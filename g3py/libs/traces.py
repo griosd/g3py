@@ -24,6 +24,12 @@ def conditional(datatrace, lambda_df):
     return conditional_traces
 
 
+def datatrace(model, trace):
+    dt = trace_to_dataframe(trace, hide_transformed_vars=True)
+    add_likelihood_to_dataframe(model, dt, trace)
+    return dt
+
+
 def trace_to_dataframe(trace, chains=None, flat_names=None, hide_transformed_vars=True):
     # TODO: mientras pymc3 se arregla
     var_shapes = trace._straces[0].var_shapes
@@ -41,7 +47,7 @@ def trace_to_dataframe(trace, chains=None, flat_names=None, hide_transformed_var
     return pd.concat(var_dfs, axis=1)
 
 
-def add_likelihood_to_dataframe(model,datatrace,trace):
+def add_likelihood_to_dataframe(model, datatrace, trace):
     ll = pd.Series(index=datatrace.index)
     adll = pd.Series(index=datatrace.index)
     niter = pd.Series(index=datatrace.index)
@@ -123,10 +129,10 @@ def traceplot(trace, plot_transformed=True):
     pm.traceplot(trace, plot_transformed=plot_transformed)
 
 
-def plot_df_items(df, items=None, size=8, n_levels=30, cmap="Blues_d"):
+def plot_datatrace(df, items=None, size=6, n_levels=20, cmap="Blues_d"):
     df = marginal(df, items)
     g = sb.PairGrid(df, size=size)
-    g.map_diag(sb.distplot)
+    g.map_diag(sb.distplot, bins=200)
     g.map_offdiag(plt.scatter)
     g.map_offdiag(sb.kdeplot, n_levels=n_levels, cmap=cmap)
     return g

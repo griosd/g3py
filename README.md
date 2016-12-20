@@ -12,3 +12,6 @@ búsqueda de óptimos locales y recorrer el espacio en búsqueda de óptimos glo
 
 # Installation
 pip install g3py
+
+# Tutorial
+Notebook Jupyter con el entrenamiento de un modelo TGP con transformación de Box-Cox, kernel SE y media constante sobre los datos Sunspots: [Box-Cox-Sunspots](https://github.com/griosd/g3py/blob/master/notebooks/BoxCox-sunspots.ipynb)

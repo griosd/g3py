@@ -2,7 +2,7 @@ import numpy as np
 import scipy as sp
 import theano as th
 import theano.tensor as tt
-import theano.sandbox.linalg as sT
+import theano.tensor.slinalg as sT
 from IPython.display import Image
 th.config.on_unused_input = 'ignore'
 
@@ -14,6 +14,11 @@ def makefn(vars, fn):
 def show_graph(f, name='temp.png'):
     th.printing.pydotprint(f, with_ids=True, outfile=name, var_with_name_simple=True)
     return Image(name)
+
+
+def tt_to_num(r):
+    return tt.switch(tt.isnan(r), np.float32(0), tt.switch(tt.isinf(r), np.nan_to_num(np.float32(np.inf)), r))
+
 
 
 class CholeskyRobust(th.gof.Op):
@@ -29,7 +34,7 @@ class CholeskyRobust(th.gof.Op):
     def __init__(self):
         self.lower = True
         self.destructive = False
-        self.maxtries = 6
+        self.maxtries = 20
 
     def infer_shape(self, node, shapes):
         return [shapes[0]]
@@ -44,6 +49,7 @@ class CholeskyRobust(th.gof.Op):
         # if info == 0:
         #    return L
         # else:
+        #print(K)
         diagK = np.diag(K)
         dK = np.eye(K.shape[0]) * diagK.mean() * 1e-6
         if np.any(diagK <= 0.0):
@@ -54,6 +60,7 @@ class CholeskyRobust(th.gof.Op):
                 return np.nan_to_num(sp.linalg.cholesky(K + dK, lower=True))
             except:
                 dK *= 10
+
         raise sp.linalg.LinAlgError("not approximate positive-definite")
 
 
@@ -102,5 +109,5 @@ class CholeskyRobust(th.gof.Op):
 
 
 cholesky_robust = CholeskyRobust()
-solve_lower_triangular = sT.solve
-solve_upper_triangular = sT.solve
+solve_lower_triangular = sT.solve_lower_triangular
+solve_upper_triangular = sT.solve_upper_triangular

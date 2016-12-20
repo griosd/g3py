@@ -2,10 +2,7 @@ import numpy as np
 import theano as th
 import theano.tensor as tt
 from g3py.functions.hypers import Hypers
-
-
-def tt_to_num(r):
-    return tt.switch(tt.isnan(r), np.float32(0), tt.switch(tt.isinf(r), np.nan_to_num(np.float32(np.inf)), r))
+from g3py.libs.tensors import tt_to_num
 
 
 class Metric(Hypers):
@@ -91,4 +88,4 @@ class ARD_DotBias(ARD):
         return self.bias + tt.dot(x1 * self.scales, x2)
 
     def default_hypers(self, x=None, y=None):
-        return {self.bias: np.float(0,type=th.config.floatX), self.scales: x.mean()}
+        return {self.bias: np.float(0, type=th.config.floatX), self.scales: x.mean()}

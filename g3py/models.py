@@ -3,15 +3,17 @@ import numpy as np
 import scipy as sp
 import pymc3 as pm
 import theano as th
-import IPython.html.widgets as widgets
+import theano.tensor as tt
+import theano.tensor.slinalg as sL
+import theano.tensor.nlinalg as nL
+import ipywidgets.widgets as widgets
 from .functions.hypers import zeros, trans_hypers
 from .functions.means import Mean
 from .functions.kernels import Kernel, KernelSum, WN
 from .functions.mappings import Mapping, Identity
-from .libs.tensors import cholesky_robust, makefn
+from .libs.tensors import cholesky_robust, makefn, tt_to_num
 from .libs.plots import text_plot
-from theano import tensor as tt
-from theano.sandbox import linalg as sT
+
 
 
 class Model(pm.Model):
@@ -92,6 +94,7 @@ class TGP:
         self.outputs_test = None
         self.inv_outputs = None
         self._widget_params = None
+        self._widget_trace = None
 
         self.compiles = {}
         self.description = {}
@@ -140,9 +143,9 @@ class TGP:
         delta = value - self.mean(self.space)
         cov = self.kernel.cov(self.space)
         cho = cholesky_robust(cov)
-        L = sT.solve(cho, delta)
+        L = sL.solve_lower_triangular(cho, delta)
         return value, tt.exp(-np.float32(0.5) * (cov.shape[0].astype(th.config.floatX) * tt.log(np.float32(2.0 * np.pi))
-                                                 + L.T.dot(L)) - tt.sum(tt.log(sT.diag(cho))))
+                                                 + L.T.dot(L)) - tt.sum(tt.log(nL.diag(cho))))
 
     def marginal_tgp(self):
         value = tt.vector('marginal_tgp')
@@ -150,14 +153,14 @@ class TGP:
         delta = self.mapping.inv(value) - self.mean(self.space)
         cov = self.kernel.cov(self.space)
         cho = cholesky_robust(cov)
-        L = sT.solve(cho, delta)
+        L = sL.solve_lower_triangular(cho, delta)
         return value, tt.exp(-np.float32(0.5) * (cov.shape[0].astype(th.config.floatX) * tt.log(np.float32(2.0 * np.pi))
-                                                 + L.T.dot(L)) - tt.sum(tt.log(sT.diag(cho))) + self.mapping.logdet_dinv(value))
+                                                 + L.T.dot(L)) - tt.sum(tt.log(nL.diag(cho))) + self.mapping.logdet_dinv(value))
 
     def prior_gp(self, cov=False):
         mu = self.mean(self.space)
         k_cov = self.kernel_f.cov(self.space)
-        var = sT.extract_diag(k_cov)
+        var = sL.extract_diag(k_cov)
         if cov:
             return mu, var, k_cov
         else:
@@ -184,9 +187,9 @@ class TGP:
 
     def posterior_gp(self, cov=False):
         k_ni = self.kernel_f.cov(self.space, self.inputs)
-        mu = self.mean(self.space) + k_ni.dot(sT.solve(self.cov_inputs, self.inv_outputs - self.mean_inputs))
-        k_cov = self.kernel_f.cov(self.space) - k_ni.dot(sT.solve(self.cov_inputs, k_ni.T))
-        var = sT.extract_diag(k_cov)
+        mu = self.mean(self.space) + k_ni.dot(sL.solve(self.cov_inputs, self.inv_outputs - self.mean_inputs))
+        k_cov = self.kernel_f.cov(self.space) - k_ni.dot(sL.solve(self.cov_inputs, k_ni.T))
+        var = nL.extract_diag(k_cov)
         if cov:
             return mu, var, k_cov
         else:
@@ -450,9 +453,9 @@ class TGP:
         text_plot(self.description['title'],  self.description['x'],  self.description['y'], loc=1)
         self._widget_params = params
 
-    def show_widget(self, params=None):
+    def widget_params(self, params=None):
         if params is None:
-            params = self.widget_params()
+            params = self.get_params()
         intervals = dict()
         for k, v in params.items():
             if v > 0:
@@ -463,21 +466,28 @@ class TGP:
                 intervals[k] = [-1.99, 1.99]
         widgets.interact(self.plot_tgp_widget, __manual=True, **intervals)
 
-    def widget_params(self):
+    def get_params(self):
         if self._widget_params is None:
             return self.find_default()
         return self._widget_params
 
-    def sample_hypers(self, start, samples=100, chains=1):
-        pm.Slice
+    def get_point(self, trace, i):
+        return {v.name: trace[i][v.name] for v in self.model.vars}
+
+    def plot_trace(self, id_trace=0):
+        self._widget_params = self.get_point(self._widget_trace, id_trace)
+        self.plot_tgp_widget(**self._widget_params)
+
+    def widget_trace(self, trace):
+        self._widget_trace = trace
+        widgets.interact(self.plot_trace, id_trace=[0, len(self._widget_trace) - 1])
+
+    def sample_hypers(self, start, samples=1000, chains=1):
         with self.model:
-            advi_mu, advi_sm, advi_elbo = pm.advi(start=start, n=samples)
+            advi_mu, advi_sm, advi_elbo = pm.advi(start=start, n=20000)
             step = pm.HamiltonianMC(scaling=advi_sm)
             trace = pm.sample(samples, step=step, start=advi_mu, njobs=chains)
         return trace
-
-    def get_point(self, trace, i):
-        return {v.name: trace[i][v.name] for v in self.model.vars}
 
     def plot_cov(self):
         return plt.matshow(self.cov_inputs)
@@ -487,20 +497,20 @@ class TGPDist(pm.Continuous):
     def __init__(self, mu, cov, mapping, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.mean = self.median = self.mode = self.mu = mu
-        self.cov = cov
+        self.cov = tt_to_num(cov)
         self.mapping = mapping
 
     def logp_cov(self, value):  # es más rápido pero se cae
         delta = self.mapping.inv(value) - self.mu
-        return -np.float32(0.5) * (tt.log(sT.det(self.cov)) + delta.T.dot(sT.solve(self.cov, delta))
+        return -np.float32(0.5) * (tt.log(sL.det(self.cov)) + delta.T.dot(sL.solve(self.cov, delta))
                                    + self.cov.shape[0].astype(th.config.floatX) * tt.log(np.float32(2.0 * np.pi))) \
                + self.mapping.logdet_dinv(value)
 
     def logp_cho(self, value):
         delta = self.mapping.inv(value) - self.mu
-        L = sT.solve(self.cho, delta)
+        L = sL.solve_lower_triangular(self.cho, delta)
         return -np.float32(0.5) * (self.cov.shape[0].astype(th.config.floatX) * tt.log(np.float32(2.0 * np.pi))
-                                   + L.T.dot(L)) - tt.sum(tt.log(sT.diag(self.cho))) + self.mapping.logdet_dinv(value)
+                                   + L.T.dot(L)) - tt.sum(tt.log(nL.diag(self.cho))) + self.mapping.logdet_dinv(value)
 
     def logp(self, value):
         return self.logp_cho(value)
