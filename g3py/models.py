@@ -346,7 +346,7 @@ class TGP:
 
     def plot_tgp_samples(self, params, n=1):
         for i in range(n):
-            plt.plot(self.space_x, self.compiles['sampler_tgp'](np.random.randn(len(self.space_x)), **params))
+            plt.plot(self.space_x, self.compiles['sampler_tgp'](np.random.randn(len(self.space_x)), **params), alpha=0.4)
 
     def plot_gp(self, params, title=None, samples=0, big=True, loc=1):
         self.plot_data(big)
