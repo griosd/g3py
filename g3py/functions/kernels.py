@@ -21,7 +21,7 @@ class Kernel(Hypers):
         self.metric.check_hypers(parent+self.name+'_')
 
     def default_hypers(self, x=None, y=None):
-        return {self.var: np.sqrt(y.var()).astype(th.config.floatX), **self.metric.default_hypers(x, y)}
+        return {self.var: y.var().astype(th.config.floatX), **self.metric.default_hypers(x, y)}
 
     def __call__(self, x1, x2):
         pass

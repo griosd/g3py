@@ -11,7 +11,7 @@ from .functions.hypers import zeros, trans_hypers
 from .functions.means import Mean
 from .functions.kernels import Kernel, KernelSum, WN
 from .functions.mappings import Mapping, Identity
-from .libs.tensors import cholesky_robust, makefn, tt_to_num
+from .libs.tensors import cholesky_robust, makefn, tt_to_num, tt_to_cov
 from .libs.plots import text_plot
 
 
@@ -458,9 +458,9 @@ class TGP:
             params = self.get_params()
         intervals = dict()
         for k, v in params.items():
-            if v > 0:
+            if v > 0.1:
                 intervals[k] = [0, 2*v]
-            elif v < 0:
+            elif v < -0.1:
                 intervals[k] = [2*v, 0]
             else:
                 intervals[k] = [-1.99, 1.99]
@@ -497,17 +497,17 @@ class TGPDist(pm.Continuous):
     def __init__(self, mu, cov, mapping, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.mean = self.median = self.mode = self.mu = mu
-        self.cov = tt_to_num(cov)
+        self.cov = tt_to_cov(cov)
         self.mapping = mapping
 
     def logp_cov(self, value):  # es más rápido pero se cae
-        delta = self.mapping.inv(value) - self.mu
+        delta = tt_to_num(self.mapping.inv(value)) - self.mu
         return -np.float32(0.5) * (tt.log(sL.det(self.cov)) + delta.T.dot(sL.solve(self.cov, delta))
                                    + self.cov.shape[0].astype(th.config.floatX) * tt.log(np.float32(2.0 * np.pi))) \
                + self.mapping.logdet_dinv(value)
 
     def logp_cho(self, value):
-        delta = self.mapping.inv(value) - self.mu
+        delta = tt_to_num(self.mapping.inv(value)) - self.mu
         L = sL.solve_lower_triangular(self.cho, delta)
         return -np.float32(0.5) * (self.cov.shape[0].astype(th.config.floatX) * tt.log(np.float32(2.0 * np.pi))
                                    + L.T.dot(L)) - tt.sum(tt.log(nL.diag(self.cho))) + self.mapping.logdet_dinv(value)

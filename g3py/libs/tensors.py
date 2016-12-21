@@ -20,6 +20,11 @@ def tt_to_num(r):
     return tt.switch(tt.isnan(r), np.float32(0), tt.switch(tt.isinf(r), np.nan_to_num(np.float32(np.inf)), r))
 
 
+def tt_to_cov(c):
+    r = tt_to_num(c)
+    m = tt.min(tt.diag(r))
+    return tt.switch(m > 0, r, r + (1e-6-m)*tt.eye(c.shape[0]) )
+
 
 class CholeskyRobust(th.gof.Op):
     """
@@ -100,7 +105,7 @@ class CholeskyRobust(th.gof.Op):
                 outer.T, solve_upper_triangular(outer.T, inner.T).T)
 
         s = conjugate_solve_triangular(
-            chol_x, tril_and_halve_diagonal(chol_x.T.dot(dz)))
+            chol_x, tril_and_halve_diagonal(tt_to_num(chol_x.T.dot(dz))))
 
         if self.lower:
             return [tt.tril(s + s.T) - tt.diag(tt.diagonal(s))]
