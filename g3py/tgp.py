@@ -492,7 +492,6 @@ class TGP:
                 #step += [pm.Metropolis(vars=self.sampling_vars, tune=False)] # OK
                 #step += [pm.HamiltonianMC(vars=self.sampling_vars, scaling=advi_sm, is_cov=True)] #Scaling is not positive definite. Simple check failed. Diagonal contains negatives. Check indexes
                 #step += [pm.NUTS(vars=self.sampling_vars, scaling=advi_sm, is_cov=True)] #BUG float32
-                step += [RobustSlice(vars=self.sampling_vars)]  # Slice original se cuelga si parte del óptimo
             else:
                 step = RobustSlice()
             trace = pm.sample(samples, step=step, start=advi_mu, njobs=chains)

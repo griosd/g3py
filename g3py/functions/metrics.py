@@ -54,23 +54,22 @@ class ARD_L1(ARD):
         return tt.abs_(x1 - x2) / self.scales
 
     def default_hypers(self, x=None, y=None):
-        return {self.scales: np.abs(x[1:] - x[:-1]).mean()}
-
+        return {self.scales: np.abs(x).mean()}
 
 class ARD_L2(ARD):
     def __call__(self, x1, x2):
-        return ((x1 - x2) ** 2) / (2 * self.scales)
+        return ((x1 - x2) ** 2) / (2 * self.scales**2)
 
     def default_hypers(self, x=None, y=None):
-        return {self.scales: np.abs(x[1:] - x[:-1]).mean()}
+        return {self.scales: np.abs(x).mean()}
 
 
 class ARD_Dot(ARD):
     def __call__(self, x1, x2):
-        return tt.dot(x1 * self.scales, x2)
+        return tt.dot(x1/self.scales, x2/self.scales)
 
     def default_hypers(self, x=None, y=None):
-        return {self.scales: x.mean()}
+        return {self.scales: np.abs(x).mean()}
 
 
 class ARD_DotBias(ARD):
@@ -85,7 +84,7 @@ class ARD_DotBias(ARD):
         self.hypers += [self.bias]
 
     def __call__(self, x1, x2):
-        return self.bias + tt.dot(x1 * self.scales, x2)
+        return self.bias + tt.dot(x1/self.scales, x2/self.scales)
 
     def default_hypers(self, x=None, y=None):
-        return {self.bias: np.float(0, type=th.config.floatX), self.scales: x.mean()}
+        return {self.bias: np.float32(1), self.scales: np.abs(x).mean()}

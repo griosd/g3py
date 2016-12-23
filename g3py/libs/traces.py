@@ -1,5 +1,5 @@
 import os
-
+import pickle
 import numpy as np
 import pandas as pd
 import pymc3 as pm
@@ -25,9 +25,27 @@ def conditional(datatrace, lambda_df):
 
 
 def datatrace(model, trace):
-    dt = trace_to_dataframe(trace, hide_transformed_vars=True)
+    dt = trace_to_dataframe(trace, hide_transformed_vars=False)
     add_likelihood_to_dataframe(model, dt, trace)
     return dt
+
+
+def save_trace(trace, path='trace.pkl'):
+    with open(path, 'wb') as f:
+        pickle.dump(trace, f, protocol=-1)
+
+
+def load_trace(path='trace.pkl'):
+    with open(path, 'r') as f:
+        return pickle.load(f)
+
+
+def save_datatrace(datatrace, path='datatrace.pkl'):
+    datatrace.to_pickle(path)
+
+
+def load_datatrace(path='datatrace.pkl'):
+    return pd.read_pickle(path)
 
 
 def trace_to_dataframe(trace, chains=None, flat_names=None, hide_transformed_vars=True):

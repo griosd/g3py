@@ -7,6 +7,14 @@ from IPython.display import Image
 th.config.on_unused_input = 'ignore'
 
 
+
+def debug(x, name=''):
+    if th.config.mode in ['NanGuardMode', 'DebugMode']:
+        return th.printing.Print(name)(x)
+    else:
+        return x
+
+
 def makefn(vars, fn):
     return th.function(vars, fn, allow_input_downcast=True, on_unused_input='ignore')
 
@@ -16,8 +24,8 @@ def show_graph(f, name='temp.png'):
     return Image(name)
 
 
-def tt_to_num(r):
-    return tt.switch(tt.isnan(r), np.float32(0), tt.switch(tt.isinf(r), np.nan_to_num(np.float32(np.inf)), r))
+def tt_to_num(r, nan=0, inf=np.inf):
+    return tt.switch(tt.isnan(r), np.nan_to_num(np.float32(nan)), tt.switch(tt.isinf(r), np.nan_to_num(np.float32(inf)), r))
 
 
 def tt_to_cov(c):
@@ -65,14 +73,15 @@ class CholeskyRobust(th.gof.Op):
                 return np.nan_to_num(sp.linalg.cholesky(K + dK, lower=True))
             except:
                 dK *= 10
-
         raise sp.linalg.LinAlgError("not approximate positive-definite")
-
 
     def perform(self, node, inputs, outputs):
         x = inputs[0]
         z = outputs[0]
-        z[0] = self._cholesky(x).astype(x.dtype)
+        try:
+            z[0] = self._cholesky(x).astype(x.dtype)
+        except:
+            raise sp.linalg.LinAlgError("not perform cholesky")
 
     def grad(self, inputs, gradients):
         """

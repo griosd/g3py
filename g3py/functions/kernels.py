@@ -1,5 +1,6 @@
 import numpy as np
 import theano as th
+#import pymc3 as pm
 import theano.tensor as tt
 from g3py.functions.hypers import Hypers
 
@@ -17,11 +18,15 @@ class Kernel(Hypers):
     def check_hypers(self, parent=''):
         if self.var is None:
             self.var = Hypers.FlatExp(parent + self.name + '_Var')
-        self.hypers += [self.var]
+        if isinstance(self.var, tt.TensorVariable):
+            self.hypers += [self.var]
         self.metric.check_hypers(parent+self.name+'_')
 
     def default_hypers(self, x=None, y=None):
-        return {self.var: y.var().astype(th.config.floatX), **self.metric.default_hypers(x, y)}
+        if isinstance(self.var, tt.TensorVariable):
+            return {self.var: y.var().astype(th.config.floatX), **self.metric.default_hypers(x, y)}
+        else:
+            return self.metric.default_hypers(x, y)
 
     def __call__(self, x1, x2):
         pass
@@ -96,6 +101,7 @@ class KernelOperation(Kernel):
         self.k = _k
         self.element = _element
         self.hypers = []
+        self.op = 'op'
 
     def check_hypers(self, parent=''):
         self.k.check_hypers(parent=parent)
@@ -105,13 +111,15 @@ class KernelOperation(Kernel):
         return self.k.default_hypers(x, y)
 
     def __str__(self):
-        return str(self.element) + " op " + str(self.k)
+        return str(self.element) + " "+self.op+" " + str(self.k)
+    __repr__ = __str__
 
 
 class KernelComposition(Kernel):
     def __init__(self, _k1: Kernel, _k2: Kernel):
         self.k1 = _k1
         self.k2 = _k2
+        self.op = 'op'
 
     def check_hypers(self, parent=''):
         self.k1.check_hypers(parent=parent)
@@ -122,7 +130,8 @@ class KernelComposition(Kernel):
         return {**self.k1.default_hypers(x, y), **self.k2.default_hypers(x, y)}
 
     def __str__(self):
-        return str(self.k1) + " op " + str(self.k2)
+        return str(self.k1) + " "+self.op+" " + str(self.k2)
+    __repr__ = __str__
 
 
 class KernelScale(KernelOperation):
@@ -148,6 +157,14 @@ class KernelShift(KernelOperation):
 
 
 class KernelProd(KernelComposition):
+    def __init__(self, _k1: Kernel, _k2: Kernel):
+        super().__init__(_k1, _k2)
+        if self.k1.var is None:
+            self.k1.var = 1.0
+        elif self.k2.var is None:
+            self.k2.var = 1.0
+        self.op = '*'
+
     def __call__(self, x1, x2):
         return self.k1(x1, x2) * self.k2(x1, x2)
 
@@ -159,6 +176,10 @@ class KernelProd(KernelComposition):
 
 
 class KernelSum(KernelComposition):
+    def __init__(self, _k1: Kernel, _k2: Kernel):
+        super().__init__(_k1, _k2)
+        self.op = '+'
+
     def __call__(self, x1, x2):
         return self.k1(x1, x2) + self.k2(x1, x2)
 
@@ -176,7 +197,7 @@ class BW(KernelDot):
 
 class LIN(KernelDot):
     def __init__(self, x, metric=ARD_DotBias, name=None, var=None):
-        super().__init__(x, metric, name, var)
+        super().__init__(x, metric, name, 1)
 
 
 class POL(KernelDot):
@@ -192,6 +213,24 @@ class POL(KernelDot):
             return self.var * self.metric.gram(x1, x1) ** self.p
         else:
             return self.var * self.metric.gram(x1, x2) ** self.p
+
+
+class NN(KernelDot):
+    def __init__(self, x, p=2, metric=ARD_DotBias, name=None, var=None):
+        super().__init__(x, metric, name, var)
+        self.p = p
+
+    def __call__(self, x1, x2):
+        return self.var * tt.arcsin(2*self.metric(x1, x2)/((1 + 2*self.metric(x1, x1))*(1 + 2*self.metric(x2, x2))))
+
+    def cov(self, x1, x2=None):
+        if x2 is None:
+            xx = self.metric.gram(x1, x1)
+            return self.var * tt.arcsin(2*xx/((1 + 2*xx)**2))
+        else:
+            return self.var * tt.arcsin(2*self.metric.gram(x1, x2)/((1 + 2*self.metric.gram(x1, x1))*(1 + 2*self.metric.gram(x2, x2))))
+
+
 
 
 class WN(KernelStationary):
@@ -226,26 +265,30 @@ class RQ(KernelStationary):
         return tt.pow(1 + d / self.alpha, -self.alpha)
 
 
-class SM(KernelStationary):
-    def __init__(self, x, metric=L1, name=None, var=None, m=None, s=None):
+class COS(KernelStationary):
+    def __init__(self, x, metric=ARD_L1, name=None, var=None, alpha=None):
         super().__init__(x, metric, name, var)
-        self.m = m
-        self.s = s
-
-    def check_hypers(self, parent=''):
-        super().check_hypers(parent=parent)
-        if self.m is None:
-            self.m = Hypers.Flat(parent+self.name+'_M')
-        if self.s is None:
-            self.s = Hypers.FlatExp(parent+self.name+'_S')
-        self.hypers += [self.m, self.s]
-
-    def default_hypers(self, x=None, y=None):
-        return {self.m: np.float32(1.0),
-                self.s: np.float32(1.0), **super().default_hypers(x, y)}
 
     def k(self, d):
-        return tt.exp(-2 * pi**2 * d**2 * self.s) * tt.cos(2 * pi * d * self.m)
+        return tt.cos(d)
+
+
+class MAT32(KernelStationary):
+    def __init__(self, x, metric=ARD_L1, name=None, var=None, alpha=None):
+        super().__init__(x, metric, name, var)
+
+    def k(self, d):
+        d3 = np.sqrt(3)*d
+        return (1 + d3)*tt.exp(-d3)
+
+
+class MAT52(KernelStationary):
+    def __init__(self, x, metric=ARD_L2, name=None, var=None, alpha=None):
+        super().__init__(x, metric, name, var)
+
+    def k(self, d):
+        d5 = np.sqrt(5)*d
+        return (1 + d5 + (d5**2)/3)*tt.exp(-d5)
 
 
 class KernelStationaryExponential(KernelStationary):
@@ -283,4 +326,27 @@ class PER(KernelStationary):
 
     def k(self, d):
         return tt.exp(2*(tt.sin(pi*d / self.p)**2) / self.l)
+
+
+class SM(KernelStationary):
+    def __init__(self, x, metric=L1, name=None, var=None, m=None, s=None):
+        super().__init__(x, metric, name, var)
+        self.m = m
+        self.s = s
+
+    def check_hypers(self, parent=''):
+        super().check_hypers(parent=parent)
+        if self.m is None:
+            self.m = Hypers.Flat(parent+self.name+'_M')
+        if self.s is None:
+            self.s = Hypers.FlatExp(parent+self.name+'_S')
+        self.hypers += [self.m, self.s]
+
+    def default_hypers(self, x=None, y=None):
+        return {self.m: np.float32(1.0),
+                self.s: np.float32(1.0), **super().default_hypers(x, y)}
+
+    def k(self, d):
+        return tt.exp(-2 * pi**2 * d**2 * self.s) * tt.cos(2 * pi * d * self.m)
+
 

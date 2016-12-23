@@ -4,6 +4,7 @@ import theano.sandbox.linalg as sT
 from g3py.functions.hypers import Hypers
 from g3py.libs.tensors import tt_to_num, debug
 
+
 class Mapping(Hypers):
     def __call__(self, x):
         pass
@@ -16,6 +17,71 @@ class Mapping(Hypers):
 
     def automatic_logdet_dinv(self, y):
         return debug(tt.log(sT.det(debug(tt.jacobian(self.inv(y), y), 'jacobian_inv'))), 'automatic_logdet_dinv')
+
+    def __mul__(self, other):
+        if issubclass(type(other), Mapping):
+            return MappingInvProd(self, other)
+        else:
+            return MappingInvProd(self, other)
+    __imul__ = __mul__
+    __rmul__ = __mul__
+
+    def __matmul__(self, other):
+        if issubclass(type(other), Mapping):
+            return MappingComposed(self, other)
+        else:
+            return MappingComposed(self, other)
+    __imatmul__ = __matmul__
+    __rmatmul__ = __matmul__
+
+
+class MappingOperation(Mapping):
+    def __init__(self, m1, m2):
+        self.m1 = m1
+        self.m2 = m2
+        self.op = 'op'
+
+    def check_hypers(self, parent=''):
+        self.m1.check_hypers(parent=parent)
+        self.m2.check_hypers(parent=parent)
+        self.hypers = self.m1.hypers + self.m2.hypers
+
+    def default_hypers(self, x=None, y=None):
+        return {**self.m1.default_hypers(x, y), **self.m2.default_hypers(x, y)}
+
+    def __str__(self):
+        return str(self.m1) + " "+self.op+" " + str(self.m2)
+    __repr__ = __str__
+
+
+class MappingComposed(MappingOperation):
+    def __init__(self, m1: Mapping, m2: Mapping):
+        super().__init__(m1, m2)
+        self.op = '@'
+
+    def __call__(self, x):
+        return self.m1(self.m2(x))
+
+    def inv(self, y):
+        return self.m2.inv(self.m1.inv(y))
+
+    def logdet_dinv(self, y):
+        return self.m2.logdet_dinv(self.m1.inv(y)) + self.m1.logdet_dinv(y)
+
+
+class MappingInvProd(MappingOperation):
+    def __init__(self, m1: Mapping, m2: Mapping):
+        super().__init__(m1, m2)
+        self.op = '*'
+
+    def __call__(self, x):
+        pass
+
+    def inv(self, y):
+        return self.m1.inv(y) * self.m2.inv(y)
+
+    def logdet_dinv(self, y):
+        return self.m2.logdet_dinv(self.m1.inv(y)) + self.m1.logdet_dinv(y)
 
 
 class Identity(Mapping):
@@ -69,7 +135,7 @@ class BoxCoxShifted(Mapping):
         self.hypers += [self.shift, self.power]
 
     def default_hypers(self, x=None, y=None):
-        return {self.shift: np.float32(1.0),
+        return {self.shift: y.min() - np.abs(y[1:]-y[:-1]).min(),
                 self.power: np.float32(1.0)}
 
     def __call__(self, x):

@@ -64,16 +64,16 @@ class Hypers:
     @staticmethod
     def ExpFlat(name, shape=(), testval=zeros):
         with modelcontext():
-            return tt.exp(pm.Flat(name, shape=shape,testval=testval(shape),dtype=th.config.floatX))
+            return tt.exp(pm.Flat(name, shape=shape, testval=testval(shape),dtype=th.config.floatX))
     @staticmethod
     def FlatExp(name, shape=(), testval=ones):
         with modelcontext():
-            return pm.Flat(name, transform=pm.distributions.transforms.log, shape=shape, testval=testval(shape),dtype=th.config.floatX)
+            return pm.Flat(name, transform=pm.distributions.transforms.log, shape=shape, testval=testval(shape), dtype=th.config.floatX)
     @staticmethod
     def FlatExpId(name, shape=(), testval=ones):
         with modelcontext():
-            return pm.Flat(name, transform=LogIdTransform(), shape=shape, testval=testval(shape),dtype=th.config.floatX)
+            return pm.Flat(name, transform=LogIdTransform(), shape=shape, testval=testval(shape), dtype=th.config.floatX)
     @staticmethod
     def Exponential(name, lam=ones, shape=(), testval=ones):
         with modelcontext():
-            return pm.Exponential(name, shape=shape,lam=lam(shape), testval=testval(shape),dtype=th.config.floatX)
+            return pm.Exponential(name, shape=shape,lam=lam(shape), testval=testval(shape), dtype=th.config.floatX)

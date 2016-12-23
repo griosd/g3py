@@ -49,7 +49,7 @@ def plot(*args, **kwargs):
     return plt.plot(*args, **kwargs)
 
 
-def text_plot(title="title", x="xlabel", y="ylabel", ncol=6, loc=8, axis=None):
+def text_plot(title="title", x="xlabel", y="ylabel", ncol=3, loc=8, axis=None):
     plt.axis('tight')
     plt.title(title)
     plt.xlabel(x)
