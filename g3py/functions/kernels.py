@@ -1,10 +1,8 @@
 import numpy as np
 import theano as th
-#import pymc3 as pm
 import theano.tensor as tt
 from g3py.functions.hypers import Hypers
-
-from g3py.functions.metrics import Delta, Minimum, L1, ARD_Dot, ARD_DotBias, ARD_L1, ARD_L2
+from g3py.functions.metrics import Delta, Minimum, Difference, L1, ARD_Dot, ARD_DotBias, ARD_L1, ARD_L2
 
 pi = np.float32(np.pi)
 
@@ -231,8 +229,6 @@ class NN(KernelDot):
             return self.var * tt.arcsin(2*self.metric.gram(x1, x2)/((1 + 2*self.metric.gram(x1, x1))*(1 + 2*self.metric.gram(x2, x2))))
 
 
-
-
 class WN(KernelStationary):
     def __init__(self, x=None, metric=Delta, name=None, var=None):
         super().__init__(x, metric, name, var)
@@ -331,22 +327,22 @@ class PER(KernelStationary):
 class SM(KernelStationary):
     def __init__(self, x, metric=L1, name=None, var=None, m=None, s=None):
         super().__init__(x, metric, name, var)
-        self.m = m
-        self.s = s
+        self.period = m
+        self.scale = s
 
     def check_hypers(self, parent=''):
         super().check_hypers(parent=parent)
-        if self.m is None:
-            self.m = Hypers.Flat(parent+self.name+'_M')
-        if self.s is None:
-            self.s = Hypers.FlatExp(parent+self.name+'_S')
-        self.hypers += [self.m, self.s]
+        if self.period is None:
+            self.period = Hypers.FlatExp(parent + self.name + '_PER')
+        if self.scale is None:
+            self.scale = Hypers.FlatExp(parent + self.name + '_SCALE')
+        self.hypers += [self.period, self.scale]
 
     def default_hypers(self, x=None, y=None):
-        return {self.m: np.float32(1.0),
-                self.s: np.float32(1.0), **super().default_hypers(x, y)}
+        return {self.period: np.float32(1.0),
+                self.scale: np.abs(x).mean()**2, **super().default_hypers(x, y)}
 
     def k(self, d):
-        return tt.exp(-2 * pi**2 * d**2 * self.s) * tt.cos(2 * pi * d * self.m)
+        return tt.exp(-2 * pi ** 2 * d ** 2 / self.scale) * tt.cos(2 * pi * d / self.period)
 
 

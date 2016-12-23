@@ -89,6 +89,8 @@ class TGP:
         return r
 
     def swap_test_obs(self):
+        if self.inputs is None:
+            return
         swap = self.inputs.get_value()
         self.inputs.set_value(self.inputs_test)
         self.inputs_test = swap
@@ -116,22 +118,20 @@ class TGP:
         return value, tt.exp(-np.float32(0.5) * (cov.shape[0].astype(th.config.floatX) * tt.log(np.float32(2.0 * np.pi))
                                                  + L.T.dot(L)) - tt.sum(tt.log(nL.diag(cho))) + self.mapping.logdet_dinv(value))
 
-    def prior_gp(self, cov=False):
+    def prior_gp(self, cov=False, noise=False):
         mu = self.mean(self.space)
-        k_cov = self.kernel_f.cov(self.space)
+        if noise:
+            k_cov = self.kernel.cov(self.space)
+        else:
+            k_cov = self.kernel_f.cov(self.space)
         var = nL.extract_diag(k_cov)
         if cov:
             return mu, var, k_cov
         else:
             return mu, var
 
-    def prior_tgp(self, sigma=2.0):
-        mu, var = self.prior_gp(self.space)
-        std = tt.sqrt(var)
-        return self.mapping(mu), self.mapping(mu - sigma * std), self.mapping(mu + sigma * std)
-
-    def prior_quantiles_tgp(self, sigma=1.96):
-        mu, var = self.prior_gp()
+    def prior_quantiles_tgp(self, sigma=1.96, noise=False):
+        mu, var = self.prior_gp(cov=False, noise=noise)
         std = tt.sqrt(var)
         return self.mapping(mu), self.mapping(mu - sigma * std), self.mapping(mu + sigma * std)
 
@@ -144,19 +144,21 @@ class TGP:
         return self.gauss_hermite(self.mapping, mu, std, a, w), self.gauss_hermite(lambda v: self.mapping(v) ** 2, mu,
                                                                                    std, a, w)
 
-    def posterior_gp(self, cov=False):
+    def posterior_gp(self, cov=False, noise=False):
         k_ni = self.kernel_f.cov(self.space, self.inputs)
         mu = self.mean(self.space) + k_ni.dot(sL.solve(self.cov_inputs, self.inv_outputs - self.mean_inputs))
-        k_cov = self.kernel_f.cov(self.space) - k_ni.dot(sL.solve(self.cov_inputs, k_ni.T))
+        if noise:
+            k_cov = self.kernel.cov(self.space) - k_ni.dot(sL.solve(self.cov_inputs, k_ni.T))
+        else:
+            k_cov = self.kernel_f.cov(self.space) - k_ni.dot(sL.solve(self.cov_inputs, k_ni.T))
         var = nL.extract_diag(debug(k_cov, 'k_cov'))
         if cov:
             return mu, var, k_cov
         else:
             return mu, var
-        return mu, var
 
-    def posterior_quantiles_tgp(self, sigma=1.96):
-        mu, var = self.posterior_gp()
+    def posterior_quantiles_tgp(self, sigma=1.96, noise=False):
+        mu, var = self.posterior_gp(noise=noise)
         std = tt.sqrt(var)
         return self.mapping(mu), self.mapping(mu - sigma * std), self.mapping(mu + sigma * std)
 
@@ -177,7 +179,7 @@ class TGP:
         else:
             mu, var, cov = self.posterior_gp(cov=True)
         cho = cholesky_robust(cov)
-        return random, mu + random.dot(cho)
+        return random, mu + cho.dot(random)
 
     def sampler_tgp(self):
         random, samples = self.sampler_gp()
@@ -191,20 +193,28 @@ class TGP:
         params = self.model.vars
         if self.outputs is None:
             mu, var, cov = self.prior_gp(cov=True)
+            _, noise = self.prior_gp(cov=False, noise=True)
             median, I_up, I_down = self.prior_quantiles_tgp()
+            _, noise_up, noise_down = self.prior_quantiles_tgp(noise=True)
             m1, m2 = self.prior_moments_tgp()
         else:
             mu, var, cov = self.posterior_gp(cov=True)
+            _, noise = self.posterior_gp(cov=False, noise=True)
             median, I_up, I_down = self.posterior_quantiles_tgp()
+            _, noise_up, noise_down = self.posterior_quantiles_tgp(noise=True)
             m1, m2 = self.posterior_moments_tgp()
 
         mu_compilated = makefn(params, mu)
         var_compilated = makefn(params, var)
         cov_compilated = makefn(params, cov)
+        noise_compilated = makefn(params, noise)
 
         median_compilated = makefn(params, median)
         I_up_compilated = makefn(params, I_up)
         I_down_compilated = makefn(params, I_down)
+
+        noise_up_compilated = makefn(params, noise_up)
+        noise_down_compilated = makefn(params, noise_down)
 
         moment1 = makefn(params, m1)
         moment2 = makefn(params, m2)
@@ -212,12 +222,16 @@ class TGP:
         self.compiles['mean'] = mu_compilated
         self.compiles['variance'] = var_compilated
         self.compiles['covariance'] = cov_compilated
+        self.compiles['noise'] = noise_compilated
         self.compiles['median'] = median_compilated
         self.compiles['I_up'] = I_up_compilated
         self.compiles['I_down'] = I_down_compilated
+        self.compiles['noise_up'] = noise_up_compilated
+        self.compiles['noise_down'] = noise_down_compilated
         self.compiles['m1'] = moment1
         self.compiles['m2'] = moment2
-        return mu_compilated, var_compilated, median_compilated, I_up_compilated, I_down_compilated, moment1, moment2
+        return mu_compilated, var_compilated, noise_compilated, median_compilated, I_up_compilated, I_down_compilated, \
+               noise_up_compilated, noise_down_compilated, moment1, moment2
 
     def compile_samplers(self):
         params = self.model.vars
@@ -264,25 +278,30 @@ class TGP:
         try:
             if self.hidden is not None:
                 plt.plot(self.space_x, self.hidden, label='Hidden Processes')
+            plt.plot(self.inputs.get_value(), self.outputs.get_value(), '.k', label='Observations')
         except:
             pass
-        plt.plot(self.inputs.get_value(), self.outputs.get_value(), '.k', label='Observations')
+
 
     def plot_data_big(self):
         try:
             if self.hidden is not None:
                 plt.plot(self.space_x, self.hidden, linewidth=4, label='Hidden Processes')
+            plt.plot(self.inputs.get_value(), self.outputs.get_value(), '.k', ms=20, label='Observations')
         except:
             pass
-        plt.plot(self.inputs.get_value(), self.outputs.get_value(), '.k', ms=20, label='Observations')
 
-    def plot_gp_moments(self, params):
+
+    def plot_gp_moments(self, params, sigma=1.96):
         mean = self.compiles['mean'](**params)
         variance = self.compiles['variance'](**params)
+        noise = self.compiles['noise'](**params)
         std = np.sqrt(variance)
+        wn = np.sqrt(noise)
         plt.plot(self.space_x, mean, label='Mean')
-        plt.fill_between(self.space_x, mean + 1.96 * std, mean - 1.96 * std, alpha=0.2, label='95%')
-        return mean, variance
+        plt.fill_between(self.space_x, mean + sigma * std, mean - sigma * std, alpha=0.2, label='95%')
+        plt.fill_between(self.space_x, mean + sigma * wn, mean - sigma * wn, alpha=0.1, label='noise')
+        return mean, variance, noise
 
     def plot_gp_samples(self, params, samples=1):
         for i in range(samples):
@@ -292,8 +311,11 @@ class TGP:
         med = self.compiles['median'](**params)
         Iup = self.compiles['I_up'](**params)
         Idown = self.compiles['I_down'](**params)
+        noise_up = self.compiles['noise_up'](**params)
+        noise_down = self.compiles['noise_down'](**params)
         plt.plot(self.space_x, med, label='Median')
         plt.fill_between(self.space_x, Iup, Idown, alpha=0.2, label='95%')
+        plt.fill_between(self.space_x, noise_up, noise_down, alpha=0.1, label='Noise')
         return med, Iup, Idown
 
     def plot_tgp_moments(self, params):
@@ -376,6 +398,8 @@ class TGP:
         if start is None:
             start = self.find_default()
         maps.append(('start', self.model.logp(start), start))
+        plt.figure(0)
+        self.plot_tgp(start, 'start', samples)
         with self.model:
             for i in range(points):
                 try:
@@ -388,7 +412,7 @@ class TGP:
                         new = pm.find_MAP(fmin=sp.optimize.fmin_powell, vars=self.sampling_vars, start=start)
                     maps.append((name, self.model.logp(new), new))
                     if plot:
-                        plt.figure(i)
+                        plt.figure(i+1)
                         self.plot_tgp(new, name, samples)
                         plt.show()
                 except:
@@ -402,6 +426,8 @@ class TGP:
         return {**self.kernel.default_hypers(x, y), **self.mapping.default_hypers(x, y), **self.mean.default_hypers(x, y)}
 
     def find_default(self):
+        if self.inputs is None:
+            return self.model.test_point
         default = {}
         for k, v in trans_hypers(self.default_hypers()).items():
             default[k.name] = v
@@ -409,9 +435,10 @@ class TGP:
         return default
 
     def plot_model(self, **params):
-        plt.figure(2)
-        _ = plt.plot(self.compiles['covariance'](**params)[len(self.space_x) // 2, :])
-        text_plot('kernel', 'x1', 'x2')
+        #plt.figure(2)
+        #_ = plt.plot(self.compiles['covariance'](**params)[len(self.space_x) // 2, :])
+        #text_plot('kernel', 'x1', 'x2')
+        return
 
     def plot_tgp_widget(self, **params):
         self.plot_data(big=True)

@@ -27,6 +27,11 @@ class Minimum(Metric):
         return tt.minimum(x1-x2*0, x2-x1*0)
 
 
+class Difference(Metric):
+    def __call__(self, x1, x2):
+        return x1 - x2
+
+
 class L1(Metric):
     def __call__(self, x1, x2):
         return tt.abs_(x1 - x2)
@@ -54,14 +59,15 @@ class ARD_L1(ARD):
         return tt.abs_(x1 - x2) / self.scales
 
     def default_hypers(self, x=None, y=None):
-        return {self.scales: np.abs(x).mean()}
+        return {self.scales: np.abs(x[1:]-x[:-1]).mean()}
+
 
 class ARD_L2(ARD):
     def __call__(self, x1, x2):
         return ((x1 - x2) ** 2) / (2 * self.scales**2)
 
     def default_hypers(self, x=None, y=None):
-        return {self.scales: np.abs(x).mean()}
+        return {self.scales: np.abs(x[1:]-x[:-1]).mean()}
 
 
 class ARD_Dot(ARD):
@@ -87,4 +93,4 @@ class ARD_DotBias(ARD):
         return self.bias + tt.dot(x1/self.scales, x2/self.scales)
 
     def default_hypers(self, x=None, y=None):
-        return {self.bias: np.float32(1), self.scales: np.abs(x).mean()}
+        return {self.bias: (np.abs(y).mean())/np.abs(x).mean(), self.scales: (np.sqrt(np.abs(y)).mean())/np.abs(x).mean()}
