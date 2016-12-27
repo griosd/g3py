@@ -7,7 +7,7 @@ class Mean(Hypers):
     def __init__(self, call=None, *args, **kwargs):
         super().__init__(*args, **kwargs)
         if call is not None:
-            self.__call__ = call
+            self.eval = call
 
     def __call__(self, x):
         pass
@@ -28,6 +28,9 @@ class Mean(Hypers):
     __iadd__ = __add__
     __radd__ = __add__
 
+    def __call__(self, x):
+        return self.eval(x[:, self.dims])
+
 
 class MeanOperation(Mean):
     def __init__(self, _m: Mean, _element):
@@ -39,8 +42,8 @@ class MeanOperation(Mean):
         self.m.check_hypers(parent=parent)
         self.hypers = self.m.hypers
 
-    def default_hypers(self, x=None, y=None):
-        return self.m.default_hypers(x, y)
+    def default_hypers_dims(self, x=None, y=None):
+        return self.m.default_hypers_dims(x, y)
 
     def __str__(self):
         return str(self.element) + " op " + str(self.m)
@@ -56,15 +59,15 @@ class MeanComposition(Mean):
         self.m2.check_hypers(parent=parent)
         self.hypers = self.m1.hypers + self.m2.hypers
 
-    def default_hypers(self, x=None, y=None):
-        return {**self.m1.default_hypers(x, y), **self.m2.default_hypers(x, y)}
+    def default_hypers_dims(self, x=None, y=None):
+        return {**self.m1.default_hypers_dims(x, y), **self.m2.default_hypers_dims(x, y)}
 
     def __str__(self):
         return str(self.m) + " op " + str(self.m)
 
 
 class MeanScale(MeanOperation):
-    def __call__(self, x):
+    def eval(self, x):
         return self.element * self.m(x)
 
     def __str__(self):
@@ -72,7 +75,7 @@ class MeanScale(MeanOperation):
 
 
 class MeanShift(MeanOperation):
-    def __call__(self, x):
+    def eval(self, x):
         return self.element + self.m(x)
 
     def __str__(self):
@@ -80,7 +83,7 @@ class MeanShift(MeanOperation):
 
 
 class MeanProd(MeanComposition):
-    def __call__(self, x):
+    def eval(self, x):
         return self.m1(x) * self.m2(x)
 
     def __str__(self):
@@ -88,7 +91,7 @@ class MeanProd(MeanComposition):
 
 
 class MeanSum(MeanComposition):
-    def __call__(self, x):
+    def eval(self, x):
         return self.m1(x) + self.m2(x)
 
     def __str__(self):
@@ -96,8 +99,8 @@ class MeanSum(MeanComposition):
 
 
 class Zero(Mean):
-    def __call__(self, x):
-        return 0.0
+    def eval(self, x):
+        return tt.zeros(shape=(x.shape[0],)) #TODO: check dims
 
 
 class Bias(Mean):
@@ -113,8 +116,8 @@ class Bias(Mean):
     def default_hypers(self, x=None, y=None):
         return {self.constant: y.mean().astype(th.config.floatX)}
 
-    def __call__(self, x):
-        return x*0 + self.constant
+    def eval(self, x):
+        return x*0 + self.constant #TODO: check dims
 
 
 class Linear(Mean):
@@ -134,7 +137,7 @@ class Linear(Mean):
         return {self.constant: y.mean().astype(th.config.floatX),
                 self.coeff: y.mean()/x.mean()}
 
-    def __call__(self, x):
-        return self.constant + tt.dot(x, self.coeff)
+    def eval(self, x):
+        return self.constant + tt.dot(x, self.coeff) #TODO: check dims
 
 

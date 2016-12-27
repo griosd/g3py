@@ -17,11 +17,11 @@ def modelcontext(model=None):
 
 
 def zeros(shape):
-    return np.zeros(shape,dtype=th.config.floatX)
+    return np.zeros(shape, dtype=th.config.floatX)
 
 
 def ones(shape):
-    return np.ones(shape,dtype=th.config.floatX)
+    return np.ones(shape, dtype=th.config.floatX)
 
 
 def trans_hypers(hypers):
@@ -37,9 +37,17 @@ def trans_hypers(hypers):
 class Hypers:
     def __init__(self, x=None, name=None):
         if x is not None:
-            self.shape = x[0].shape
+            if type(x) is tuple:
+                domain, self.dims = x
+                self.shape = domain.shape[1]
+            else:
+                self.shape = x.shape[1]
+                self.dims = slice(0, self.shape)
+            #if self.shape == 1:
+            #    self.shape = ()
         else:
             self.shape = ()
+            self.dims = slice(None)
         if name is None:
             self.name = self.__class__.__name__
         else:
@@ -47,7 +55,10 @@ class Hypers:
         self.hypers = []
 
     def __str__(self):
-        return str(self.__class__.__name__)+'[h='+str(self.hypers) + ']'
+        if len(self.hypers) is 0:
+            return str(self.__class__.__name__)
+        else:
+            return str(self.__class__.__name__)+'[h='+str(self.hypers) + ']'
     __repr__ = __str__
 
     def check_hypers(self, parent=''):
@@ -56,15 +67,17 @@ class Hypers:
     def default_hypers(self, x=None, y=None):
         return {}
 
+    def default_hypers_dims(self, x=None, y=None):
+        return self.default_hypers(x[:, self.dims], y)
 
     @staticmethod
     def Flat(name, shape=(), testval=zeros):
         with modelcontext():
-            return pm.Flat(name, shape=shape,testval=testval(shape),dtype=th.config.floatX)
+            return pm.Flat(name, shape=shape, testval=testval(shape), dtype=th.config.floatX)
     @staticmethod
     def ExpFlat(name, shape=(), testval=zeros):
         with modelcontext():
-            return tt.exp(pm.Flat(name, shape=shape, testval=testval(shape),dtype=th.config.floatX))
+            return tt.exp(pm.Flat(name, shape=shape, testval=testval(shape), dtype=th.config.floatX))
     @staticmethod
     def FlatExp(name, shape=(), testval=ones):
         with modelcontext():
@@ -76,4 +89,4 @@ class Hypers:
     @staticmethod
     def Exponential(name, lam=ones, shape=(), testval=ones):
         with modelcontext():
-            return pm.Exponential(name, shape=shape,lam=lam(shape), testval=testval(shape), dtype=th.config.floatX)
+            return pm.Exponential(name, shape=shape, lam=lam(shape), testval=testval(shape), dtype=th.config.floatX)

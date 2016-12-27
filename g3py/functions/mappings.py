@@ -46,8 +46,8 @@ class MappingOperation(Mapping):
         self.m2.check_hypers(parent=parent)
         self.hypers = self.m1.hypers + self.m2.hypers
 
-    def default_hypers(self, x=None, y=None):
-        return {**self.m1.default_hypers(x, y), **self.m2.default_hypers(x, y)}
+    def default_hypers_dims(self, x=None, y=None):
+        return {**self.m1.default_hypers_dims(x, y), **self.m2.default_hypers_dims(x, y)}
 
     def __str__(self):
         return str(self.m1) + " "+self.op+" " + str(self.m2)

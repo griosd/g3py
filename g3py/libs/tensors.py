@@ -7,7 +7,6 @@ from IPython.display import Image
 th.config.on_unused_input = 'ignore'
 
 
-
 def debug(x, name=''):
     if th.config.mode in ['NanGuardMode', 'DebugMode']:
         return th.printing.Print(name)(x)
@@ -15,8 +14,8 @@ def debug(x, name=''):
         return x
 
 
-def makefn(vars, fn):
-    return th.function(vars, fn, allow_input_downcast=True, on_unused_input='ignore')
+def makefn(th_vars, fn):
+    return th.function(th_vars, fn, allow_input_downcast=True, on_unused_input='ignore')
 
 
 def show_graph(f, name='temp.png'):

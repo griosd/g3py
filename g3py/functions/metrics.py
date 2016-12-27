@@ -10,7 +10,10 @@ class Metric(Hypers):
         return tt.abs_(x1 - x2)
 
     def gram(self, x1, x2):
-        return tt_to_num(self(x1.dimshuffle([0, 'x']), x2.dimshuffle(['x', 0])))
+        try:
+            return tt_to_num(self(x1[:, self.dims].dimshuffle([0, 'x', 1]), x2[:, self.dims].dimshuffle(['x', 0, 1])))
+        except ValueError:
+            return tt_to_num(self(x1[:, self.dims].dimshuffle([0, 'x']), x2[:, self.dims].dimshuffle(['x', 0])))
 
     def __str__(self):
         return str(self.__class__.__name__) + '[h=' + str(self.hypers) + ']'
@@ -24,7 +27,7 @@ class Delta(Metric):
 
 class Minimum(Metric):
     def __call__(self, x1, x2):
-        return tt.minimum(x1-x2*0, x2-x1*0)
+        return tt.prod(tt.minimum(x1-x2*0, x2-x1*0))
 
 
 class Difference(Metric):
@@ -34,12 +37,12 @@ class Difference(Metric):
 
 class L1(Metric):
     def __call__(self, x1, x2):
-        return tt.abs_(x1 - x2)
+        return tt.sum(tt.abs_(x1 - x2))
 
 
 class L2(Metric):
     def __call__(self, x1, x2):
-        return ((x1 - x2)**2)/2
+        return tt.sum(0.5*(x1 - x2)**2)
 
 
 class ARD(Metric):
@@ -56,18 +59,18 @@ class ARD(Metric):
 
 class ARD_L1(ARD):
     def __call__(self, x1, x2):
-        return tt.abs_(x1 - x2) / self.scales
+        return tt.dot(tt.abs_(x1 - x2), 1 / self.scales)
 
     def default_hypers(self, x=None, y=None):
-        return {self.scales: np.abs(x[1:]-x[:-1]).mean()}
+        return {self.scales: np.abs(x[1:]-x[:-1]).mean(axis=0)}
 
 
 class ARD_L2(ARD):
     def __call__(self, x1, x2):
-        return ((x1 - x2) ** 2) / (2 * self.scales**2)
+        return tt.dot((x1 - x2) ** 2, 1 / (2 * self.scales**2))
 
     def default_hypers(self, x=None, y=None):
-        return {self.scales: np.abs(x[1:]-x[:-1]).mean()}
+        return {self.scales: np.abs(x[1:]-x[:-1]).mean(axis=0)}
 
 
 class ARD_Dot(ARD):
@@ -75,7 +78,7 @@ class ARD_Dot(ARD):
         return tt.dot(x1/self.scales, x2/self.scales)
 
     def default_hypers(self, x=None, y=None):
-        return {self.scales: np.abs(x).mean()}
+        return {self.scales: (np.sqrt(np.abs(y)).mean(axis=0))/np.abs(x).mean(axis=0)}
 
 
 class ARD_DotBias(ARD):
@@ -93,4 +96,5 @@ class ARD_DotBias(ARD):
         return self.bias + tt.dot(x1/self.scales, x2/self.scales)
 
     def default_hypers(self, x=None, y=None):
-        return {self.bias: (np.abs(y).mean())/np.abs(x).mean(), self.scales: (np.sqrt(np.abs(y)).mean())/np.abs(x).mean()}
+        return {self.bias: (np.abs(y).mean(axis=0))/np.abs(x).mean(axis=0),
+                self.scales: (np.sqrt(np.abs(y)).mean(axis=0))/np.abs(x).mean(axis=0)}
