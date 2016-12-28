@@ -1,0 +1,387 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>g3py.models &mdash; g3py 1.0.0 documentation</title>
+  
+
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  
+
+  
+
+  
+        <link rel="index" title="Index"
+              href="../../genindex.html"/>
+        <link rel="search" title="Search" href="../../search.html"/>
+    <link rel="top" title="g3py 1.0.0 documentation" href="../../index.html"/>
+        <link rel="up" title="Module code" href="../index.html"/> 
+
+  
+  <script src="../../_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="../../index.html" class="icon icon-home"> g3py
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                1.0.0
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+                <!-- Local TOC -->
+                <div class="local-toc"></div>
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="../../index.html">g3py</a>
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../../index.html">Docs</a> &raquo;</li>
+      
+          <li><a href="../index.html">Module code</a> &raquo;</li>
+      
+    <li>g3py.models</li>
+      <li class="wy-breadcrumbs-aside">
+        
+          
+        
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for g3py.models</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">pymc3</span> <span class="k">as</span> <span class="nn">pm</span>
+<span class="kn">import</span> <span class="nn">scipy</span> <span class="k">as</span> <span class="nn">sp</span>
+<span class="kn">import</span> <span class="nn">theano</span> <span class="k">as</span> <span class="nn">th</span>
+<span class="kn">import</span> <span class="nn">theano.tensor</span> <span class="k">as</span> <span class="nn">tt</span>
+<span class="kn">import</span> <span class="nn">theano.tensor.nlinalg</span> <span class="k">as</span> <span class="nn">nL</span>
+<span class="kn">import</span> <span class="nn">theano.tensor.slinalg</span> <span class="k">as</span> <span class="nn">sL</span>
+<span class="kn">from</span> <span class="nn">pymc3.distributions.distribution</span> <span class="k">import</span> <span class="n">generate_samples</span>
+<span class="kn">from</span> <span class="nn">scipy.stats._multivariate</span> <span class="k">import</span> <span class="n">multivariate_normal</span>
+
+<span class="kn">from</span> <span class="nn">.libs.tensors</span> <span class="k">import</span> <span class="n">cholesky_robust</span><span class="p">,</span> <span class="n">tt_to_num</span><span class="p">,</span> <span class="n">debug</span>
+
+
+<div class="viewcode-block" id="Model"><a class="viewcode-back" href="../../g3py.html#g3py.models.Model">[docs]</a><span class="k">class</span> <span class="nc">Model</span><span class="p">(</span><span class="n">pm</span><span class="o">.</span><span class="n">Model</span><span class="p">):</span>
+
+    <span class="nd">@classmethod</span>
+<div class="viewcode-block" id="Model.get_contexts"><a class="viewcode-back" href="../../g3py.html#g3py.models.Model.get_contexts">[docs]</a>    <span class="k">def</span> <span class="nf">get_contexts</span><span class="p">(</span><span class="n">cls</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">pm</span><span class="o">.</span><span class="n">Model</span><span class="o">.</span><span class="n">get_contexts</span><span class="p">()</span></div>
+
+    <span class="nd">@classmethod</span>
+<div class="viewcode-block" id="Model.get_context"><a class="viewcode-back" href="../../g3py.html#g3py.models.Model.get_context">[docs]</a>    <span class="k">def</span> <span class="nf">get_context</span><span class="p">(</span><span class="n">cls</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">pm</span><span class="o">.</span><span class="n">Model</span><span class="o">.</span><span class="n">get_context</span><span class="p">()</span></div>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">prior</span> <span class="o">=</span> <span class="kc">False</span>
+
+<div class="viewcode-block" id="Model.use_prior"><a class="viewcode-back" href="../../g3py.html#g3py.models.Model.use_prior">[docs]</a>    <span class="k">def</span> <span class="nf">use_prior</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">prior</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">prior</span> <span class="o">=</span> <span class="n">prior</span></div>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">logpt</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">prior</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">log_posterior_t</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">log_likelihood_t</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">log_posterior_t</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Theano scalar of log-posterior of the model&quot;&quot;&quot;</span>
+        <span class="n">factors</span> <span class="o">=</span> <span class="p">[</span><span class="n">var</span><span class="o">.</span><span class="n">logpt</span> <span class="k">for</span> <span class="n">var</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">basic_RVs</span><span class="p">]</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">potentials</span>
+        <span class="k">return</span> <span class="n">tt</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="o">*</span><span class="nb">map</span><span class="p">(</span><span class="n">tt</span><span class="o">.</span><span class="n">sum</span><span class="p">,</span> <span class="n">factors</span><span class="p">))</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">log_likelihood_t</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Theano scalar of log-likelihood of the model&quot;&quot;&quot;</span>
+        <span class="n">factors</span> <span class="o">=</span> <span class="p">[</span><span class="n">var</span><span class="o">.</span><span class="n">logpt</span> <span class="k">for</span> <span class="n">var</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">observed_RVs</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">tt</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="o">*</span><span class="nb">map</span><span class="p">(</span><span class="n">tt</span><span class="o">.</span><span class="n">sum</span><span class="p">,</span> <span class="n">factors</span><span class="p">))</span></div>
+
+
+<div class="viewcode-block" id="TGPDist"><a class="viewcode-back" href="../../g3py.html#g3py.models.TGPDist">[docs]</a><span class="k">class</span> <span class="nc">TGPDist</span><span class="p">(</span><span class="n">pm</span><span class="o">.</span><span class="n">Continuous</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mu</span><span class="p">,</span> <span class="n">cov</span><span class="p">,</span> <span class="n">mapping</span><span class="p">,</span> <span class="n">tgp</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mean</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">median</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">mu</span> <span class="o">=</span> <span class="n">mu</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cov</span> <span class="o">=</span> <span class="n">cov</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mapping</span> <span class="o">=</span> <span class="n">mapping</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tgp</span> <span class="o">=</span> <span class="n">tgp</span>
+
+<div class="viewcode-block" id="TGPDist.logp_cov"><a class="viewcode-back" href="../../g3py.html#g3py.models.TGPDist.logp_cov">[docs]</a>    <span class="k">def</span> <span class="nf">logp_cov</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>  <span class="c1"># es más rápido pero se cae</span>
+        <span class="n">delta</span> <span class="o">=</span> <span class="n">tt_to_num</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mapping</span><span class="o">.</span><span class="n">inv</span><span class="p">(</span><span class="n">value</span><span class="p">))</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">mu</span>
+        <span class="k">return</span> <span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">(</span><span class="mf">0.5</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="n">tt</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">nL</span><span class="o">.</span><span class="n">det</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cov</span><span class="p">))</span> <span class="o">+</span> <span class="n">delta</span><span class="o">.</span><span class="n">T</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">sL</span><span class="o">.</span><span class="n">solve</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cov</span><span class="p">,</span> <span class="n">delta</span><span class="p">))</span>
+                                   <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">cov</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">th</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">floatX</span><span class="p">)</span> <span class="o">*</span> <span class="n">tt</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">(</span><span class="mf">2.0</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">)))</span> \
+               <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">mapping</span><span class="o">.</span><span class="n">logdet_dinv</span><span class="p">(</span><span class="n">value</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="TGPDist.logp_cho"><a class="viewcode-back" href="../../g3py.html#g3py.models.TGPDist.logp_cho">[docs]</a>    <span class="k">def</span> <span class="nf">logp_cho</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="n">delta</span> <span class="o">=</span> <span class="n">tt_to_num</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mapping</span><span class="o">.</span><span class="n">inv</span><span class="p">(</span><span class="n">value</span><span class="p">))</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">mu</span>
+        <span class="n">L</span> <span class="o">=</span> <span class="n">sL</span><span class="o">.</span><span class="n">solve_lower_triangular</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cho</span><span class="p">,</span> <span class="n">delta</span><span class="p">)</span>
+        <span class="k">return</span> <span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">(</span><span class="mf">0.5</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cov</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">th</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">floatX</span><span class="p">)</span> <span class="o">*</span> <span class="n">tt</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">(</span><span class="mf">2.0</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">))</span>
+                                   <span class="o">+</span> <span class="n">L</span><span class="o">.</span><span class="n">T</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">L</span><span class="p">))</span> <span class="o">-</span> <span class="n">tt</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">tt</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">nL</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cho</span><span class="p">)))</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">mapping</span><span class="o">.</span><span class="n">logdet_dinv</span><span class="p">(</span><span class="n">value</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="TGPDist.logp"><a class="viewcode-back" href="../../g3py.html#g3py.models.TGPDist.logp">[docs]</a>    <span class="k">def</span> <span class="nf">logp</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="k">if</span> <span class="kc">False</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">tt_to_num</span><span class="p">(</span><span class="n">debug</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">logp_cov</span><span class="p">(</span><span class="n">value</span><span class="p">),</span> <span class="s1">&#39;logp_cov&#39;</span><span class="p">),</span> <span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">inf</span><span class="p">,</span> <span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">inf</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">tt_to_num</span><span class="p">(</span><span class="n">debug</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">logp_cho</span><span class="p">(</span><span class="n">value</span><span class="p">),</span> <span class="s1">&#39;logp_cho&#39;</span><span class="p">),</span> <span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">inf</span><span class="p">,</span> <span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">inf</span><span class="p">)</span></div>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">cho</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">cholesky_robust</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cov</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">sp</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">LinAlgError</span><span class="p">(</span><span class="s2">&quot;not cholesky&quot;</span><span class="p">)</span>
+
+<div class="viewcode-block" id="TGPDist.random"><a class="viewcode-back" href="../../g3py.html#g3py.models.TGPDist.random">[docs]</a>    <span class="k">def</span> <span class="nf">random</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">point</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="n">point</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">tgp</span><span class="o">.</span><span class="n">point</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tgp</span><span class="p">,</span> <span class="n">point</span><span class="p">)</span>
+        <span class="n">mu</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">tgp</span><span class="o">.</span><span class="n">compiles</span><span class="p">[</span><span class="s1">&#39;mean&#39;</span><span class="p">](</span><span class="o">**</span><span class="n">point</span><span class="p">)</span>
+        <span class="n">cov</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">tgp</span><span class="o">.</span><span class="n">compiles</span><span class="p">[</span><span class="s1">&#39;covariance&#39;</span><span class="p">](</span><span class="o">**</span><span class="n">point</span><span class="p">)</span>
+
+        <span class="k">def</span> <span class="nf">_random</span><span class="p">(</span><span class="n">mean</span><span class="p">,</span> <span class="n">cov</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">compiles</span><span class="p">[</span><span class="s1">&#39;trans&#39;</span><span class="p">](</span><span class="n">multivariate_normal</span><span class="o">.</span><span class="n">rvs</span><span class="p">(</span><span class="n">mean</span><span class="p">,</span> <span class="n">cov</span><span class="p">,</span> <span class="kc">None</span> <span class="k">if</span> <span class="n">size</span> <span class="o">==</span> <span class="n">mean</span><span class="o">.</span><span class="n">shape</span> <span class="k">else</span> <span class="n">size</span><span class="p">),</span> <span class="o">**</span><span class="n">point</span><span class="p">)</span>
+        <span class="n">samples</span> <span class="o">=</span> <span class="n">generate_samples</span><span class="p">(</span><span class="n">_random</span><span class="p">,</span> <span class="n">mean</span><span class="o">=</span><span class="n">mu</span><span class="p">,</span> <span class="n">cov</span><span class="o">=</span><span class="n">cov</span><span class="p">,</span> <span class="n">dist_shape</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="n">broadcast_shape</span><span class="o">=</span><span class="n">mu</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="n">size</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">samples</span></div></div>
+
+
+<div class="viewcode-block" id="ConstantStep"><a class="viewcode-back" href="../../g3py.html#g3py.models.ConstantStep">[docs]</a><span class="k">class</span> <span class="nc">ConstantStep</span><span class="p">(</span><span class="n">pm</span><span class="o">.</span><span class="n">step_methods</span><span class="o">.</span><span class="n">arraystep</span><span class="o">.</span><span class="n">ArrayStep</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Dummy sampler that returns the current value at every iteration. Useful for</span>
+<span class="sd">    fixing parameters at a particular value.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    vars : list</span>
+<span class="sd">    List of variables for sampler.</span>
+<span class="sd">    model : PyMC Model</span>
+<span class="sd">    Optional model for sampling step. Defaults to None (taken from context).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">vars</span><span class="p">,</span> <span class="n">model</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="n">model</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">modelcontext</span><span class="p">(</span><span class="n">model</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">model</span> <span class="o">=</span> <span class="n">model</span>
+        <span class="nb">vars</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">inputvars</span><span class="p">(</span><span class="nb">vars</span><span class="p">)</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">ConstantStep</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="nb">vars</span><span class="p">,</span> <span class="p">[</span><span class="n">model</span><span class="o">.</span><span class="n">fastlogp</span><span class="p">],</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+<div class="viewcode-block" id="ConstantStep.astep"><a class="viewcode-back" href="../../g3py.html#g3py.models.ConstantStep.astep">[docs]</a>    <span class="k">def</span> <span class="nf">astep</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">q0</span><span class="p">,</span> <span class="n">logp</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">q0</span></div></div>
+
+
+<div class="viewcode-block" id="RobustSlice"><a class="viewcode-back" href="../../g3py.html#g3py.models.RobustSlice">[docs]</a><span class="k">class</span> <span class="nc">RobustSlice</span><span class="p">(</span><span class="n">pm</span><span class="o">.</span><span class="n">step_methods</span><span class="o">.</span><span class="n">arraystep</span><span class="o">.</span><span class="n">ArrayStep</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Univariate slice sampler step method</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    vars : list</span>
+<span class="sd">        List of variables for sampler.</span>
+<span class="sd">    w : float</span>
+<span class="sd">        Initial width of slice (Defaults to 1).</span>
+<span class="sd">    tune : bool</span>
+<span class="sd">        Flag for tuning (Defaults to True).</span>
+<span class="sd">    model : PyMC Model</span>
+<span class="sd">        Optional model for sampling step. Defaults to None (taken from context).</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">default_blocked</span> <span class="o">=</span> <span class="kc">False</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">vars</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">w</span><span class="o">=</span><span class="mf">1.</span><span class="p">,</span> <span class="n">tune</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">model</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">max_iter</span><span class="o">=</span><span class="mi">25</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">model</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">modelcontext</span><span class="p">(</span><span class="n">model</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">w</span> <span class="o">=</span> <span class="n">w</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tune</span> <span class="o">=</span> <span class="n">tune</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">w_sum</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">n_tunes</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">max_iter</span> <span class="o">=</span> <span class="n">max_iter</span>
+        <span class="k">if</span> <span class="nb">vars</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="nb">vars</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">cont_vars</span>
+        <span class="nb">vars</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">inputvars</span><span class="p">(</span><span class="nb">vars</span><span class="p">)</span>
+
+        <span class="nb">super</span><span class="p">(</span><span class="n">RobustSlice</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="nb">vars</span><span class="p">,</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">fastlogp</span><span class="p">],</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+<div class="viewcode-block" id="RobustSlice.astep"><a class="viewcode-back" href="../../g3py.html#g3py.models.RobustSlice.astep">[docs]</a>    <span class="k">def</span> <span class="nf">astep</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">q0</span><span class="p">,</span> <span class="n">logp</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">w</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">resize</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">w</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">q0</span><span class="p">))</span>
+        <span class="n">y</span> <span class="o">=</span> <span class="n">logp</span><span class="p">(</span><span class="n">q0</span><span class="p">)</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">standard_exponential</span><span class="p">()</span>
+
+        <span class="c1"># Stepping out procedure</span>
+        <span class="n">q_left</span> <span class="o">=</span> <span class="n">q0</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">w</span><span class="p">)</span>
+        <span class="n">q_right</span> <span class="o">=</span> <span class="n">q_left</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">w</span>
+
+
+        <span class="c1">#print(&#39;q0, log(q0), y=logp(q0)-N(0,1)&#39;,q0, logp(q0), y)</span>
+        <span class="c1">#print(&#39;w, q_left, q_right&#39;,self.w, q_left, q_right)</span>
+        <span class="c1">#print(&#39;y, log(q_left), log(q_right)&#39;,y, logp(q_left), logp(q_right))</span>
+
+        <span class="nb">iter</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">while</span> <span class="p">(</span><span class="n">y</span> <span class="o">&lt;</span> <span class="n">logp</span><span class="p">(</span><span class="n">q_left</span><span class="p">))</span><span class="o">.</span><span class="n">all</span><span class="p">()</span> <span class="ow">and</span> <span class="nb">iter</span><span class="o">&lt;</span><span class="bp">self</span><span class="o">.</span><span class="n">max_iter</span><span class="p">:</span>
+            <span class="n">q_left</span> <span class="o">-=</span> <span class="bp">self</span><span class="o">.</span><span class="n">w</span>
+            <span class="nb">iter</span><span class="o">+=</span><span class="mi">1</span>
+
+        <span class="k">while</span> <span class="p">(</span><span class="n">y</span> <span class="o">&lt;</span> <span class="n">logp</span><span class="p">(</span><span class="n">q_right</span><span class="p">))</span><span class="o">.</span><span class="n">all</span><span class="p">()</span> <span class="ow">and</span> <span class="nb">iter</span><span class="o">&lt;</span><span class="bp">self</span><span class="o">.</span><span class="n">max_iter</span><span class="p">:</span>
+            <span class="n">q_right</span> <span class="o">+=</span> <span class="bp">self</span><span class="o">.</span><span class="n">w</span>
+            <span class="nb">iter</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="k">if</span> <span class="nb">iter</span><span class="o">&gt;=</span><span class="bp">self</span><span class="o">.</span><span class="n">max_iter</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">q0</span>
+
+        <span class="n">q</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="n">q_left</span><span class="p">,</span> <span class="n">q_right</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="n">q_left</span><span class="o">.</span><span class="n">size</span><span class="p">)</span>  <span class="c1"># new variable to avoid copies</span>
+        <span class="k">while</span> <span class="n">logp</span><span class="p">(</span><span class="n">q</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="n">y</span><span class="p">:</span>
+            <span class="c1"># Sample uniformly from slice</span>
+            <span class="k">if</span> <span class="p">(</span><span class="n">q</span> <span class="o">&gt;</span> <span class="n">q0</span><span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">():</span>
+                <span class="n">q_right</span> <span class="o">=</span> <span class="n">q</span>
+            <span class="k">elif</span> <span class="p">(</span><span class="n">q</span> <span class="o">&lt;</span> <span class="n">q0</span><span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">():</span>
+                <span class="n">q_left</span> <span class="o">=</span> <span class="n">q</span>
+            <span class="n">q</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="n">q_left</span><span class="p">,</span> <span class="n">q_right</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="n">q_left</span><span class="o">.</span><span class="n">size</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">tune</span><span class="p">:</span>
+            <span class="c1"># Tune sampler parameters</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">w_sum</span> <span class="o">+=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">q0</span> <span class="o">-</span> <span class="n">q</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">n_tunes</span> <span class="o">+=</span> <span class="mf">1.</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">w</span> <span class="o">=</span> <span class="mf">2.</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">w_sum</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_tunes</span>
+        <span class="k">return</span> <span class="n">q</span></div>
+
+    <span class="nd">@staticmethod</span>
+<div class="viewcode-block" id="RobustSlice.competence"><a class="viewcode-back" href="../../g3py.html#g3py.models.RobustSlice.competence">[docs]</a>    <span class="k">def</span> <span class="nf">competence</span><span class="p">(</span><span class="n">var</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">var</span><span class="o">.</span><span class="n">dtype</span> <span class="ow">in</span> <span class="n">pm</span><span class="o">.</span><span class="n">continuous_types</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">var</span><span class="o">.</span><span class="n">shape</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">pm</span><span class="o">.</span><span class="n">Competence</span><span class="o">.</span><span class="n">PREFERRED</span>
+            <span class="k">return</span> <span class="n">pm</span><span class="o">.</span><span class="n">Competence</span><span class="o">.</span><span class="n">COMPATIBLE</span>
+        <span class="k">return</span> <span class="n">pm</span><span class="o">.</span><span class="n">Competence</span><span class="o">.</span><span class="n">INCOMPATIBLE</span></div></div>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2016, GAMES UChile.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../../',
+            VERSION:'1.0.0',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true
+        };
+    </script>
+      <script type="text/javascript" src="../../_static/jquery.js"></script>
+      <script type="text/javascript" src="../../_static/underscore.js"></script>
+      <script type="text/javascript" src="../../_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="../../_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>

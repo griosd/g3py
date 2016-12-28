@@ -47,6 +47,14 @@ class Model(pm.Model):
         factors = [var.logpt for var in self.observed_RVs]
         return tt.add(*map(tt.sum, factors))
 
+    def dlogp(self, vars=None):
+        """Nan Robust dlogp"""
+        return self.model.fn(tt_to_num(pm.gradient(self.logpt, vars)))
+
+    def fastdlogp(self, vars=None):
+        """Nan Robust fastdlogp"""
+        return self.model.fastfn(tt_to_num(pm.gradient(self.logpt, vars)))
+
 
 class TGPDist(pm.Continuous):
     def __init__(self, mu, cov, mapping, tgp, *args, **kwargs):
@@ -130,6 +138,9 @@ class RobustSlice(pm.step_methods.arraystep.ArrayStep):
     model : PyMC Model
         Optional model for sampling step. Defaults to None (taken from context).
 
+    max_iter: int
+        Max Iterations before to return the same point (Defaults to 25)
+
     """
     default_blocked = False
 
@@ -167,7 +178,7 @@ class RobustSlice(pm.step_methods.arraystep.ArrayStep):
         while (y < logp(q_right)).all() and iter<self.max_iter:
             q_right += self.w
             iter += 1
-        if iter>=self.max_iter:
+        if iter >= self.max_iter:
             return q0
 
         q = np.random.uniform(q_left, q_right, size=q_left.size)  # new variable to avoid copies

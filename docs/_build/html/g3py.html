@@ -1,0 +1,663 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>g3py package &mdash; g3py 1.0.0 documentation</title>
+  
+
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  
+
+  
+
+  
+        <link rel="index" title="Index"
+              href="genindex.html"/>
+        <link rel="search" title="Search" href="search.html"/>
+    <link rel="top" title="g3py 1.0.0 documentation" href="index.html"/> 
+
+  
+  <script src="_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="index.html" class="icon icon-home"> g3py
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                1.0.0
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+                <!-- Local TOC -->
+                <div class="local-toc"><ul>
+<li><a class="reference internal" href="#">g3py package</a><ul>
+<li><a class="reference internal" href="#subpackages">Subpackages</a></li>
+<li><a class="reference internal" href="#submodules">Submodules</a></li>
+<li><a class="reference internal" href="#module-g3py.models">g3py.models module</a></li>
+<li><a class="reference internal" href="#module-g3py.tgp">g3py.tgp module</a></li>
+<li><a class="reference internal" href="#module-g3py">Module contents</a></li>
+</ul>
+</li>
+</ul>
+</div>
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="index.html">g3py</a>
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+ 
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="index.html">Docs</a> &raquo;</li>
+      
+    <li>g3py package</li>
+      <li class="wy-breadcrumbs-aside">
+        
+          
+            <a href="_sources/g3py.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="g3py-package">
+<h1>g3py package<a class="headerlink" href="#g3py-package" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="subpackages">
+<h2>Subpackages<a class="headerlink" href="#subpackages" title="Permalink to this headline">¶</a></h2>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="g3py.functions.html">g3py.functions package</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="g3py.functions.html#submodules">Submodules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="g3py.functions.html#module-g3py.functions.hypers">g3py.functions.hypers module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="g3py.functions.html#module-g3py.functions.kernels">g3py.functions.kernels module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="g3py.functions.html#module-g3py.functions.mappings">g3py.functions.mappings module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="g3py.functions.html#module-g3py.functions.means">g3py.functions.means module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="g3py.functions.html#module-g3py.functions.metrics">g3py.functions.metrics module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="g3py.functions.html#module-g3py.functions">Module contents</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="g3py.libs.html">g3py.libs package</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="g3py.libs.html#submodules">Submodules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="g3py.libs.html#module-g3py.libs.data">g3py.libs.data module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="g3py.libs.html#module-g3py.libs.plots">g3py.libs.plots module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="g3py.libs.html#module-g3py.libs.tensors">g3py.libs.tensors module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="g3py.libs.html#module-g3py.libs.traces">g3py.libs.traces module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="g3py.libs.html#module-g3py.libs">Module contents</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="g3py.sandbox.html">g3py.sandbox package</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="g3py.sandbox.html#submodules">Submodules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="g3py.sandbox.html#module-g3py.sandbox.gpmm">g3py.sandbox.gpmm module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="g3py.sandbox.html#g3py-sandbox-temp-module">g3py.sandbox.temp module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="g3py.sandbox.html#module-g3py.sandbox.tgp">g3py.sandbox.tgp module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="g3py.sandbox.html#module-g3py.sandbox">Module contents</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</div>
+<div class="section" id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="module-g3py.models">
+<span id="g3py-models-module"></span><h2>g3py.models module<a class="headerlink" href="#module-g3py.models" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="g3py.models.ConstantStep">
+<em class="property">class </em><code class="descclassname">g3py.models.</code><code class="descname">ConstantStep</code><span class="sig-paren">(</span><em>vars</em>, <em>model=None</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/models.html#ConstantStep"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.models.ConstantStep" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">pymc3.step_methods.arraystep.ArrayStep</span></code></p>
+<p>Dummy sampler that returns the current value at every iteration. Useful for
+fixing parameters at a particular value.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>vars</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#list" title="(in Python v2.7)"><em>list</em></a>) &#8211; </li>
+<li><strong>of variables for sampler.</strong> (<em>List</em>) &#8211; </li>
+<li><strong>model</strong> (<em>PyMC Model</em>) &#8211; </li>
+<li><strong>model for sampling step. Defaults to None (taken from context).</strong> (<em>Optional</em>) &#8211; </li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="g3py.models.ConstantStep.astep">
+<code class="descname">astep</code><span class="sig-paren">(</span><em>q0</em>, <em>logp</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/models.html#ConstantStep.astep"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.models.ConstantStep.astep" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="g3py.models.Model">
+<em class="property">class </em><code class="descclassname">g3py.models.</code><code class="descname">Model</code><span class="sig-paren">(</span><em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/models.html#Model"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.models.Model" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">pymc3.model.Model</span></code></p>
+<dl class="classmethod">
+<dt id="g3py.models.Model.get_context">
+<em class="property">classmethod </em><code class="descname">get_context</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/models.html#Model.get_context"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.models.Model.get_context" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="classmethod">
+<dt id="g3py.models.Model.get_contexts">
+<em class="property">classmethod </em><code class="descname">get_contexts</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/models.html#Model.get_contexts"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.models.Model.get_contexts" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="g3py.models.Model.log_likelihood_t">
+<code class="descname">log_likelihood_t</code><a class="headerlink" href="#g3py.models.Model.log_likelihood_t" title="Permalink to this definition">¶</a></dt>
+<dd><p>Theano scalar of log-likelihood of the model</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="g3py.models.Model.log_posterior_t">
+<code class="descname">log_posterior_t</code><a class="headerlink" href="#g3py.models.Model.log_posterior_t" title="Permalink to this definition">¶</a></dt>
+<dd><p>Theano scalar of log-posterior of the model</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="g3py.models.Model.logpt">
+<code class="descname">logpt</code><a class="headerlink" href="#g3py.models.Model.logpt" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="g3py.models.Model.use_prior">
+<code class="descname">use_prior</code><span class="sig-paren">(</span><em>prior=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/models.html#Model.use_prior"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.models.Model.use_prior" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="g3py.models.RobustSlice">
+<em class="property">class </em><code class="descclassname">g3py.models.</code><code class="descname">RobustSlice</code><span class="sig-paren">(</span><em>vars=None</em>, <em>w=1.0</em>, <em>tune=True</em>, <em>model=None</em>, <em>max_iter=25</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/models.html#RobustSlice"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.models.RobustSlice" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">pymc3.step_methods.arraystep.ArrayStep</span></code></p>
+<p>Univariate slice sampler step method</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>vars</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#list" title="(in Python v2.7)"><em>list</em></a>) &#8211; List of variables for sampler.</li>
+<li><strong>w</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#float" title="(in Python v2.7)"><em>float</em></a>) &#8211; Initial width of slice (Defaults to 1).</li>
+<li><strong>tune</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#bool" title="(in Python v2.7)"><em>bool</em></a>) &#8211; Flag for tuning (Defaults to True).</li>
+<li><strong>model</strong> (<em>PyMC Model</em>) &#8211; Optional model for sampling step. Defaults to None (taken from context).</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="g3py.models.RobustSlice.astep">
+<code class="descname">astep</code><span class="sig-paren">(</span><em>q0</em>, <em>logp</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/models.html#RobustSlice.astep"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.models.RobustSlice.astep" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="staticmethod">
+<dt id="g3py.models.RobustSlice.competence">
+<em class="property">static </em><code class="descname">competence</code><span class="sig-paren">(</span><em>var</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/models.html#RobustSlice.competence"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.models.RobustSlice.competence" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="g3py.models.RobustSlice.default_blocked">
+<code class="descname">default_blocked</code><em class="property"> = False</em><a class="headerlink" href="#g3py.models.RobustSlice.default_blocked" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="g3py.models.TGPDist">
+<em class="property">class </em><code class="descclassname">g3py.models.</code><code class="descname">TGPDist</code><span class="sig-paren">(</span><em>mu</em>, <em>cov</em>, <em>mapping</em>, <em>tgp</em>, <em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/models.html#TGPDist"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.models.TGPDist" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">pymc3.distributions.distribution.Continuous</span></code></p>
+<dl class="attribute">
+<dt id="g3py.models.TGPDist.cho">
+<code class="descname">cho</code><a class="headerlink" href="#g3py.models.TGPDist.cho" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="g3py.models.TGPDist.logp">
+<code class="descname">logp</code><span class="sig-paren">(</span><em>value</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/models.html#TGPDist.logp"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.models.TGPDist.logp" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="g3py.models.TGPDist.logp_cho">
+<code class="descname">logp_cho</code><span class="sig-paren">(</span><em>value</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/models.html#TGPDist.logp_cho"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.models.TGPDist.logp_cho" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="g3py.models.TGPDist.logp_cov">
+<code class="descname">logp_cov</code><span class="sig-paren">(</span><em>value</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/models.html#TGPDist.logp_cov"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.models.TGPDist.logp_cov" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="g3py.models.TGPDist.random">
+<code class="descname">random</code><span class="sig-paren">(</span><em>point=None</em>, <em>size=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/models.html#TGPDist.random"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.models.TGPDist.random" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-g3py.tgp">
+<span id="g3py-tgp-module"></span><h2>g3py.tgp module<a class="headerlink" href="#module-g3py.tgp" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="g3py.tgp.GP">
+<em class="property">class </em><code class="descclassname">g3py.tgp.</code><code class="descname">GP</code><span class="sig-paren">(</span><em>space</em>, <em>mean</em>, <em>kernel</em>, <em>noise=True</em>, <em>name=None</em>, <em>hidden=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/tgp.html#GP"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.tgp.GP" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#g3py.tgp.TGP" title="g3py.tgp.TGP"><code class="xref py py-class docutils literal"><span class="pre">g3py.tgp.TGP</span></code></a></p>
+</dd></dl>
+
+<dl class="class">
+<dt id="g3py.tgp.TGP">
+<em class="property">class </em><code class="descclassname">g3py.tgp.</code><code class="descname">TGP</code><span class="sig-paren">(</span><em>space</em>, <em>mean: g3py.functions.means.Mean</em>, <em>kernel: g3py.functions.kernels.Kernel</em>, <em>mapping: g3py.functions.mappings.Mapping</em>, <em>noise=True</em>, <em>name=None</em>, <em>hidden=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/tgp.html#TGP"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.tgp.TGP" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/2/library/functions.html#object" title="(in Python v2.7)"><code class="xref py py-class docutils literal"><span class="pre">object</span></code></a></p>
+<dl class="method">
+<dt id="g3py.tgp.TGP.check_hypers">
+<code class="descname">check_hypers</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/tgp.html#TGP.check_hypers"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.tgp.TGP.check_hypers" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="g3py.tgp.TGP.compile">
+<code class="descname">compile</code><span class="sig-paren">(</span><em>index=0</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/tgp.html#TGP.compile"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.tgp.TGP.compile" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="g3py.tgp.TGP.compile_distributions">
+<code class="descname">compile_distributions</code><span class="sig-paren">(</span><em>index=0</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/tgp.html#TGP.compile_distributions"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.tgp.TGP.compile_distributions" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="g3py.tgp.TGP.compile_functions">
+<code class="descname">compile_functions</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/tgp.html#TGP.compile_functions"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.tgp.TGP.compile_functions" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="g3py.tgp.TGP.compile_samplers">
+<code class="descname">compile_samplers</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/tgp.html#TGP.compile_samplers"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.tgp.TGP.compile_samplers" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="g3py.tgp.TGP.default_hypers">
+<code class="descname">default_hypers</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/tgp.html#TGP.default_hypers"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.tgp.TGP.default_hypers" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="g3py.tgp.TGP.describe">
+<code class="descname">describe</code><span class="sig-paren">(</span><em>title</em>, <em>x</em>, <em>y</em>, <em>text=''</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/tgp.html#TGP.describe"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.tgp.TGP.describe" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="g3py.tgp.TGP.eval_default">
+<code class="descname">eval_default</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/tgp.html#TGP.eval_default"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.tgp.TGP.eval_default" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="g3py.tgp.TGP.find_MAP">
+<code class="descname">find_MAP</code><span class="sig-paren">(</span><em>start=None</em>, <em>points=1</em>, <em>plot=False</em>, <em>samples=0</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/tgp.html#TGP.find_MAP"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.tgp.TGP.find_MAP" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="g3py.tgp.TGP.find_default">
+<code class="descname">find_default</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/tgp.html#TGP.find_default"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.tgp.TGP.find_default" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="g3py.tgp.TGP.fix_params">
+<code class="descname">fix_params</code><span class="sig-paren">(</span><em>fixed_params</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/tgp.html#TGP.fix_params"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.tgp.TGP.fix_params" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="g3py.tgp.TGP.fixed_vars">
+<code class="descname">fixed_vars</code><a class="headerlink" href="#g3py.tgp.TGP.fixed_vars" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="staticmethod">
+<dt id="g3py.tgp.TGP.gauss_hermite">
+<em class="property">static </em><code class="descname">gauss_hermite</code><span class="sig-paren">(</span><em>f</em>, <em>mu</em>, <em>sigma</em>, <em>a</em>, <em>w</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/tgp.html#TGP.gauss_hermite"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.tgp.TGP.gauss_hermite" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="g3py.tgp.TGP.get_params">
+<code class="descname">get_params</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/tgp.html#TGP.get_params"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.tgp.TGP.get_params" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="g3py.tgp.TGP.get_point">
+<code class="descname">get_point</code><span class="sig-paren">(</span><em>trace</em>, <em>i</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/tgp.html#TGP.get_point"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.tgp.TGP.get_point" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="g3py.tgp.TGP.marginal_gp">
+<code class="descname">marginal_gp</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/tgp.html#TGP.marginal_gp"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.tgp.TGP.marginal_gp" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="g3py.tgp.TGP.marginal_tgp">
+<code class="descname">marginal_tgp</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/tgp.html#TGP.marginal_tgp"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.tgp.TGP.marginal_tgp" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="g3py.tgp.TGP.observed">
+<code class="descname">observed</code><span class="sig-paren">(</span><em>inputs</em>, <em>outputs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/tgp.html#TGP.observed"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.tgp.TGP.observed" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="g3py.tgp.TGP.plot_cov">
+<code class="descname">plot_cov</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/tgp.html#TGP.plot_cov"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.tgp.TGP.plot_cov" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="g3py.tgp.TGP.plot_data">
+<code class="descname">plot_data</code><span class="sig-paren">(</span><em>big=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/tgp.html#TGP.plot_data"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.tgp.TGP.plot_data" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="g3py.tgp.TGP.plot_data_big">
+<code class="descname">plot_data_big</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/tgp.html#TGP.plot_data_big"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.tgp.TGP.plot_data_big" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="g3py.tgp.TGP.plot_data_normal">
+<code class="descname">plot_data_normal</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/tgp.html#TGP.plot_data_normal"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.tgp.TGP.plot_data_normal" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="g3py.tgp.TGP.plot_gp">
+<code class="descname">plot_gp</code><span class="sig-paren">(</span><em>params</em>, <em>title=None</em>, <em>samples=0</em>, <em>big=True</em>, <em>scores=False</em>, <em>loc=1</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/tgp.html#TGP.plot_gp"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.tgp.TGP.plot_gp" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="g3py.tgp.TGP.plot_gp_moments">
+<code class="descname">plot_gp_moments</code><span class="sig-paren">(</span><em>params</em>, <em>sigma=1.96</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/tgp.html#TGP.plot_gp_moments"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.tgp.TGP.plot_gp_moments" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="g3py.tgp.TGP.plot_gp_samples">
+<code class="descname">plot_gp_samples</code><span class="sig-paren">(</span><em>params</em>, <em>samples=1</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/tgp.html#TGP.plot_gp_samples"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.tgp.TGP.plot_gp_samples" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="g3py.tgp.TGP.plot_model">
+<code class="descname">plot_model</code><span class="sig-paren">(</span><em>**params</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/tgp.html#TGP.plot_model"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.tgp.TGP.plot_model" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="g3py.tgp.TGP.plot_space">
+<code class="descname">plot_space</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/tgp.html#TGP.plot_space"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.tgp.TGP.plot_space" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="g3py.tgp.TGP.plot_tgp">
+<code class="descname">plot_tgp</code><span class="sig-paren">(</span><em>params</em>, <em>title=None</em>, <em>samples=0</em>, <em>big=True</em>, <em>scores=False</em>, <em>loc=1</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/tgp.html#TGP.plot_tgp"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.tgp.TGP.plot_tgp" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="g3py.tgp.TGP.plot_tgp_moments">
+<code class="descname">plot_tgp_moments</code><span class="sig-paren">(</span><em>params</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/tgp.html#TGP.plot_tgp_moments"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.tgp.TGP.plot_tgp_moments" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="g3py.tgp.TGP.plot_tgp_quantiles">
+<code class="descname">plot_tgp_quantiles</code><span class="sig-paren">(</span><em>params</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/tgp.html#TGP.plot_tgp_quantiles"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.tgp.TGP.plot_tgp_quantiles" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="g3py.tgp.TGP.plot_tgp_samples">
+<code class="descname">plot_tgp_samples</code><span class="sig-paren">(</span><em>params</em>, <em>samples=1</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/tgp.html#TGP.plot_tgp_samples"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.tgp.TGP.plot_tgp_samples" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="g3py.tgp.TGP.plot_tgp_trace">
+<code class="descname">plot_tgp_trace</code><span class="sig-paren">(</span><em>trace</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/tgp.html#TGP.plot_tgp_trace"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.tgp.TGP.plot_tgp_trace" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="g3py.tgp.TGP.plot_tgp_widget">
+<code class="descname">plot_tgp_widget</code><span class="sig-paren">(</span><em>**params</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/tgp.html#TGP.plot_tgp_widget"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.tgp.TGP.plot_tgp_widget" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="g3py.tgp.TGP.plot_trace">
+<code class="descname">plot_trace</code><span class="sig-paren">(</span><em>id_trace=0</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/tgp.html#TGP.plot_trace"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.tgp.TGP.plot_trace" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="g3py.tgp.TGP.point">
+<code class="descname">point</code><span class="sig-paren">(</span><em>point</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/tgp.html#TGP.point"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.tgp.TGP.point" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="g3py.tgp.TGP.point_to_In">
+<code class="descname">point_to_In</code><span class="sig-paren">(</span><em>point</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/tgp.html#TGP.point_to_In"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.tgp.TGP.point_to_In" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="g3py.tgp.TGP.point_to_eval">
+<code class="descname">point_to_eval</code><span class="sig-paren">(</span><em>point</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/tgp.html#TGP.point_to_eval"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.tgp.TGP.point_to_eval" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="g3py.tgp.TGP.posterior_gp">
+<code class="descname">posterior_gp</code><span class="sig-paren">(</span><em>cov=False</em>, <em>noise=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/tgp.html#TGP.posterior_gp"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.tgp.TGP.posterior_gp" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="g3py.tgp.TGP.posterior_moments_tgp">
+<code class="descname">posterior_moments_tgp</code><span class="sig-paren">(</span><em>n=20</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/tgp.html#TGP.posterior_moments_tgp"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.tgp.TGP.posterior_moments_tgp" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="g3py.tgp.TGP.posterior_quantiles_tgp">
+<code class="descname">posterior_quantiles_tgp</code><span class="sig-paren">(</span><em>sigma=1.96</em>, <em>noise=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/tgp.html#TGP.posterior_quantiles_tgp"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.tgp.TGP.posterior_quantiles_tgp" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="g3py.tgp.TGP.prior_gp">
+<code class="descname">prior_gp</code><span class="sig-paren">(</span><em>cov=False</em>, <em>noise=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/tgp.html#TGP.prior_gp"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.tgp.TGP.prior_gp" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="g3py.tgp.TGP.prior_moments_tgp">
+<code class="descname">prior_moments_tgp</code><span class="sig-paren">(</span><em>n=20</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/tgp.html#TGP.prior_moments_tgp"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.tgp.TGP.prior_moments_tgp" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="g3py.tgp.TGP.prior_quantiles_tgp">
+<code class="descname">prior_quantiles_tgp</code><span class="sig-paren">(</span><em>sigma=1.96</em>, <em>noise=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/tgp.html#TGP.prior_quantiles_tgp"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.tgp.TGP.prior_quantiles_tgp" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="g3py.tgp.TGP.sample_hypers">
+<code class="descname">sample_hypers</code><span class="sig-paren">(</span><em>start=None</em>, <em>samples=1000</em>, <em>chains=1</em>, <em>advi=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/tgp.html#TGP.sample_hypers"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.tgp.TGP.sample_hypers" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="g3py.tgp.TGP.sampler_gp">
+<code class="descname">sampler_gp</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/tgp.html#TGP.sampler_gp"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.tgp.TGP.sampler_gp" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="g3py.tgp.TGP.sampler_tgp">
+<code class="descname">sampler_tgp</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/tgp.html#TGP.sampler_tgp"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.tgp.TGP.sampler_tgp" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="g3py.tgp.TGP.sampling_vars">
+<code class="descname">sampling_vars</code><a class="headerlink" href="#g3py.tgp.TGP.sampling_vars" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="g3py.tgp.TGP.scores">
+<code class="descname">scores</code><span class="sig-paren">(</span><em>params</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/tgp.html#TGP.scores"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.tgp.TGP.scores" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="g3py.tgp.TGP.set_space">
+<code class="descname">set_space</code><span class="sig-paren">(</span><em>space</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/tgp.html#TGP.set_space"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.tgp.TGP.set_space" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="g3py.tgp.TGP.swap_test_obs">
+<code class="descname">swap_test_obs</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/tgp.html#TGP.swap_test_obs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.tgp.TGP.swap_test_obs" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="g3py.tgp.TGP.testing">
+<code class="descname">testing</code><span class="sig-paren">(</span><em>inputs</em>, <em>outputs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/tgp.html#TGP.testing"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.tgp.TGP.testing" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="g3py.tgp.TGP.widget_params">
+<code class="descname">widget_params</code><span class="sig-paren">(</span><em>params=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/tgp.html#TGP.widget_params"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.tgp.TGP.widget_params" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="g3py.tgp.TGP.widget_trace">
+<code class="descname">widget_trace</code><span class="sig-paren">(</span><em>trace</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/tgp.html#TGP.widget_trace"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.tgp.TGP.widget_trace" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="g3py.tgp.get_space">
+<code class="descclassname">g3py.tgp.</code><code class="descname">get_space</code><span class="sig-paren">(</span><em>space</em>, <em>name=None</em>, <em>squeeze=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/tgp.html#get_space"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.tgp.get_space" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</div>
+<div class="section" id="module-g3py">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-g3py" title="Permalink to this headline">¶</a></h2>
+</div>
+</div>
+
+
+           </div>
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2016, GAMES UChile.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'./',
+            VERSION:'1.0.0',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true
+        };
+    </script>
+      <script type="text/javascript" src="_static/jquery.js"></script>
+      <script type="text/javascript" src="_static/underscore.js"></script>
+      <script type="text/javascript" src="_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>

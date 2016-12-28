@@ -1,0 +1,996 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>g3py.functions package &mdash; g3py 1.0.0 documentation</title>
+  
+
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  
+
+  
+
+  
+        <link rel="index" title="Index"
+              href="genindex.html"/>
+        <link rel="search" title="Search" href="search.html"/>
+    <link rel="top" title="g3py 1.0.0 documentation" href="index.html"/> 
+
+  
+  <script src="_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="index.html" class="icon icon-home"> g3py
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                1.0.0
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+                <!-- Local TOC -->
+                <div class="local-toc"><ul>
+<li><a class="reference internal" href="#">g3py.functions package</a><ul>
+<li><a class="reference internal" href="#submodules">Submodules</a></li>
+<li><a class="reference internal" href="#module-g3py.functions.hypers">g3py.functions.hypers module</a></li>
+<li><a class="reference internal" href="#module-g3py.functions.kernels">g3py.functions.kernels module</a></li>
+<li><a class="reference internal" href="#module-g3py.functions.mappings">g3py.functions.mappings module</a></li>
+<li><a class="reference internal" href="#module-g3py.functions.means">g3py.functions.means module</a></li>
+<li><a class="reference internal" href="#module-g3py.functions.metrics">g3py.functions.metrics module</a></li>
+<li><a class="reference internal" href="#module-g3py.functions">Module contents</a></li>
+</ul>
+</li>
+</ul>
+</div>
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="index.html">g3py</a>
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+ 
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="index.html">Docs</a> &raquo;</li>
+      
+    <li>g3py.functions package</li>
+      <li class="wy-breadcrumbs-aside">
+        
+          
+            <a href="_sources/g3py.functions.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="g3py-functions-package">
+<h1>g3py.functions package<a class="headerlink" href="#g3py-functions-package" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="module-g3py.functions.hypers">
+<span id="g3py-functions-hypers-module"></span><h2>g3py.functions.hypers module<a class="headerlink" href="#module-g3py.functions.hypers" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="g3py.functions.hypers.Hypers">
+<em class="property">class </em><code class="descclassname">g3py.functions.hypers.</code><code class="descname">Hypers</code><span class="sig-paren">(</span><em>x=None</em>, <em>name=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/hypers.html#Hypers"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.hypers.Hypers" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/2/library/functions.html#object" title="(in Python v2.7)"><code class="xref py py-class docutils literal"><span class="pre">object</span></code></a></p>
+<dl class="staticmethod">
+<dt id="g3py.functions.hypers.Hypers.ExpFlat">
+<em class="property">static </em><code class="descname">ExpFlat</code><span class="sig-paren">(</span><em>name</em>, <em>shape=()</em>, <em>testval=&lt;function zeros&gt;</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/hypers.html#Hypers.ExpFlat"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.hypers.Hypers.ExpFlat" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="staticmethod">
+<dt id="g3py.functions.hypers.Hypers.Exponential">
+<em class="property">static </em><code class="descname">Exponential</code><span class="sig-paren">(</span><em>name</em>, <em>lam=&lt;function ones&gt;</em>, <em>shape=()</em>, <em>testval=&lt;function ones&gt;</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/hypers.html#Hypers.Exponential"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.hypers.Hypers.Exponential" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="staticmethod">
+<dt id="g3py.functions.hypers.Hypers.Flat">
+<em class="property">static </em><code class="descname">Flat</code><span class="sig-paren">(</span><em>name</em>, <em>shape=()</em>, <em>testval=&lt;function zeros&gt;</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/hypers.html#Hypers.Flat"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.hypers.Hypers.Flat" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="staticmethod">
+<dt id="g3py.functions.hypers.Hypers.FlatExp">
+<em class="property">static </em><code class="descname">FlatExp</code><span class="sig-paren">(</span><em>name</em>, <em>shape=()</em>, <em>testval=&lt;function ones&gt;</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/hypers.html#Hypers.FlatExp"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.hypers.Hypers.FlatExp" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="staticmethod">
+<dt id="g3py.functions.hypers.Hypers.FlatExpId">
+<em class="property">static </em><code class="descname">FlatExpId</code><span class="sig-paren">(</span><em>name</em>, <em>shape=()</em>, <em>testval=&lt;function ones&gt;</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/hypers.html#Hypers.FlatExpId"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.hypers.Hypers.FlatExpId" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="g3py.functions.hypers.Hypers.check_hypers">
+<code class="descname">check_hypers</code><span class="sig-paren">(</span><em>parent=''</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/hypers.html#Hypers.check_hypers"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.hypers.Hypers.check_hypers" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="g3py.functions.hypers.Hypers.default_hypers">
+<code class="descname">default_hypers</code><span class="sig-paren">(</span><em>x=None</em>, <em>y=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/hypers.html#Hypers.default_hypers"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.hypers.Hypers.default_hypers" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="g3py.functions.hypers.Hypers.default_hypers_dims">
+<code class="descname">default_hypers_dims</code><span class="sig-paren">(</span><em>x=None</em>, <em>y=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/hypers.html#Hypers.default_hypers_dims"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.hypers.Hypers.default_hypers_dims" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="g3py.functions.hypers.LogIdTransform">
+<em class="property">class </em><code class="descclassname">g3py.functions.hypers.</code><code class="descname">LogIdTransform</code><a class="reference internal" href="_modules/g3py/functions/hypers.html#LogIdTransform"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.hypers.LogIdTransform" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">pymc3.distributions.transforms.ElemwiseTransform</span></code></p>
+<dl class="method">
+<dt id="g3py.functions.hypers.LogIdTransform.backward">
+<code class="descname">backward</code><span class="sig-paren">(</span><em>x</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/hypers.html#LogIdTransform.backward"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.hypers.LogIdTransform.backward" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="g3py.functions.hypers.LogIdTransform.forward">
+<code class="descname">forward</code><span class="sig-paren">(</span><em>x</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/hypers.html#LogIdTransform.forward"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.hypers.LogIdTransform.forward" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="g3py.functions.hypers.LogIdTransform.name">
+<code class="descname">name</code><em class="property"> = 'logid'</em><a class="headerlink" href="#g3py.functions.hypers.LogIdTransform.name" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="g3py.functions.hypers.modelcontext">
+<code class="descclassname">g3py.functions.hypers.</code><code class="descname">modelcontext</code><span class="sig-paren">(</span><em>model=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/hypers.html#modelcontext"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.hypers.modelcontext" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="g3py.functions.hypers.ones">
+<code class="descclassname">g3py.functions.hypers.</code><code class="descname">ones</code><span class="sig-paren">(</span><em>shape</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/hypers.html#ones"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.hypers.ones" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="g3py.functions.hypers.trans_hypers">
+<code class="descclassname">g3py.functions.hypers.</code><code class="descname">trans_hypers</code><span class="sig-paren">(</span><em>hypers</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/hypers.html#trans_hypers"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.hypers.trans_hypers" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="g3py.functions.hypers.zeros">
+<code class="descclassname">g3py.functions.hypers.</code><code class="descname">zeros</code><span class="sig-paren">(</span><em>shape</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/hypers.html#zeros"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.hypers.zeros" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</div>
+<div class="section" id="module-g3py.functions.kernels">
+<span id="g3py-functions-kernels-module"></span><h2>g3py.functions.kernels module<a class="headerlink" href="#module-g3py.functions.kernels" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="g3py.functions.kernels.BW">
+<em class="property">class </em><code class="descclassname">g3py.functions.kernels.</code><code class="descname">BW</code><span class="sig-paren">(</span><em>x</em>, <em>name=None</em>, <em>metric=&lt;class 'g3py.functions.metrics.Minimum'&gt;</em>, <em>var=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/kernels.html#BW"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.kernels.BW" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#g3py.functions.kernels.KernelDot" title="g3py.functions.kernels.KernelDot"><code class="xref py py-class docutils literal"><span class="pre">g3py.functions.kernels.KernelDot</span></code></a></p>
+</dd></dl>
+
+<dl class="class">
+<dt id="g3py.functions.kernels.COS">
+<em class="property">class </em><code class="descclassname">g3py.functions.kernels.</code><code class="descname">COS</code><span class="sig-paren">(</span><em>x</em>, <em>name=None</em>, <em>metric=&lt;class 'g3py.functions.metrics.Difference'&gt;</em>, <em>var=None</em>, <em>periods=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/kernels.html#COS"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.kernels.COS" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#g3py.functions.kernels.KernelPeriodic" title="g3py.functions.kernels.KernelPeriodic"><code class="xref py py-class docutils literal"><span class="pre">g3py.functions.kernels.KernelPeriodic</span></code></a></p>
+<dl class="method">
+<dt id="g3py.functions.kernels.COS.k">
+<code class="descname">k</code><span class="sig-paren">(</span><em>d</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/kernels.html#COS.k"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.kernels.COS.k" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="g3py.functions.kernels.Kernel">
+<em class="property">class </em><code class="descclassname">g3py.functions.kernels.</code><code class="descname">Kernel</code><span class="sig-paren">(</span><em>x</em>, <em>name=None</em>, <em>metric=&lt;class 'g3py.functions.metrics.Delta'&gt;</em>, <em>var=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/kernels.html#Kernel"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.kernels.Kernel" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#g3py.functions.hypers.Hypers" title="g3py.functions.hypers.Hypers"><code class="xref py py-class docutils literal"><span class="pre">g3py.functions.hypers.Hypers</span></code></a></p>
+<dl class="method">
+<dt id="g3py.functions.kernels.Kernel.check_hypers">
+<code class="descname">check_hypers</code><span class="sig-paren">(</span><em>parent=''</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/kernels.html#Kernel.check_hypers"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.kernels.Kernel.check_hypers" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="g3py.functions.kernels.Kernel.cov">
+<code class="descname">cov</code><span class="sig-paren">(</span><em>x1</em>, <em>x2=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/kernels.html#Kernel.cov"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.kernels.Kernel.cov" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="g3py.functions.kernels.Kernel.default_hypers">
+<code class="descname">default_hypers</code><span class="sig-paren">(</span><em>x=None</em>, <em>y=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/kernels.html#Kernel.default_hypers"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.kernels.Kernel.default_hypers" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="g3py.functions.kernels.KernelComposition">
+<em class="property">class </em><code class="descclassname">g3py.functions.kernels.</code><code class="descname">KernelComposition</code><span class="sig-paren">(</span><em>_k1: g3py.functions.kernels.Kernel</em>, <em>_k2: g3py.functions.kernels.Kernel</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/kernels.html#KernelComposition"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.kernels.KernelComposition" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#g3py.functions.kernels.Kernel" title="g3py.functions.kernels.Kernel"><code class="xref py py-class docutils literal"><span class="pre">g3py.functions.kernels.Kernel</span></code></a></p>
+<dl class="method">
+<dt id="g3py.functions.kernels.KernelComposition.check_hypers">
+<code class="descname">check_hypers</code><span class="sig-paren">(</span><em>parent=''</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/kernels.html#KernelComposition.check_hypers"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.kernels.KernelComposition.check_hypers" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="g3py.functions.kernels.KernelComposition.default_hypers_dims">
+<code class="descname">default_hypers_dims</code><span class="sig-paren">(</span><em>x=None</em>, <em>y=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/kernels.html#KernelComposition.default_hypers_dims"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.kernels.KernelComposition.default_hypers_dims" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="g3py.functions.kernels.KernelDot">
+<em class="property">class </em><code class="descclassname">g3py.functions.kernels.</code><code class="descname">KernelDot</code><span class="sig-paren">(</span><em>x</em>, <em>name=None</em>, <em>metric=&lt;class 'g3py.functions.metrics.ARD_Dot'&gt;</em>, <em>var=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/kernels.html#KernelDot"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.kernels.KernelDot" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#g3py.functions.kernels.Kernel" title="g3py.functions.kernels.Kernel"><code class="xref py py-class docutils literal"><span class="pre">g3py.functions.kernels.Kernel</span></code></a></p>
+<dl class="method">
+<dt id="g3py.functions.kernels.KernelDot.cov">
+<code class="descname">cov</code><span class="sig-paren">(</span><em>x1</em>, <em>x2=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/kernels.html#KernelDot.cov"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.kernels.KernelDot.cov" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="g3py.functions.kernels.KernelOperation">
+<em class="property">class </em><code class="descclassname">g3py.functions.kernels.</code><code class="descname">KernelOperation</code><span class="sig-paren">(</span><em>_k: g3py.functions.kernels.Kernel</em>, <em>_element</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/kernels.html#KernelOperation"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.kernels.KernelOperation" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#g3py.functions.kernels.Kernel" title="g3py.functions.kernels.Kernel"><code class="xref py py-class docutils literal"><span class="pre">g3py.functions.kernels.Kernel</span></code></a></p>
+<dl class="method">
+<dt id="g3py.functions.kernels.KernelOperation.check_hypers">
+<code class="descname">check_hypers</code><span class="sig-paren">(</span><em>parent=''</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/kernels.html#KernelOperation.check_hypers"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.kernels.KernelOperation.check_hypers" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="g3py.functions.kernels.KernelOperation.default_hypers_dims">
+<code class="descname">default_hypers_dims</code><span class="sig-paren">(</span><em>x=None</em>, <em>y=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/kernels.html#KernelOperation.default_hypers_dims"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.kernels.KernelOperation.default_hypers_dims" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="g3py.functions.kernels.KernelPeriodic">
+<em class="property">class </em><code class="descclassname">g3py.functions.kernels.</code><code class="descname">KernelPeriodic</code><span class="sig-paren">(</span><em>x</em>, <em>name=None</em>, <em>metric=&lt;class 'g3py.functions.metrics.Difference'&gt;</em>, <em>var=None</em>, <em>periods=None</em>, <em>scales=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/kernels.html#KernelPeriodic"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.kernels.KernelPeriodic" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#g3py.functions.kernels.KernelStationary" title="g3py.functions.kernels.KernelStationary"><code class="xref py py-class docutils literal"><span class="pre">g3py.functions.kernels.KernelStationary</span></code></a></p>
+<dl class="method">
+<dt id="g3py.functions.kernels.KernelPeriodic.check_hypers">
+<code class="descname">check_hypers</code><span class="sig-paren">(</span><em>parent=''</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/kernels.html#KernelPeriodic.check_hypers"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.kernels.KernelPeriodic.check_hypers" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="g3py.functions.kernels.KernelPeriodic.default_hypers">
+<code class="descname">default_hypers</code><span class="sig-paren">(</span><em>x=None</em>, <em>y=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/kernels.html#KernelPeriodic.default_hypers"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.kernels.KernelPeriodic.default_hypers" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="g3py.functions.kernels.KernelProd">
+<em class="property">class </em><code class="descclassname">g3py.functions.kernels.</code><code class="descname">KernelProd</code><span class="sig-paren">(</span><em>_k1: g3py.functions.kernels.Kernel</em>, <em>_k2: g3py.functions.kernels.Kernel</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/kernels.html#KernelProd"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.kernels.KernelProd" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#g3py.functions.kernels.KernelComposition" title="g3py.functions.kernels.KernelComposition"><code class="xref py py-class docutils literal"><span class="pre">g3py.functions.kernels.KernelComposition</span></code></a></p>
+<dl class="method">
+<dt id="g3py.functions.kernels.KernelProd.cov">
+<code class="descname">cov</code><span class="sig-paren">(</span><em>x1</em>, <em>x2=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/kernels.html#KernelProd.cov"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.kernels.KernelProd.cov" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="g3py.functions.kernels.KernelScale">
+<em class="property">class </em><code class="descclassname">g3py.functions.kernels.</code><code class="descname">KernelScale</code><span class="sig-paren">(</span><em>_k: g3py.functions.kernels.Kernel</em>, <em>_element</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/kernels.html#KernelScale"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.kernels.KernelScale" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#g3py.functions.kernels.KernelOperation" title="g3py.functions.kernels.KernelOperation"><code class="xref py py-class docutils literal"><span class="pre">g3py.functions.kernels.KernelOperation</span></code></a></p>
+<dl class="method">
+<dt id="g3py.functions.kernels.KernelScale.cov">
+<code class="descname">cov</code><span class="sig-paren">(</span><em>x1</em>, <em>x2=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/kernels.html#KernelScale.cov"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.kernels.KernelScale.cov" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="g3py.functions.kernels.KernelShift">
+<em class="property">class </em><code class="descclassname">g3py.functions.kernels.</code><code class="descname">KernelShift</code><span class="sig-paren">(</span><em>_k: g3py.functions.kernels.Kernel</em>, <em>_element</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/kernels.html#KernelShift"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.kernels.KernelShift" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#g3py.functions.kernels.KernelOperation" title="g3py.functions.kernels.KernelOperation"><code class="xref py py-class docutils literal"><span class="pre">g3py.functions.kernels.KernelOperation</span></code></a></p>
+<dl class="method">
+<dt id="g3py.functions.kernels.KernelShift.cov">
+<code class="descname">cov</code><span class="sig-paren">(</span><em>x1</em>, <em>x2=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/kernels.html#KernelShift.cov"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.kernels.KernelShift.cov" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="g3py.functions.kernels.KernelStationary">
+<em class="property">class </em><code class="descclassname">g3py.functions.kernels.</code><code class="descname">KernelStationary</code><span class="sig-paren">(</span><em>x</em>, <em>name=None</em>, <em>metric=&lt;class 'g3py.functions.metrics.ARD_L2'&gt;</em>, <em>var=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/kernels.html#KernelStationary"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.kernels.KernelStationary" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#g3py.functions.kernels.Kernel" title="g3py.functions.kernels.Kernel"><code class="xref py py-class docutils literal"><span class="pre">g3py.functions.kernels.Kernel</span></code></a></p>
+<dl class="method">
+<dt id="g3py.functions.kernels.KernelStationary.cov">
+<code class="descname">cov</code><span class="sig-paren">(</span><em>x1</em>, <em>x2=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/kernels.html#KernelStationary.cov"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.kernels.KernelStationary.cov" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="g3py.functions.kernels.KernelStationary.k">
+<code class="descname">k</code><span class="sig-paren">(</span><em>d</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/kernels.html#KernelStationary.k"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.kernels.KernelStationary.k" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="g3py.functions.kernels.KernelStationaryExponential">
+<em class="property">class </em><code class="descclassname">g3py.functions.kernels.</code><code class="descname">KernelStationaryExponential</code><span class="sig-paren">(</span><em>x</em>, <em>name=None</em>, <em>metric=&lt;class 'g3py.functions.metrics.ARD_L2'&gt;</em>, <em>var=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/kernels.html#KernelStationaryExponential"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.kernels.KernelStationaryExponential" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#g3py.functions.kernels.KernelStationary" title="g3py.functions.kernels.KernelStationary"><code class="xref py py-class docutils literal"><span class="pre">g3py.functions.kernels.KernelStationary</span></code></a></p>
+<dl class="method">
+<dt id="g3py.functions.kernels.KernelStationaryExponential.k">
+<code class="descname">k</code><span class="sig-paren">(</span><em>d</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/kernels.html#KernelStationaryExponential.k"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.kernels.KernelStationaryExponential.k" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="g3py.functions.kernels.KernelSum">
+<em class="property">class </em><code class="descclassname">g3py.functions.kernels.</code><code class="descname">KernelSum</code><span class="sig-paren">(</span><em>_k1: g3py.functions.kernels.Kernel</em>, <em>_k2: g3py.functions.kernels.Kernel</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/kernels.html#KernelSum"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.kernels.KernelSum" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#g3py.functions.kernels.KernelComposition" title="g3py.functions.kernels.KernelComposition"><code class="xref py py-class docutils literal"><span class="pre">g3py.functions.kernels.KernelComposition</span></code></a></p>
+<dl class="method">
+<dt id="g3py.functions.kernels.KernelSum.cov">
+<code class="descname">cov</code><span class="sig-paren">(</span><em>x1</em>, <em>x2=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/kernels.html#KernelSum.cov"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.kernels.KernelSum.cov" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="g3py.functions.kernels.LIN">
+<em class="property">class </em><code class="descclassname">g3py.functions.kernels.</code><code class="descname">LIN</code><span class="sig-paren">(</span><em>x</em>, <em>name=None</em>, <em>metric=&lt;class 'g3py.functions.metrics.ARD_DotBias'&gt;</em>, <em>var=1</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/kernels.html#LIN"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.kernels.LIN" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#g3py.functions.kernels.KernelDot" title="g3py.functions.kernels.KernelDot"><code class="xref py py-class docutils literal"><span class="pre">g3py.functions.kernels.KernelDot</span></code></a></p>
+</dd></dl>
+
+<dl class="class">
+<dt id="g3py.functions.kernels.MAT32">
+<em class="property">class </em><code class="descclassname">g3py.functions.kernels.</code><code class="descname">MAT32</code><span class="sig-paren">(</span><em>x</em>, <em>name=None</em>, <em>metric=&lt;class 'g3py.functions.metrics.ARD_L1'&gt;</em>, <em>var=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/kernels.html#MAT32"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.kernels.MAT32" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#g3py.functions.kernels.KernelStationary" title="g3py.functions.kernels.KernelStationary"><code class="xref py py-class docutils literal"><span class="pre">g3py.functions.kernels.KernelStationary</span></code></a></p>
+<dl class="method">
+<dt id="g3py.functions.kernels.MAT32.k">
+<code class="descname">k</code><span class="sig-paren">(</span><em>d</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/kernels.html#MAT32.k"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.kernels.MAT32.k" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="g3py.functions.kernels.MAT52">
+<em class="property">class </em><code class="descclassname">g3py.functions.kernels.</code><code class="descname">MAT52</code><span class="sig-paren">(</span><em>x</em>, <em>name=None</em>, <em>metric=&lt;class 'g3py.functions.metrics.ARD_L2'&gt;</em>, <em>var=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/kernels.html#MAT52"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.kernels.MAT52" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#g3py.functions.kernels.KernelStationary" title="g3py.functions.kernels.KernelStationary"><code class="xref py py-class docutils literal"><span class="pre">g3py.functions.kernels.KernelStationary</span></code></a></p>
+<dl class="method">
+<dt id="g3py.functions.kernels.MAT52.k">
+<code class="descname">k</code><span class="sig-paren">(</span><em>d</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/kernels.html#MAT52.k"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.kernels.MAT52.k" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="g3py.functions.kernels.NN">
+<em class="property">class </em><code class="descclassname">g3py.functions.kernels.</code><code class="descname">NN</code><span class="sig-paren">(</span><em>x</em>, <em>name=None</em>, <em>metric=&lt;class 'g3py.functions.metrics.ARD_DotBias'&gt;</em>, <em>var=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/kernels.html#NN"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.kernels.NN" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#g3py.functions.kernels.KernelDot" title="g3py.functions.kernels.KernelDot"><code class="xref py py-class docutils literal"><span class="pre">g3py.functions.kernels.KernelDot</span></code></a></p>
+<dl class="method">
+<dt id="g3py.functions.kernels.NN.cov">
+<code class="descname">cov</code><span class="sig-paren">(</span><em>x1</em>, <em>x2=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/kernels.html#NN.cov"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.kernels.NN.cov" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="g3py.functions.kernels.OU">
+<em class="property">class </em><code class="descclassname">g3py.functions.kernels.</code><code class="descname">OU</code><span class="sig-paren">(</span><em>x</em>, <em>name=None</em>, <em>metric=&lt;class 'g3py.functions.metrics.ARD_L1'&gt;</em>, <em>var=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/kernels.html#OU"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.kernels.OU" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#g3py.functions.kernels.KernelStationaryExponential" title="g3py.functions.kernels.KernelStationaryExponential"><code class="xref py py-class docutils literal"><span class="pre">g3py.functions.kernels.KernelStationaryExponential</span></code></a></p>
+</dd></dl>
+
+<dl class="class">
+<dt id="g3py.functions.kernels.PER">
+<em class="property">class </em><code class="descclassname">g3py.functions.kernels.</code><code class="descname">PER</code><span class="sig-paren">(</span><em>x</em>, <em>name=None</em>, <em>metric=&lt;class 'g3py.functions.metrics.Difference'&gt;</em>, <em>var=None</em>, <em>periods=None</em>, <em>scales=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/kernels.html#PER"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.kernels.PER" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#g3py.functions.kernels.KernelPeriodic" title="g3py.functions.kernels.KernelPeriodic"><code class="xref py py-class docutils literal"><span class="pre">g3py.functions.kernels.KernelPeriodic</span></code></a></p>
+<dl class="method">
+<dt id="g3py.functions.kernels.PER.k">
+<code class="descname">k</code><span class="sig-paren">(</span><em>d</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/kernels.html#PER.k"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.kernels.PER.k" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="g3py.functions.kernels.POL">
+<em class="property">class </em><code class="descclassname">g3py.functions.kernels.</code><code class="descname">POL</code><span class="sig-paren">(</span><em>x</em>, <em>p=2</em>, <em>name=None</em>, <em>metric=&lt;class 'g3py.functions.metrics.ARD_DotBias'&gt;</em>, <em>var=1</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/kernels.html#POL"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.kernels.POL" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#g3py.functions.kernels.KernelDot" title="g3py.functions.kernels.KernelDot"><code class="xref py py-class docutils literal"><span class="pre">g3py.functions.kernels.KernelDot</span></code></a></p>
+<dl class="method">
+<dt id="g3py.functions.kernels.POL.cov">
+<code class="descname">cov</code><span class="sig-paren">(</span><em>x1</em>, <em>x2=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/kernels.html#POL.cov"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.kernels.POL.cov" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="g3py.functions.kernels.RQ">
+<em class="property">class </em><code class="descclassname">g3py.functions.kernels.</code><code class="descname">RQ</code><span class="sig-paren">(</span><em>x</em>, <em>name=None</em>, <em>metric=&lt;class 'g3py.functions.metrics.ARD_L2'&gt;</em>, <em>var=None</em>, <em>alpha=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/kernels.html#RQ"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.kernels.RQ" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#g3py.functions.kernels.KernelStationary" title="g3py.functions.kernels.KernelStationary"><code class="xref py py-class docutils literal"><span class="pre">g3py.functions.kernels.KernelStationary</span></code></a></p>
+<dl class="method">
+<dt id="g3py.functions.kernels.RQ.check_hypers">
+<code class="descname">check_hypers</code><span class="sig-paren">(</span><em>parent=''</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/kernels.html#RQ.check_hypers"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.kernels.RQ.check_hypers" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="g3py.functions.kernels.RQ.default_hypers">
+<code class="descname">default_hypers</code><span class="sig-paren">(</span><em>x=None</em>, <em>y=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/kernels.html#RQ.default_hypers"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.kernels.RQ.default_hypers" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="g3py.functions.kernels.RQ.k">
+<code class="descname">k</code><span class="sig-paren">(</span><em>d</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/kernels.html#RQ.k"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.kernels.RQ.k" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="g3py.functions.kernels.SE">
+<em class="property">class </em><code class="descclassname">g3py.functions.kernels.</code><code class="descname">SE</code><span class="sig-paren">(</span><em>x</em>, <em>name=None</em>, <em>metric=&lt;class 'g3py.functions.metrics.ARD_L2'&gt;</em>, <em>var=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/kernels.html#SE"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.kernels.SE" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#g3py.functions.kernels.KernelStationaryExponential" title="g3py.functions.kernels.KernelStationaryExponential"><code class="xref py py-class docutils literal"><span class="pre">g3py.functions.kernels.KernelStationaryExponential</span></code></a></p>
+</dd></dl>
+
+<dl class="class">
+<dt id="g3py.functions.kernels.SM">
+<em class="property">class </em><code class="descclassname">g3py.functions.kernels.</code><code class="descname">SM</code><span class="sig-paren">(</span><em>x</em>, <em>name=None</em>, <em>metric=&lt;class 'g3py.functions.metrics.Difference'&gt;</em>, <em>var=None</em>, <em>periods=None</em>, <em>scales=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/kernels.html#SM"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.kernels.SM" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#g3py.functions.kernels.KernelPeriodic" title="g3py.functions.kernels.KernelPeriodic"><code class="xref py py-class docutils literal"><span class="pre">g3py.functions.kernels.KernelPeriodic</span></code></a></p>
+<dl class="method">
+<dt id="g3py.functions.kernels.SM.k">
+<code class="descname">k</code><span class="sig-paren">(</span><em>d</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/kernels.html#SM.k"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.kernels.SM.k" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="g3py.functions.kernels.WN">
+<em class="property">class </em><code class="descclassname">g3py.functions.kernels.</code><code class="descname">WN</code><span class="sig-paren">(</span><em>x</em>, <em>name=None</em>, <em>metric=&lt;class 'g3py.functions.metrics.Delta'&gt;</em>, <em>var=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/kernels.html#WN"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.kernels.WN" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#g3py.functions.kernels.KernelStationary" title="g3py.functions.kernels.KernelStationary"><code class="xref py py-class docutils literal"><span class="pre">g3py.functions.kernels.KernelStationary</span></code></a></p>
+<dl class="method">
+<dt id="g3py.functions.kernels.WN.cov">
+<code class="descname">cov</code><span class="sig-paren">(</span><em>x1</em>, <em>x2=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/kernels.html#WN.cov"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.kernels.WN.cov" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-g3py.functions.mappings">
+<span id="g3py-functions-mappings-module"></span><h2>g3py.functions.mappings module<a class="headerlink" href="#module-g3py.functions.mappings" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="g3py.functions.mappings.BoxCoxShifted">
+<em class="property">class </em><code class="descclassname">g3py.functions.mappings.</code><code class="descname">BoxCoxShifted</code><span class="sig-paren">(</span><em>y</em>, <em>name='BoxCoxShifted'</em>, <em>shift=None</em>, <em>power=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/mappings.html#BoxCoxShifted"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.mappings.BoxCoxShifted" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#g3py.functions.mappings.Mapping" title="g3py.functions.mappings.Mapping"><code class="xref py py-class docutils literal"><span class="pre">g3py.functions.mappings.Mapping</span></code></a></p>
+<dl class="method">
+<dt id="g3py.functions.mappings.BoxCoxShifted.check_hypers">
+<code class="descname">check_hypers</code><span class="sig-paren">(</span><em>parent=''</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/mappings.html#BoxCoxShifted.check_hypers"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.mappings.BoxCoxShifted.check_hypers" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="g3py.functions.mappings.BoxCoxShifted.default_hypers">
+<code class="descname">default_hypers</code><span class="sig-paren">(</span><em>x=None</em>, <em>y=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/mappings.html#BoxCoxShifted.default_hypers"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.mappings.BoxCoxShifted.default_hypers" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="g3py.functions.mappings.BoxCoxShifted.inv">
+<code class="descname">inv</code><span class="sig-paren">(</span><em>y</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/mappings.html#BoxCoxShifted.inv"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.mappings.BoxCoxShifted.inv" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="g3py.functions.mappings.BoxCoxShifted.logdet_dinv">
+<code class="descname">logdet_dinv</code><span class="sig-paren">(</span><em>y</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/mappings.html#BoxCoxShifted.logdet_dinv"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.mappings.BoxCoxShifted.logdet_dinv" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="g3py.functions.mappings.Identity">
+<em class="property">class </em><code class="descclassname">g3py.functions.mappings.</code><code class="descname">Identity</code><span class="sig-paren">(</span><em>y=None</em>, <em>name=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/mappings.html#Identity"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.mappings.Identity" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#g3py.functions.mappings.Mapping" title="g3py.functions.mappings.Mapping"><code class="xref py py-class docutils literal"><span class="pre">g3py.functions.mappings.Mapping</span></code></a></p>
+<dl class="method">
+<dt id="g3py.functions.mappings.Identity.inv">
+<code class="descname">inv</code><span class="sig-paren">(</span><em>y</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/mappings.html#Identity.inv"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.mappings.Identity.inv" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="g3py.functions.mappings.Identity.logdet_dinv">
+<code class="descname">logdet_dinv</code><span class="sig-paren">(</span><em>y</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/mappings.html#Identity.logdet_dinv"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.mappings.Identity.logdet_dinv" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="g3py.functions.mappings.LogShifted">
+<em class="property">class </em><code class="descclassname">g3py.functions.mappings.</code><code class="descname">LogShifted</code><span class="sig-paren">(</span><em>y</em>, <em>name=None</em>, <em>shift=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/mappings.html#LogShifted"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.mappings.LogShifted" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#g3py.functions.mappings.Mapping" title="g3py.functions.mappings.Mapping"><code class="xref py py-class docutils literal"><span class="pre">g3py.functions.mappings.Mapping</span></code></a></p>
+<dl class="method">
+<dt id="g3py.functions.mappings.LogShifted.check_hypers">
+<code class="descname">check_hypers</code><span class="sig-paren">(</span><em>parent=''</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/mappings.html#LogShifted.check_hypers"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.mappings.LogShifted.check_hypers" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="g3py.functions.mappings.LogShifted.default_hypers">
+<code class="descname">default_hypers</code><span class="sig-paren">(</span><em>x=None</em>, <em>y=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/mappings.html#LogShifted.default_hypers"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.mappings.LogShifted.default_hypers" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="g3py.functions.mappings.LogShifted.inv">
+<code class="descname">inv</code><span class="sig-paren">(</span><em>y</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/mappings.html#LogShifted.inv"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.mappings.LogShifted.inv" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="g3py.functions.mappings.LogShifted.logdet_dinv">
+<code class="descname">logdet_dinv</code><span class="sig-paren">(</span><em>y</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/mappings.html#LogShifted.logdet_dinv"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.mappings.LogShifted.logdet_dinv" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="g3py.functions.mappings.Logistic">
+<em class="property">class </em><code class="descclassname">g3py.functions.mappings.</code><code class="descname">Logistic</code><span class="sig-paren">(</span><em>y</em>, <em>name='Logistic'</em>, <em>lower=None</em>, <em>high=None</em>, <em>location=None</em>, <em>scale=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/mappings.html#Logistic"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.mappings.Logistic" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#g3py.functions.mappings.Mapping" title="g3py.functions.mappings.Mapping"><code class="xref py py-class docutils literal"><span class="pre">g3py.functions.mappings.Mapping</span></code></a></p>
+<dl class="method">
+<dt id="g3py.functions.mappings.Logistic.check_hypers">
+<code class="descname">check_hypers</code><span class="sig-paren">(</span><em>parent=''</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/mappings.html#Logistic.check_hypers"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.mappings.Logistic.check_hypers" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="g3py.functions.mappings.Logistic.default_hypers">
+<code class="descname">default_hypers</code><span class="sig-paren">(</span><em>x=None</em>, <em>y=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/mappings.html#Logistic.default_hypers"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.mappings.Logistic.default_hypers" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="g3py.functions.mappings.Logistic.inv">
+<code class="descname">inv</code><span class="sig-paren">(</span><em>y</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/mappings.html#Logistic.inv"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.mappings.Logistic.inv" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="g3py.functions.mappings.Logistic.logdet_dinv">
+<code class="descname">logdet_dinv</code><span class="sig-paren">(</span><em>y</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/mappings.html#Logistic.logdet_dinv"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.mappings.Logistic.logdet_dinv" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="g3py.functions.mappings.Mapping">
+<em class="property">class </em><code class="descclassname">g3py.functions.mappings.</code><code class="descname">Mapping</code><span class="sig-paren">(</span><em>x=None</em>, <em>name=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/mappings.html#Mapping"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.mappings.Mapping" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#g3py.functions.hypers.Hypers" title="g3py.functions.hypers.Hypers"><code class="xref py py-class docutils literal"><span class="pre">g3py.functions.hypers.Hypers</span></code></a></p>
+<dl class="method">
+<dt id="g3py.functions.mappings.Mapping.automatic_logdet_dinv">
+<code class="descname">automatic_logdet_dinv</code><span class="sig-paren">(</span><em>y</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/mappings.html#Mapping.automatic_logdet_dinv"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.mappings.Mapping.automatic_logdet_dinv" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="g3py.functions.mappings.Mapping.inv">
+<code class="descname">inv</code><span class="sig-paren">(</span><em>y</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/mappings.html#Mapping.inv"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.mappings.Mapping.inv" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="g3py.functions.mappings.Mapping.logdet_dinv">
+<code class="descname">logdet_dinv</code><span class="sig-paren">(</span><em>y</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/mappings.html#Mapping.logdet_dinv"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.mappings.Mapping.logdet_dinv" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="g3py.functions.mappings.MappingComposed">
+<em class="property">class </em><code class="descclassname">g3py.functions.mappings.</code><code class="descname">MappingComposed</code><span class="sig-paren">(</span><em>m1: g3py.functions.mappings.Mapping</em>, <em>m2: g3py.functions.mappings.Mapping</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/mappings.html#MappingComposed"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.mappings.MappingComposed" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#g3py.functions.mappings.MappingOperation" title="g3py.functions.mappings.MappingOperation"><code class="xref py py-class docutils literal"><span class="pre">g3py.functions.mappings.MappingOperation</span></code></a></p>
+<dl class="method">
+<dt id="g3py.functions.mappings.MappingComposed.inv">
+<code class="descname">inv</code><span class="sig-paren">(</span><em>y</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/mappings.html#MappingComposed.inv"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.mappings.MappingComposed.inv" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="g3py.functions.mappings.MappingComposed.logdet_dinv">
+<code class="descname">logdet_dinv</code><span class="sig-paren">(</span><em>y</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/mappings.html#MappingComposed.logdet_dinv"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.mappings.MappingComposed.logdet_dinv" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="g3py.functions.mappings.MappingInvProd">
+<em class="property">class </em><code class="descclassname">g3py.functions.mappings.</code><code class="descname">MappingInvProd</code><span class="sig-paren">(</span><em>m1: g3py.functions.mappings.Mapping</em>, <em>m2: g3py.functions.mappings.Mapping</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/mappings.html#MappingInvProd"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.mappings.MappingInvProd" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#g3py.functions.mappings.MappingOperation" title="g3py.functions.mappings.MappingOperation"><code class="xref py py-class docutils literal"><span class="pre">g3py.functions.mappings.MappingOperation</span></code></a></p>
+<dl class="method">
+<dt id="g3py.functions.mappings.MappingInvProd.inv">
+<code class="descname">inv</code><span class="sig-paren">(</span><em>y</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/mappings.html#MappingInvProd.inv"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.mappings.MappingInvProd.inv" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="g3py.functions.mappings.MappingInvProd.logdet_dinv">
+<code class="descname">logdet_dinv</code><span class="sig-paren">(</span><em>y</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/mappings.html#MappingInvProd.logdet_dinv"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.mappings.MappingInvProd.logdet_dinv" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="g3py.functions.mappings.MappingOperation">
+<em class="property">class </em><code class="descclassname">g3py.functions.mappings.</code><code class="descname">MappingOperation</code><span class="sig-paren">(</span><em>m1</em>, <em>m2</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/mappings.html#MappingOperation"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.mappings.MappingOperation" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#g3py.functions.mappings.Mapping" title="g3py.functions.mappings.Mapping"><code class="xref py py-class docutils literal"><span class="pre">g3py.functions.mappings.Mapping</span></code></a></p>
+<dl class="method">
+<dt id="g3py.functions.mappings.MappingOperation.check_hypers">
+<code class="descname">check_hypers</code><span class="sig-paren">(</span><em>parent=''</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/mappings.html#MappingOperation.check_hypers"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.mappings.MappingOperation.check_hypers" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="g3py.functions.mappings.MappingOperation.default_hypers_dims">
+<code class="descname">default_hypers_dims</code><span class="sig-paren">(</span><em>x=None</em>, <em>y=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/mappings.html#MappingOperation.default_hypers_dims"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.mappings.MappingOperation.default_hypers_dims" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-g3py.functions.means">
+<span id="g3py-functions-means-module"></span><h2>g3py.functions.means module<a class="headerlink" href="#module-g3py.functions.means" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="g3py.functions.means.Bias">
+<em class="property">class </em><code class="descclassname">g3py.functions.means.</code><code class="descname">Bias</code><span class="sig-paren">(</span><em>x=None</em>, <em>name=None</em>, <em>constant=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/means.html#Bias"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.means.Bias" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#g3py.functions.means.Mean" title="g3py.functions.means.Mean"><code class="xref py py-class docutils literal"><span class="pre">g3py.functions.means.Mean</span></code></a></p>
+<dl class="method">
+<dt id="g3py.functions.means.Bias.check_hypers">
+<code class="descname">check_hypers</code><span class="sig-paren">(</span><em>parent=''</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/means.html#Bias.check_hypers"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.means.Bias.check_hypers" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="g3py.functions.means.Bias.default_hypers">
+<code class="descname">default_hypers</code><span class="sig-paren">(</span><em>x=None</em>, <em>y=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/means.html#Bias.default_hypers"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.means.Bias.default_hypers" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="g3py.functions.means.Bias.eval">
+<code class="descname">eval</code><span class="sig-paren">(</span><em>x</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/means.html#Bias.eval"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.means.Bias.eval" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="g3py.functions.means.Linear">
+<em class="property">class </em><code class="descclassname">g3py.functions.means.</code><code class="descname">Linear</code><span class="sig-paren">(</span><em>x=None</em>, <em>name=None</em>, <em>constant=None</em>, <em>coeff=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/means.html#Linear"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.means.Linear" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#g3py.functions.means.Mean" title="g3py.functions.means.Mean"><code class="xref py py-class docutils literal"><span class="pre">g3py.functions.means.Mean</span></code></a></p>
+<dl class="method">
+<dt id="g3py.functions.means.Linear.check_hypers">
+<code class="descname">check_hypers</code><span class="sig-paren">(</span><em>parent=''</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/means.html#Linear.check_hypers"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.means.Linear.check_hypers" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="g3py.functions.means.Linear.default_hypers">
+<code class="descname">default_hypers</code><span class="sig-paren">(</span><em>x=None</em>, <em>y=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/means.html#Linear.default_hypers"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.means.Linear.default_hypers" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="g3py.functions.means.Linear.eval">
+<code class="descname">eval</code><span class="sig-paren">(</span><em>x</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/means.html#Linear.eval"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.means.Linear.eval" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="g3py.functions.means.Mean">
+<em class="property">class </em><code class="descclassname">g3py.functions.means.</code><code class="descname">Mean</code><span class="sig-paren">(</span><em>call=None</em>, <em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/means.html#Mean"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.means.Mean" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#g3py.functions.hypers.Hypers" title="g3py.functions.hypers.Hypers"><code class="xref py py-class docutils literal"><span class="pre">g3py.functions.hypers.Hypers</span></code></a></p>
+</dd></dl>
+
+<dl class="class">
+<dt id="g3py.functions.means.MeanComposition">
+<em class="property">class </em><code class="descclassname">g3py.functions.means.</code><code class="descname">MeanComposition</code><span class="sig-paren">(</span><em>_m1: g3py.functions.means.Mean</em>, <em>_m2: g3py.functions.means.Mean</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/means.html#MeanComposition"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.means.MeanComposition" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#g3py.functions.means.Mean" title="g3py.functions.means.Mean"><code class="xref py py-class docutils literal"><span class="pre">g3py.functions.means.Mean</span></code></a></p>
+<dl class="method">
+<dt id="g3py.functions.means.MeanComposition.check_hypers">
+<code class="descname">check_hypers</code><span class="sig-paren">(</span><em>parent=''</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/means.html#MeanComposition.check_hypers"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.means.MeanComposition.check_hypers" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="g3py.functions.means.MeanComposition.default_hypers_dims">
+<code class="descname">default_hypers_dims</code><span class="sig-paren">(</span><em>x=None</em>, <em>y=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/means.html#MeanComposition.default_hypers_dims"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.means.MeanComposition.default_hypers_dims" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="g3py.functions.means.MeanOperation">
+<em class="property">class </em><code class="descclassname">g3py.functions.means.</code><code class="descname">MeanOperation</code><span class="sig-paren">(</span><em>_m: g3py.functions.means.Mean</em>, <em>_element</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/means.html#MeanOperation"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.means.MeanOperation" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#g3py.functions.means.Mean" title="g3py.functions.means.Mean"><code class="xref py py-class docutils literal"><span class="pre">g3py.functions.means.Mean</span></code></a></p>
+<dl class="method">
+<dt id="g3py.functions.means.MeanOperation.check_hypers">
+<code class="descname">check_hypers</code><span class="sig-paren">(</span><em>parent=''</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/means.html#MeanOperation.check_hypers"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.means.MeanOperation.check_hypers" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="g3py.functions.means.MeanOperation.default_hypers_dims">
+<code class="descname">default_hypers_dims</code><span class="sig-paren">(</span><em>x=None</em>, <em>y=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/means.html#MeanOperation.default_hypers_dims"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.means.MeanOperation.default_hypers_dims" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="g3py.functions.means.MeanProd">
+<em class="property">class </em><code class="descclassname">g3py.functions.means.</code><code class="descname">MeanProd</code><span class="sig-paren">(</span><em>_m1: g3py.functions.means.Mean</em>, <em>_m2: g3py.functions.means.Mean</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/means.html#MeanProd"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.means.MeanProd" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#g3py.functions.means.MeanComposition" title="g3py.functions.means.MeanComposition"><code class="xref py py-class docutils literal"><span class="pre">g3py.functions.means.MeanComposition</span></code></a></p>
+<dl class="method">
+<dt id="g3py.functions.means.MeanProd.eval">
+<code class="descname">eval</code><span class="sig-paren">(</span><em>x</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/means.html#MeanProd.eval"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.means.MeanProd.eval" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="g3py.functions.means.MeanScale">
+<em class="property">class </em><code class="descclassname">g3py.functions.means.</code><code class="descname">MeanScale</code><span class="sig-paren">(</span><em>_m: g3py.functions.means.Mean</em>, <em>_element</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/means.html#MeanScale"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.means.MeanScale" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#g3py.functions.means.MeanOperation" title="g3py.functions.means.MeanOperation"><code class="xref py py-class docutils literal"><span class="pre">g3py.functions.means.MeanOperation</span></code></a></p>
+<dl class="method">
+<dt id="g3py.functions.means.MeanScale.eval">
+<code class="descname">eval</code><span class="sig-paren">(</span><em>x</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/means.html#MeanScale.eval"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.means.MeanScale.eval" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="g3py.functions.means.MeanShift">
+<em class="property">class </em><code class="descclassname">g3py.functions.means.</code><code class="descname">MeanShift</code><span class="sig-paren">(</span><em>_m: g3py.functions.means.Mean</em>, <em>_element</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/means.html#MeanShift"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.means.MeanShift" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#g3py.functions.means.MeanOperation" title="g3py.functions.means.MeanOperation"><code class="xref py py-class docutils literal"><span class="pre">g3py.functions.means.MeanOperation</span></code></a></p>
+<dl class="method">
+<dt id="g3py.functions.means.MeanShift.eval">
+<code class="descname">eval</code><span class="sig-paren">(</span><em>x</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/means.html#MeanShift.eval"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.means.MeanShift.eval" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="g3py.functions.means.MeanSum">
+<em class="property">class </em><code class="descclassname">g3py.functions.means.</code><code class="descname">MeanSum</code><span class="sig-paren">(</span><em>_m1: g3py.functions.means.Mean</em>, <em>_m2: g3py.functions.means.Mean</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/means.html#MeanSum"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.means.MeanSum" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#g3py.functions.means.MeanComposition" title="g3py.functions.means.MeanComposition"><code class="xref py py-class docutils literal"><span class="pre">g3py.functions.means.MeanComposition</span></code></a></p>
+<dl class="method">
+<dt id="g3py.functions.means.MeanSum.eval">
+<code class="descname">eval</code><span class="sig-paren">(</span><em>x</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/means.html#MeanSum.eval"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.means.MeanSum.eval" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="g3py.functions.means.Zero">
+<em class="property">class </em><code class="descclassname">g3py.functions.means.</code><code class="descname">Zero</code><span class="sig-paren">(</span><em>call=None</em>, <em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/means.html#Zero"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.means.Zero" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#g3py.functions.means.Mean" title="g3py.functions.means.Mean"><code class="xref py py-class docutils literal"><span class="pre">g3py.functions.means.Mean</span></code></a></p>
+<dl class="method">
+<dt id="g3py.functions.means.Zero.eval">
+<code class="descname">eval</code><span class="sig-paren">(</span><em>x</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/means.html#Zero.eval"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.means.Zero.eval" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-g3py.functions.metrics">
+<span id="g3py-functions-metrics-module"></span><h2>g3py.functions.metrics module<a class="headerlink" href="#module-g3py.functions.metrics" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="g3py.functions.metrics.ARD">
+<em class="property">class </em><code class="descclassname">g3py.functions.metrics.</code><code class="descname">ARD</code><span class="sig-paren">(</span><em>x</em>, <em>name=None</em>, <em>scales=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/metrics.html#ARD"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.metrics.ARD" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#g3py.functions.metrics.Metric" title="g3py.functions.metrics.Metric"><code class="xref py py-class docutils literal"><span class="pre">g3py.functions.metrics.Metric</span></code></a></p>
+<dl class="method">
+<dt id="g3py.functions.metrics.ARD.check_hypers">
+<code class="descname">check_hypers</code><span class="sig-paren">(</span><em>parent=''</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/metrics.html#ARD.check_hypers"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.metrics.ARD.check_hypers" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="g3py.functions.metrics.ARD_Dot">
+<em class="property">class </em><code class="descclassname">g3py.functions.metrics.</code><code class="descname">ARD_Dot</code><span class="sig-paren">(</span><em>x</em>, <em>name=None</em>, <em>scales=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/metrics.html#ARD_Dot"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.metrics.ARD_Dot" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#g3py.functions.metrics.ARD" title="g3py.functions.metrics.ARD"><code class="xref py py-class docutils literal"><span class="pre">g3py.functions.metrics.ARD</span></code></a></p>
+<dl class="method">
+<dt id="g3py.functions.metrics.ARD_Dot.default_hypers">
+<code class="descname">default_hypers</code><span class="sig-paren">(</span><em>x=None</em>, <em>y=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/metrics.html#ARD_Dot.default_hypers"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.metrics.ARD_Dot.default_hypers" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="g3py.functions.metrics.ARD_DotBias">
+<em class="property">class </em><code class="descclassname">g3py.functions.metrics.</code><code class="descname">ARD_DotBias</code><span class="sig-paren">(</span><em>x</em>, <em>name=None</em>, <em>scales=None</em>, <em>bias=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/metrics.html#ARD_DotBias"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.metrics.ARD_DotBias" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#g3py.functions.metrics.ARD" title="g3py.functions.metrics.ARD"><code class="xref py py-class docutils literal"><span class="pre">g3py.functions.metrics.ARD</span></code></a></p>
+<dl class="method">
+<dt id="g3py.functions.metrics.ARD_DotBias.check_hypers">
+<code class="descname">check_hypers</code><span class="sig-paren">(</span><em>parent=''</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/metrics.html#ARD_DotBias.check_hypers"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.metrics.ARD_DotBias.check_hypers" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="g3py.functions.metrics.ARD_DotBias.default_hypers">
+<code class="descname">default_hypers</code><span class="sig-paren">(</span><em>x=None</em>, <em>y=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/metrics.html#ARD_DotBias.default_hypers"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.metrics.ARD_DotBias.default_hypers" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="g3py.functions.metrics.ARD_L1">
+<em class="property">class </em><code class="descclassname">g3py.functions.metrics.</code><code class="descname">ARD_L1</code><span class="sig-paren">(</span><em>x</em>, <em>name=None</em>, <em>scales=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/metrics.html#ARD_L1"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.metrics.ARD_L1" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#g3py.functions.metrics.ARD" title="g3py.functions.metrics.ARD"><code class="xref py py-class docutils literal"><span class="pre">g3py.functions.metrics.ARD</span></code></a></p>
+<dl class="method">
+<dt id="g3py.functions.metrics.ARD_L1.default_hypers">
+<code class="descname">default_hypers</code><span class="sig-paren">(</span><em>x=None</em>, <em>y=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/metrics.html#ARD_L1.default_hypers"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.metrics.ARD_L1.default_hypers" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="g3py.functions.metrics.ARD_L2">
+<em class="property">class </em><code class="descclassname">g3py.functions.metrics.</code><code class="descname">ARD_L2</code><span class="sig-paren">(</span><em>x</em>, <em>name=None</em>, <em>scales=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/metrics.html#ARD_L2"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.metrics.ARD_L2" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#g3py.functions.metrics.ARD" title="g3py.functions.metrics.ARD"><code class="xref py py-class docutils literal"><span class="pre">g3py.functions.metrics.ARD</span></code></a></p>
+<dl class="method">
+<dt id="g3py.functions.metrics.ARD_L2.default_hypers">
+<code class="descname">default_hypers</code><span class="sig-paren">(</span><em>x=None</em>, <em>y=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/metrics.html#ARD_L2.default_hypers"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.metrics.ARD_L2.default_hypers" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="g3py.functions.metrics.Delta">
+<em class="property">class </em><code class="descclassname">g3py.functions.metrics.</code><code class="descname">Delta</code><span class="sig-paren">(</span><em>x=None</em>, <em>name=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/metrics.html#Delta"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.metrics.Delta" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#g3py.functions.metrics.Metric" title="g3py.functions.metrics.Metric"><code class="xref py py-class docutils literal"><span class="pre">g3py.functions.metrics.Metric</span></code></a></p>
+</dd></dl>
+
+<dl class="class">
+<dt id="g3py.functions.metrics.Difference">
+<em class="property">class </em><code class="descclassname">g3py.functions.metrics.</code><code class="descname">Difference</code><span class="sig-paren">(</span><em>x=None</em>, <em>name=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/metrics.html#Difference"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.metrics.Difference" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#g3py.functions.metrics.Metric" title="g3py.functions.metrics.Metric"><code class="xref py py-class docutils literal"><span class="pre">g3py.functions.metrics.Metric</span></code></a></p>
+</dd></dl>
+
+<dl class="class">
+<dt id="g3py.functions.metrics.L1">
+<em class="property">class </em><code class="descclassname">g3py.functions.metrics.</code><code class="descname">L1</code><span class="sig-paren">(</span><em>x=None</em>, <em>name=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/metrics.html#L1"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.metrics.L1" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#g3py.functions.metrics.Metric" title="g3py.functions.metrics.Metric"><code class="xref py py-class docutils literal"><span class="pre">g3py.functions.metrics.Metric</span></code></a></p>
+</dd></dl>
+
+<dl class="class">
+<dt id="g3py.functions.metrics.L2">
+<em class="property">class </em><code class="descclassname">g3py.functions.metrics.</code><code class="descname">L2</code><span class="sig-paren">(</span><em>x=None</em>, <em>name=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/metrics.html#L2"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.metrics.L2" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#g3py.functions.metrics.Metric" title="g3py.functions.metrics.Metric"><code class="xref py py-class docutils literal"><span class="pre">g3py.functions.metrics.Metric</span></code></a></p>
+</dd></dl>
+
+<dl class="class">
+<dt id="g3py.functions.metrics.Metric">
+<em class="property">class </em><code class="descclassname">g3py.functions.metrics.</code><code class="descname">Metric</code><span class="sig-paren">(</span><em>x=None</em>, <em>name=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/metrics.html#Metric"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.metrics.Metric" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#g3py.functions.hypers.Hypers" title="g3py.functions.hypers.Hypers"><code class="xref py py-class docutils literal"><span class="pre">g3py.functions.hypers.Hypers</span></code></a></p>
+<dl class="method">
+<dt id="g3py.functions.metrics.Metric.gram">
+<code class="descname">gram</code><span class="sig-paren">(</span><em>x1</em>, <em>x2</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/metrics.html#Metric.gram"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.metrics.Metric.gram" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="g3py.functions.metrics.Minimum">
+<em class="property">class </em><code class="descclassname">g3py.functions.metrics.</code><code class="descname">Minimum</code><span class="sig-paren">(</span><em>x=None</em>, <em>name=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/functions/metrics.html#Minimum"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.functions.metrics.Minimum" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#g3py.functions.metrics.Metric" title="g3py.functions.metrics.Metric"><code class="xref py py-class docutils literal"><span class="pre">g3py.functions.metrics.Metric</span></code></a></p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-g3py.functions">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-g3py.functions" title="Permalink to this headline">¶</a></h2>
+</div>
+</div>
+
+
+           </div>
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2016, GAMES UChile.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'./',
+            VERSION:'1.0.0',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true
+        };
+    </script>
+      <script type="text/javascript" src="_static/jquery.js"></script>
+      <script type="text/javascript" src="_static/underscore.js"></script>
+      <script type="text/javascript" src="_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>

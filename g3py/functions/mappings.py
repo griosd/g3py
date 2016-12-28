@@ -129,13 +129,13 @@ class BoxCoxShifted(Mapping):
 
     def check_hypers(self, parent=''):
         if self.shift is None:
-            self.shift = Hypers.Flat(parent+self.name+'_shift', shape=self.shape)
+            self.shift = Hypers.Flat(parent+self.name+'_shift')
         if self.power is None:
-            self.power = Hypers.FlatExp(parent+self.name+'_power', shape=self.shape)
+            self.power = Hypers.FlatExp(parent+self.name+'_power')
         self.hypers += [self.shift, self.power]
 
     def default_hypers(self, x=None, y=None):
-        return {self.shift: y.min() - np.abs(y[1:]-y[:-1]).min(),
+        return {self.shift: np.array(y.min() - np.abs(y[1:]-y[:-1]).min()),
                 self.power: np.float32(1.0)}
 
     def __call__(self, x):

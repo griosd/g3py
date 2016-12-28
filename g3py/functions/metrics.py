@@ -1,7 +1,7 @@
 import numpy as np
 import theano as th
 import theano.tensor as tt
-from g3py.functions.hypers import Hypers
+from g3py.functions.hypers import Hypers, ones
 from g3py.libs.tensors import tt_to_num
 
 
@@ -10,10 +10,13 @@ class Metric(Hypers):
         return tt.abs_(x1 - x2)
 
     def gram(self, x1, x2):
-        try:
-            return tt_to_num(self(x1[:, self.dims].dimshuffle([0, 'x', 1]), x2[:, self.dims].dimshuffle(['x', 0, 1])))
-        except ValueError:
-            return tt_to_num(self(x1[:, self.dims].dimshuffle([0, 'x']), x2[:, self.dims].dimshuffle(['x', 0])))
+        #try:
+        return tt_to_num(self(x1[:, self.dims].dimshuffle([0, 'x', 1]), x2[:, self.dims].dimshuffle(['x', 0, 1])))
+        #except ValueError:
+        #    return tt_to_num(self(x1[:, self.dims].dimshuffle([0, 'x']), x2[:, self.dims].dimshuffle(['x', 0])))
+
+    def input_sensitivity(self):
+        return np.ones(self.shape)
 
     def __str__(self):
         return str(self.__class__.__name__) + '[h=' + str(self.hypers) + ']'
@@ -56,6 +59,9 @@ class ARD(Metric):
             self.scales = Hypers.FlatExp(parent+self.name+'_Scales', shape=self.shape)
         self.hypers += [self.scales]
 
+    def input_sensitivity(self):
+        return ones(self.shape) / self.scales**2
+
 
 class ARD_L1(ARD):
     def __call__(self, x1, x2):
@@ -63,6 +69,9 @@ class ARD_L1(ARD):
 
     def default_hypers(self, x=None, y=None):
         return {self.scales: np.abs(x[1:]-x[:-1]).mean(axis=0)}
+
+    def input_sensitivity(self):
+        return ones(self.shape) / self.scales
 
 
 class ARD_L2(ARD):
@@ -75,7 +84,7 @@ class ARD_L2(ARD):
 
 class ARD_Dot(ARD):
     def __call__(self, x1, x2):
-        return tt.dot(x1/self.scales, x2/self.scales)
+        return tt.dot(tt.dot(x1, 1/self.scales), tt.dot(x2, 1/self.scales))
 
     def default_hypers(self, x=None, y=None):
         return {self.scales: (np.sqrt(np.abs(y)).mean(axis=0))/np.abs(x).mean(axis=0)}
@@ -89,11 +98,11 @@ class ARD_DotBias(ARD):
     def check_hypers(self, parent=''):
         super().check_hypers()
         if self.bias is None:
-            self.bias = Hypers.FlatExp(parent+self.name + '_Bias')
+            self.bias = Hypers.FlatExp(parent+self.name + '_Bias', shape=1)
         self.hypers += [self.bias]
 
     def __call__(self, x1, x2):
-        return self.bias + tt.dot(x1/self.scales, x2/self.scales)
+        return self.bias + tt.dot(tt.dot(x1, 1/self.scales), tt.dot(x2, 1/self.scales))
 
     def default_hypers(self, x=None, y=None):
         return {self.bias: (np.abs(y).mean(axis=0))/np.abs(x).mean(axis=0),

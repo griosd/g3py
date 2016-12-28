@@ -1,0 +1,770 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>g3py.tgp &mdash; g3py 1.0.0 documentation</title>
+  
+
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  
+
+  
+
+  
+        <link rel="index" title="Index"
+              href="../../genindex.html"/>
+        <link rel="search" title="Search" href="../../search.html"/>
+    <link rel="top" title="g3py 1.0.0 documentation" href="../../index.html"/>
+        <link rel="up" title="Module code" href="../index.html"/> 
+
+  
+  <script src="../../_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="../../index.html" class="icon icon-home"> g3py
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                1.0.0
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+                <!-- Local TOC -->
+                <div class="local-toc"></div>
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="../../index.html">g3py</a>
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../../index.html">Docs</a> &raquo;</li>
+      
+          <li><a href="../index.html">Module code</a> &raquo;</li>
+      
+    <li>g3py.tgp</li>
+      <li class="wy-breadcrumbs-aside">
+        
+          
+        
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for g3py.tgp</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">pymc3</span> <span class="k">as</span> <span class="nn">pm</span>
+<span class="kn">import</span> <span class="nn">scipy</span> <span class="k">as</span> <span class="nn">sp</span>
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="kn">import</span> <span class="nn">theano</span> <span class="k">as</span> <span class="nn">th</span>
+<span class="kn">from</span> <span class="nn">g3py</span> <span class="k">import</span> <span class="n">Mean</span><span class="p">,</span> <span class="n">Kernel</span><span class="p">,</span> <span class="n">Mapping</span><span class="p">,</span> <span class="n">Model</span><span class="p">,</span> <span class="n">KernelSum</span><span class="p">,</span> <span class="n">WN</span><span class="p">,</span> <span class="n">tt_to_cov</span><span class="p">,</span> <span class="n">tt_to_num</span><span class="p">,</span> <span class="n">TGPDist</span><span class="p">,</span> <span class="n">zeros</span><span class="p">,</span> <span class="n">cholesky_robust</span><span class="p">,</span> \
+    <span class="n">debug</span><span class="p">,</span> <span class="n">makefn</span><span class="p">,</span> <span class="n">text_plot</span><span class="p">,</span> <span class="n">trans_hypers</span><span class="p">,</span> <span class="n">ConstantStep</span><span class="p">,</span> <span class="n">RobustSlice</span><span class="p">,</span> <span class="n">Identity</span>
+<span class="kn">from</span> <span class="nn">ipywidgets</span> <span class="k">import</span> <span class="n">interact</span>
+<span class="kn">from</span> <span class="nn">matplotlib</span> <span class="k">import</span> <span class="n">pyplot</span> <span class="k">as</span> <span class="n">plt</span>
+<span class="kn">from</span> <span class="nn">theano</span> <span class="k">import</span> <span class="n">tensor</span> <span class="k">as</span> <span class="n">tt</span>
+<span class="kn">from</span> <span class="nn">theano.tensor</span> <span class="k">import</span> <span class="n">slinalg</span> <span class="k">as</span> <span class="n">sL</span>
+<span class="kn">from</span> <span class="nn">theano.tensor</span> <span class="k">import</span> <span class="n">nlinalg</span> <span class="k">as</span> <span class="n">nL</span>
+
+
+<div class="viewcode-block" id="TGP"><a class="viewcode-back" href="../../g3py.html#g3py.tgp.TGP">[docs]</a><span class="k">class</span> <span class="nc">TGP</span><span class="p">:</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">space</span><span class="p">,</span> <span class="n">mean</span><span class="p">:</span> <span class="n">Mean</span><span class="p">,</span> <span class="n">kernel</span><span class="p">:</span> <span class="n">Kernel</span><span class="p">,</span> <span class="n">mapping</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">,</span> <span class="n">noise</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">hidden</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">model</span> <span class="o">=</span> <span class="n">Model</span><span class="o">.</span><span class="n">get_context</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">name</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">name</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">space</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">space_x</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">space_t</span> <span class="o">=</span> <span class="n">get_space</span><span class="p">(</span><span class="n">space</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">+</span> <span class="s1">&#39;_Space&#39;</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">mean</span> <span class="o">=</span> <span class="n">mean</span>
+        <span class="k">if</span> <span class="n">noise</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">kernel_f</span> <span class="o">=</span> <span class="n">kernel</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">kernel</span> <span class="o">=</span> <span class="n">KernelSum</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">kernel_f</span><span class="p">,</span> <span class="n">WN</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">space_x</span><span class="p">,</span> <span class="s1">&#39;Noise&#39;</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">kernel_f</span> <span class="o">=</span> <span class="n">kernel</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">kernel</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">kernel_f</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mapping</span> <span class="o">=</span> <span class="n">mapping</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">inputs</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">inputs_x</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">inputs_t</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">outputs</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">outputs_y</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">outputs_t</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mean_inputs</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cov_inputs</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">inv_outputs</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">distribution</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">inputs_test</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">outputs_test</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fixed_params</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_widget_params</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_widget_trace</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">compiles</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">description</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;title&#39;</span><span class="p">:</span> <span class="s1">&#39;title&#39;</span><span class="p">,</span>
+                            <span class="s1">&#39;x&#39;</span><span class="p">:</span> <span class="s1">&#39;x&#39;</span><span class="p">,</span>
+                            <span class="s1">&#39;y&#39;</span><span class="p">:</span> <span class="s1">&#39;y&#39;</span><span class="p">,</span>
+                            <span class="s1">&#39;text&#39;</span><span class="p">:</span> <span class="s1">&#39;text&#39;</span><span class="p">}</span>
+        <span class="k">if</span> <span class="n">hidden</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">hidden</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">hidden</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">squeeze</span><span class="p">(</span><span class="n">hidden</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">check_hypers</span><span class="p">()</span>
+
+<div class="viewcode-block" id="TGP.check_hypers"><a class="viewcode-back" href="../../g3py.html#g3py.tgp.TGP.check_hypers">[docs]</a>    <span class="k">def</span> <span class="nf">check_hypers</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mean</span><span class="o">.</span><span class="n">check_hypers</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="o">+</span><span class="s1">&#39;_&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">kernel</span><span class="o">.</span><span class="n">check_hypers</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="o">+</span><span class="s1">&#39;_&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mapping</span><span class="o">.</span><span class="n">check_hypers</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="o">+</span><span class="s1">&#39;_&#39;</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="TGP.set_space"><a class="viewcode-back" href="../../g3py.html#g3py.tgp.TGP.set_space">[docs]</a>    <span class="k">def</span> <span class="nf">set_space</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">space</span><span class="p">):</span>
+        <span class="n">new_space</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">space_x</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">space_t</span> <span class="o">=</span> <span class="n">get_space</span><span class="p">(</span><span class="n">space</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">+</span> <span class="s1">&#39;_Space&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">space</span><span class="o">.</span><span class="n">set_value</span><span class="p">(</span><span class="n">new_space</span><span class="o">.</span><span class="n">get_value</span><span class="p">())</span></div>
+
+<div class="viewcode-block" id="TGP.describe"><a class="viewcode-back" href="../../g3py.html#g3py.tgp.TGP.describe">[docs]</a>    <span class="k">def</span> <span class="nf">describe</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">title</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">description</span><span class="p">[</span><span class="s1">&#39;title&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">title</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">description</span><span class="p">[</span><span class="s1">&#39;x&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">x</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">description</span><span class="p">[</span><span class="s1">&#39;y&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">y</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">description</span><span class="p">[</span><span class="s1">&#39;text&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">text</span></div>
+
+<div class="viewcode-block" id="TGP.observed"><a class="viewcode-back" href="../../g3py.html#g3py.tgp.TGP.observed">[docs]</a>    <span class="k">def</span> <span class="nf">observed</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inputs</span><span class="p">,</span> <span class="n">outputs</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">inputs</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">inputs_x</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">inputs_t</span> <span class="o">=</span> <span class="n">get_space</span><span class="p">(</span><span class="n">inputs</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">+</span> <span class="s1">&#39;_inputs&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">outputs</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">outputs_y</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">outputs_t</span> <span class="o">=</span> <span class="n">get_space</span><span class="p">(</span><span class="n">outputs</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">+</span> <span class="s1">&#39;_outputs&#39;</span><span class="p">,</span> <span class="n">squeeze</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mean_inputs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">inputs</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cov_inputs</span> <span class="o">=</span> <span class="n">tt_to_cov</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">kernel</span><span class="o">.</span><span class="n">cov</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">inputs</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">inv_outputs</span> <span class="o">=</span> <span class="n">tt_to_num</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mapping</span><span class="o">.</span><span class="n">inv</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">outputs</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">distribution</span> <span class="o">=</span> <span class="n">TGPDist</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">mean_inputs</span><span class="p">,</span> <span class="n">cov</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">cov_inputs</span><span class="p">,</span> <span class="n">mapping</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">mapping</span><span class="p">,</span> <span class="n">tgp</span><span class="o">=</span><span class="bp">self</span><span class="p">,</span>
+                                    <span class="n">observed</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">outputs</span><span class="p">,</span> <span class="n">testval</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">outputs</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">th</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">floatX</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="TGP.testing"><a class="viewcode-back" href="../../g3py.html#g3py.tgp.TGP.testing">[docs]</a>    <span class="k">def</span> <span class="nf">testing</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inputs</span><span class="p">,</span> <span class="n">outputs</span><span class="p">):</span>
+        <span class="n">__</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">inputs_test</span><span class="p">,</span> <span class="n">__</span> <span class="o">=</span> <span class="n">get_space</span><span class="p">(</span><span class="n">inputs</span><span class="p">)</span>
+        <span class="n">__</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">outputs_test</span><span class="p">,</span> <span class="n">__</span> <span class="o">=</span> <span class="n">get_space</span><span class="p">(</span><span class="n">outputs</span><span class="p">,</span> <span class="n">squeeze</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="TGP.point_to_eval"><a class="viewcode-back" href="../../g3py.html#g3py.tgp.TGP.point_to_eval">[docs]</a>    <span class="k">def</span> <span class="nf">point_to_eval</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">point</span><span class="p">):</span>
+        <span class="n">r</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">point</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">r</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">[</span><span class="n">k</span><span class="p">]]</span> <span class="o">=</span> <span class="n">v</span>
+        <span class="k">return</span> <span class="n">r</span></div>
+
+<div class="viewcode-block" id="TGP.point_to_In"><a class="viewcode-back" href="../../g3py.html#g3py.tgp.TGP.point_to_In">[docs]</a>    <span class="k">def</span> <span class="nf">point_to_In</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">point</span><span class="p">):</span>
+        <span class="n">r</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">point</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">r</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">th</span><span class="o">.</span><span class="n">In</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">[</span><span class="n">k</span><span class="p">],</span> <span class="n">value</span><span class="o">=</span><span class="n">v</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">r</span></div>
+
+<div class="viewcode-block" id="TGP.swap_test_obs"><a class="viewcode-back" href="../../g3py.html#g3py.tgp.TGP.swap_test_obs">[docs]</a>    <span class="k">def</span> <span class="nf">swap_test_obs</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">inputs</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span>
+        <span class="n">swap</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">inputs</span><span class="o">.</span><span class="n">get_value</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">inputs</span><span class="o">.</span><span class="n">set_value</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">inputs_test</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">inputs_test</span> <span class="o">=</span> <span class="n">swap</span>
+        <span class="n">swap</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">outputs</span><span class="o">.</span><span class="n">get_value</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">outputs</span><span class="o">.</span><span class="n">set_value</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">outputs_test</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">outputs_test</span> <span class="o">=</span> <span class="n">swap</span></div>
+
+<div class="viewcode-block" id="TGP.marginal_gp"><a class="viewcode-back" href="../../g3py.html#g3py.tgp.TGP.marginal_gp">[docs]</a>    <span class="k">def</span> <span class="nf">marginal_gp</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">value</span> <span class="o">=</span> <span class="n">tt</span><span class="o">.</span><span class="n">vector</span><span class="p">(</span><span class="s1">&#39;marginal_gp&#39;</span><span class="p">)</span>
+        <span class="n">value</span><span class="o">.</span><span class="n">tag</span><span class="o">.</span><span class="n">test_value</span> <span class="o">=</span> <span class="n">zeros</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">delta</span> <span class="o">=</span> <span class="n">value</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">space</span><span class="p">)</span>
+        <span class="n">cov</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">kernel</span><span class="o">.</span><span class="n">cov</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">space</span><span class="p">)</span>
+        <span class="n">cho</span> <span class="o">=</span> <span class="n">cholesky_robust</span><span class="p">(</span><span class="n">cov</span><span class="p">)</span>
+        <span class="n">L</span> <span class="o">=</span> <span class="n">sL</span><span class="o">.</span><span class="n">solve_lower_triangular</span><span class="p">(</span><span class="n">cho</span><span class="p">,</span> <span class="n">delta</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">value</span><span class="p">,</span> <span class="n">tt</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">(</span><span class="mf">0.5</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="n">cov</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">th</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">floatX</span><span class="p">)</span> <span class="o">*</span> <span class="n">tt</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">(</span><span class="mf">2.0</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">))</span>
+                                                 <span class="o">+</span> <span class="n">L</span><span class="o">.</span><span class="n">T</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">L</span><span class="p">))</span> <span class="o">-</span> <span class="n">tt</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">tt</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">nL</span><span class="o">.</span><span class="n">extract_diag</span><span class="p">(</span><span class="n">cho</span><span class="p">))))</span></div>
+
+<div class="viewcode-block" id="TGP.marginal_tgp"><a class="viewcode-back" href="../../g3py.html#g3py.tgp.TGP.marginal_tgp">[docs]</a>    <span class="k">def</span> <span class="nf">marginal_tgp</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">value</span> <span class="o">=</span> <span class="n">tt</span><span class="o">.</span><span class="n">vector</span><span class="p">(</span><span class="s1">&#39;marginal_tgp&#39;</span><span class="p">)</span>
+        <span class="n">value</span><span class="o">.</span><span class="n">tag</span><span class="o">.</span><span class="n">test_value</span> <span class="o">=</span> <span class="n">zeros</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">delta</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">mapping</span><span class="o">.</span><span class="n">inv</span><span class="p">(</span><span class="n">value</span><span class="p">)</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">space</span><span class="p">)</span>
+        <span class="n">cov</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">kernel</span><span class="o">.</span><span class="n">cov</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">space</span><span class="p">)</span>
+        <span class="n">cho</span> <span class="o">=</span> <span class="n">cholesky_robust</span><span class="p">(</span><span class="n">cov</span><span class="p">)</span>
+        <span class="n">L</span> <span class="o">=</span> <span class="n">sL</span><span class="o">.</span><span class="n">solve_lower_triangular</span><span class="p">(</span><span class="n">cho</span><span class="p">,</span> <span class="n">delta</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">value</span><span class="p">,</span> <span class="n">tt</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">(</span><span class="mf">0.5</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="n">cov</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">th</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">floatX</span><span class="p">)</span> <span class="o">*</span> <span class="n">tt</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">(</span><span class="mf">2.0</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">))</span>
+                                                 <span class="o">+</span> <span class="n">L</span><span class="o">.</span><span class="n">T</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">L</span><span class="p">))</span> <span class="o">-</span> <span class="n">tt</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">tt</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">nL</span><span class="o">.</span><span class="n">extract_diag</span><span class="p">(</span><span class="n">cho</span><span class="p">)))</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">mapping</span><span class="o">.</span><span class="n">logdet_dinv</span><span class="p">(</span><span class="n">value</span><span class="p">))</span></div>
+
+<div class="viewcode-block" id="TGP.prior_gp"><a class="viewcode-back" href="../../g3py.html#g3py.tgp.TGP.prior_gp">[docs]</a>    <span class="k">def</span> <span class="nf">prior_gp</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">cov</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">noise</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="n">mu</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">space</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">noise</span><span class="p">:</span>
+            <span class="n">k_cov</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">kernel</span><span class="o">.</span><span class="n">cov</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">space</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">k_cov</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">kernel_f</span><span class="o">.</span><span class="n">cov</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">space</span><span class="p">)</span>
+        <span class="n">var</span> <span class="o">=</span> <span class="n">nL</span><span class="o">.</span><span class="n">extract_diag</span><span class="p">(</span><span class="n">k_cov</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">cov</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">mu</span><span class="p">,</span> <span class="n">var</span><span class="p">,</span> <span class="n">k_cov</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">mu</span><span class="p">,</span> <span class="n">var</span></div>
+
+<div class="viewcode-block" id="TGP.prior_quantiles_tgp"><a class="viewcode-back" href="../../g3py.html#g3py.tgp.TGP.prior_quantiles_tgp">[docs]</a>    <span class="k">def</span> <span class="nf">prior_quantiles_tgp</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sigma</span><span class="o">=</span><span class="mf">1.96</span><span class="p">,</span> <span class="n">noise</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="n">mu</span><span class="p">,</span> <span class="n">var</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">prior_gp</span><span class="p">(</span><span class="n">cov</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">noise</span><span class="o">=</span><span class="n">noise</span><span class="p">)</span>
+        <span class="n">std</span> <span class="o">=</span> <span class="n">tt</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">var</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">mapping</span><span class="p">(</span><span class="n">mu</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">mapping</span><span class="p">(</span><span class="n">mu</span> <span class="o">-</span> <span class="n">sigma</span> <span class="o">*</span> <span class="n">std</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">mapping</span><span class="p">(</span><span class="n">mu</span> <span class="o">+</span> <span class="n">sigma</span> <span class="o">*</span> <span class="n">std</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="TGP.prior_moments_tgp"><a class="viewcode-back" href="../../g3py.html#g3py.tgp.TGP.prior_moments_tgp">[docs]</a>    <span class="k">def</span> <span class="nf">prior_moments_tgp</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n</span><span class="o">=</span><span class="mi">20</span><span class="p">):</span>
+        <span class="n">_a</span><span class="p">,</span> <span class="n">_w</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">polynomial</span><span class="o">.</span><span class="n">hermite</span><span class="o">.</span><span class="n">hermgauss</span><span class="p">(</span><span class="n">n</span><span class="p">)</span>
+        <span class="n">a</span> <span class="o">=</span> <span class="n">th</span><span class="o">.</span><span class="n">shared</span><span class="p">(</span><span class="n">_a</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">th</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">floatX</span><span class="p">),</span> <span class="n">borrow</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span><span class="o">.</span><span class="n">dimshuffle</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;x&#39;</span><span class="p">])</span>
+        <span class="n">w</span> <span class="o">=</span> <span class="n">th</span><span class="o">.</span><span class="n">shared</span><span class="p">(</span><span class="n">_w</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">th</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">floatX</span><span class="p">),</span> <span class="n">borrow</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">mu</span><span class="p">,</span> <span class="n">var</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">prior_gp</span><span class="p">()</span>
+        <span class="n">std</span> <span class="o">=</span> <span class="n">tt</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">var</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">gauss_hermite</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mapping</span><span class="p">,</span> <span class="n">mu</span><span class="p">,</span> <span class="n">std</span><span class="p">,</span> <span class="n">a</span><span class="p">,</span> <span class="n">w</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">gauss_hermite</span><span class="p">(</span><span class="k">lambda</span> <span class="n">v</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">mapping</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span><span class="p">,</span> <span class="n">mu</span><span class="p">,</span>
+                                                                                   <span class="n">std</span><span class="p">,</span> <span class="n">a</span><span class="p">,</span> <span class="n">w</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="TGP.posterior_gp"><a class="viewcode-back" href="../../g3py.html#g3py.tgp.TGP.posterior_gp">[docs]</a>    <span class="k">def</span> <span class="nf">posterior_gp</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">cov</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">noise</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="n">k_ni</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">kernel_f</span><span class="o">.</span><span class="n">cov</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">space</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">inputs</span><span class="p">)</span>
+        <span class="n">mu</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">space</span><span class="p">)</span> <span class="o">+</span> <span class="n">k_ni</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">sL</span><span class="o">.</span><span class="n">solve</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cov_inputs</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">inv_outputs</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">mean_inputs</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">noise</span><span class="p">:</span>
+            <span class="n">k_cov</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">kernel</span><span class="o">.</span><span class="n">cov</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">space</span><span class="p">)</span> <span class="o">-</span> <span class="n">k_ni</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">sL</span><span class="o">.</span><span class="n">solve</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cov_inputs</span><span class="p">,</span> <span class="n">k_ni</span><span class="o">.</span><span class="n">T</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">k_cov</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">kernel_f</span><span class="o">.</span><span class="n">cov</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">space</span><span class="p">)</span> <span class="o">-</span> <span class="n">k_ni</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">sL</span><span class="o">.</span><span class="n">solve</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cov_inputs</span><span class="p">,</span> <span class="n">k_ni</span><span class="o">.</span><span class="n">T</span><span class="p">))</span>
+        <span class="n">var</span> <span class="o">=</span> <span class="n">nL</span><span class="o">.</span><span class="n">extract_diag</span><span class="p">(</span><span class="n">debug</span><span class="p">(</span><span class="n">k_cov</span><span class="p">,</span> <span class="s1">&#39;k_cov&#39;</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">cov</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">mu</span><span class="p">,</span> <span class="n">var</span><span class="p">,</span> <span class="n">k_cov</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">mu</span><span class="p">,</span> <span class="n">var</span></div>
+
+<div class="viewcode-block" id="TGP.posterior_quantiles_tgp"><a class="viewcode-back" href="../../g3py.html#g3py.tgp.TGP.posterior_quantiles_tgp">[docs]</a>    <span class="k">def</span> <span class="nf">posterior_quantiles_tgp</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sigma</span><span class="o">=</span><span class="mf">1.96</span><span class="p">,</span> <span class="n">noise</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="n">mu</span><span class="p">,</span> <span class="n">var</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">posterior_gp</span><span class="p">(</span><span class="n">noise</span><span class="o">=</span><span class="n">noise</span><span class="p">)</span>
+        <span class="n">std</span> <span class="o">=</span> <span class="n">tt</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">var</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">mapping</span><span class="p">(</span><span class="n">mu</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">mapping</span><span class="p">(</span><span class="n">mu</span> <span class="o">-</span> <span class="n">sigma</span> <span class="o">*</span> <span class="n">std</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">mapping</span><span class="p">(</span><span class="n">mu</span> <span class="o">+</span> <span class="n">sigma</span> <span class="o">*</span> <span class="n">std</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="TGP.posterior_moments_tgp"><a class="viewcode-back" href="../../g3py.html#g3py.tgp.TGP.posterior_moments_tgp">[docs]</a>    <span class="k">def</span> <span class="nf">posterior_moments_tgp</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n</span><span class="o">=</span><span class="mi">20</span><span class="p">):</span>
+        <span class="n">_a</span><span class="p">,</span> <span class="n">_w</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">polynomial</span><span class="o">.</span><span class="n">hermite</span><span class="o">.</span><span class="n">hermgauss</span><span class="p">(</span><span class="n">n</span><span class="p">)</span>
+        <span class="n">a</span> <span class="o">=</span> <span class="n">th</span><span class="o">.</span><span class="n">shared</span><span class="p">(</span><span class="n">_a</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">th</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">floatX</span><span class="p">),</span> <span class="n">borrow</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span><span class="o">.</span><span class="n">dimshuffle</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;x&#39;</span><span class="p">])</span>
+        <span class="n">w</span> <span class="o">=</span> <span class="n">th</span><span class="o">.</span><span class="n">shared</span><span class="p">(</span><span class="n">_w</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">th</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">floatX</span><span class="p">),</span> <span class="n">borrow</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">mu</span><span class="p">,</span> <span class="n">var</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">posterior_gp</span><span class="p">()</span>
+        <span class="n">std</span> <span class="o">=</span> <span class="n">tt</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">var</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">gauss_hermite</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mapping</span><span class="p">,</span> <span class="n">mu</span><span class="p">,</span> <span class="n">std</span><span class="p">,</span> <span class="n">a</span><span class="p">,</span> <span class="n">w</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">gauss_hermite</span><span class="p">(</span><span class="k">lambda</span> <span class="n">v</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">mapping</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span><span class="p">,</span> <span class="n">mu</span><span class="p">,</span>
+                                                                                   <span class="n">std</span><span class="p">,</span> <span class="n">a</span><span class="p">,</span> <span class="n">w</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="TGP.sampler_gp"><a class="viewcode-back" href="../../g3py.html#g3py.tgp.TGP.sampler_gp">[docs]</a>    <span class="k">def</span> <span class="nf">sampler_gp</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">random</span> <span class="o">=</span> <span class="n">tt</span><span class="o">.</span><span class="n">vector</span><span class="p">(</span><span class="s1">&#39;random&#39;</span><span class="p">)</span>
+        <span class="n">random</span><span class="o">.</span><span class="n">tag</span><span class="o">.</span><span class="n">test_value</span> <span class="o">=</span> <span class="n">zeros</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">space_x</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">outputs</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">mu</span><span class="p">,</span> <span class="n">var</span><span class="p">,</span> <span class="n">cov</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">prior_gp</span><span class="p">(</span><span class="n">cov</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">mu</span><span class="p">,</span> <span class="n">var</span><span class="p">,</span> <span class="n">cov</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">posterior_gp</span><span class="p">(</span><span class="n">cov</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">cho</span> <span class="o">=</span> <span class="n">cholesky_robust</span><span class="p">(</span><span class="n">cov</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">random</span><span class="p">,</span> <span class="n">mu</span> <span class="o">+</span> <span class="n">cho</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">random</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="TGP.sampler_tgp"><a class="viewcode-back" href="../../g3py.html#g3py.tgp.TGP.sampler_tgp">[docs]</a>    <span class="k">def</span> <span class="nf">sampler_tgp</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">random</span><span class="p">,</span> <span class="n">samples</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sampler_gp</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">random</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">mapping</span><span class="p">(</span><span class="n">samples</span><span class="p">)</span></div>
+
+    <span class="nd">@staticmethod</span>
+<div class="viewcode-block" id="TGP.gauss_hermite"><a class="viewcode-back" href="../../g3py.html#g3py.tgp.TGP.gauss_hermite">[docs]</a>    <span class="k">def</span> <span class="nf">gauss_hermite</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">mu</span><span class="p">,</span> <span class="n">sigma</span><span class="p">,</span> <span class="n">a</span><span class="p">,</span> <span class="n">w</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">tt</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">w</span><span class="p">,</span> <span class="n">f</span><span class="p">(</span><span class="n">mu</span> <span class="o">+</span> <span class="n">sigma</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span> <span class="o">*</span> <span class="n">a</span><span class="p">))</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="TGP.compile_functions"><a class="viewcode-back" href="../../g3py.html#g3py.tgp.TGP.compile_functions">[docs]</a>    <span class="k">def</span> <span class="nf">compile_functions</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">params</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">vars</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">outputs</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">mu</span><span class="p">,</span> <span class="n">var</span><span class="p">,</span> <span class="n">cov</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">prior_gp</span><span class="p">(</span><span class="n">cov</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="n">_</span><span class="p">,</span> <span class="n">noise</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">prior_gp</span><span class="p">(</span><span class="n">cov</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">noise</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="n">median</span><span class="p">,</span> <span class="n">I_up</span><span class="p">,</span> <span class="n">I_down</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">prior_quantiles_tgp</span><span class="p">()</span>
+            <span class="n">_</span><span class="p">,</span> <span class="n">noise_up</span><span class="p">,</span> <span class="n">noise_down</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">prior_quantiles_tgp</span><span class="p">(</span><span class="n">noise</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="n">m1</span><span class="p">,</span> <span class="n">m2</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">prior_moments_tgp</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">mu</span><span class="p">,</span> <span class="n">var</span><span class="p">,</span> <span class="n">cov</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">posterior_gp</span><span class="p">(</span><span class="n">cov</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="n">_</span><span class="p">,</span> <span class="n">noise</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">posterior_gp</span><span class="p">(</span><span class="n">cov</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">noise</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="n">median</span><span class="p">,</span> <span class="n">I_up</span><span class="p">,</span> <span class="n">I_down</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">posterior_quantiles_tgp</span><span class="p">()</span>
+            <span class="n">_</span><span class="p">,</span> <span class="n">noise_up</span><span class="p">,</span> <span class="n">noise_down</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">posterior_quantiles_tgp</span><span class="p">(</span><span class="n">noise</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="n">m1</span><span class="p">,</span> <span class="n">m2</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">posterior_moments_tgp</span><span class="p">()</span>
+
+        <span class="n">mu_compilated</span> <span class="o">=</span> <span class="n">makefn</span><span class="p">(</span><span class="n">params</span><span class="p">,</span> <span class="n">mu</span><span class="p">)</span>
+        <span class="n">var_compilated</span> <span class="o">=</span> <span class="n">makefn</span><span class="p">(</span><span class="n">params</span><span class="p">,</span> <span class="n">var</span><span class="p">)</span>
+        <span class="n">cov_compilated</span> <span class="o">=</span> <span class="n">makefn</span><span class="p">(</span><span class="n">params</span><span class="p">,</span> <span class="n">cov</span><span class="p">)</span>
+        <span class="n">noise_compilated</span> <span class="o">=</span> <span class="n">makefn</span><span class="p">(</span><span class="n">params</span><span class="p">,</span> <span class="n">noise</span><span class="p">)</span>
+
+        <span class="n">median_compilated</span> <span class="o">=</span> <span class="n">makefn</span><span class="p">(</span><span class="n">params</span><span class="p">,</span> <span class="n">median</span><span class="p">)</span>
+        <span class="n">I_up_compilated</span> <span class="o">=</span> <span class="n">makefn</span><span class="p">(</span><span class="n">params</span><span class="p">,</span> <span class="n">I_up</span><span class="p">)</span>
+        <span class="n">I_down_compilated</span> <span class="o">=</span> <span class="n">makefn</span><span class="p">(</span><span class="n">params</span><span class="p">,</span> <span class="n">I_down</span><span class="p">)</span>
+
+        <span class="n">noise_up_compilated</span> <span class="o">=</span> <span class="n">makefn</span><span class="p">(</span><span class="n">params</span><span class="p">,</span> <span class="n">noise_up</span><span class="p">)</span>
+        <span class="n">noise_down_compilated</span> <span class="o">=</span> <span class="n">makefn</span><span class="p">(</span><span class="n">params</span><span class="p">,</span> <span class="n">noise_down</span><span class="p">)</span>
+
+        <span class="n">moment1</span> <span class="o">=</span> <span class="n">makefn</span><span class="p">(</span><span class="n">params</span><span class="p">,</span> <span class="n">m1</span><span class="p">)</span>
+        <span class="n">moment2</span> <span class="o">=</span> <span class="n">makefn</span><span class="p">(</span><span class="n">params</span><span class="p">,</span> <span class="n">m2</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">compiles</span><span class="p">[</span><span class="s1">&#39;mean&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">mu_compilated</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">compiles</span><span class="p">[</span><span class="s1">&#39;variance&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">var_compilated</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">compiles</span><span class="p">[</span><span class="s1">&#39;covariance&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">cov_compilated</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">compiles</span><span class="p">[</span><span class="s1">&#39;noise&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">noise_compilated</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">compiles</span><span class="p">[</span><span class="s1">&#39;median&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">median_compilated</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">compiles</span><span class="p">[</span><span class="s1">&#39;I_up&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">I_up_compilated</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">compiles</span><span class="p">[</span><span class="s1">&#39;I_down&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">I_down_compilated</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">compiles</span><span class="p">[</span><span class="s1">&#39;noise_up&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">noise_up_compilated</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">compiles</span><span class="p">[</span><span class="s1">&#39;noise_down&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">noise_down_compilated</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">compiles</span><span class="p">[</span><span class="s1">&#39;m1&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">moment1</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">compiles</span><span class="p">[</span><span class="s1">&#39;m2&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">moment2</span>
+        <span class="k">return</span> <span class="n">mu_compilated</span><span class="p">,</span> <span class="n">var_compilated</span><span class="p">,</span> <span class="n">noise_compilated</span><span class="p">,</span> <span class="n">median_compilated</span><span class="p">,</span> <span class="n">I_up_compilated</span><span class="p">,</span> <span class="n">I_down_compilated</span><span class="p">,</span> \
+               <span class="n">noise_up_compilated</span><span class="p">,</span> <span class="n">noise_down_compilated</span><span class="p">,</span> <span class="n">moment1</span><span class="p">,</span> <span class="n">moment2</span></div>
+
+<div class="viewcode-block" id="TGP.compile_samplers"><a class="viewcode-back" href="../../g3py.html#g3py.tgp.TGP.compile_samplers">[docs]</a>    <span class="k">def</span> <span class="nf">compile_samplers</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">params</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">vars</span>
+        <span class="n">random</span><span class="p">,</span> <span class="n">sampler</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sampler_gp</span><span class="p">()</span>
+        <span class="n">sampler_gp</span> <span class="o">=</span> <span class="n">makefn</span><span class="p">([</span><span class="n">random</span><span class="p">]</span> <span class="o">+</span> <span class="n">params</span><span class="p">,</span> <span class="n">sampler</span><span class="p">)</span>
+        <span class="n">random</span><span class="p">,</span> <span class="n">sampler</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sampler_tgp</span><span class="p">()</span>
+        <span class="n">sampler_tgp</span> <span class="o">=</span> <span class="n">makefn</span><span class="p">([</span><span class="n">random</span><span class="p">]</span> <span class="o">+</span> <span class="n">params</span><span class="p">,</span> <span class="n">sampler</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">compiles</span><span class="p">[</span><span class="s1">&#39;sampler_gp&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">sampler_gp</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">compiles</span><span class="p">[</span><span class="s1">&#39;sampler_tgp&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">sampler_tgp</span>
+        <span class="k">return</span> <span class="n">sampler_gp</span><span class="p">,</span> <span class="n">sampler_tgp</span></div>
+
+<div class="viewcode-block" id="TGP.compile_distributions"><a class="viewcode-back" href="../../g3py.html#g3py.tgp.TGP.compile_distributions">[docs]</a>    <span class="k">def</span> <span class="nf">compile_distributions</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+        <span class="n">params</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">vars</span>
+        <span class="n">value</span><span class="p">,</span> <span class="n">dist</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">marginal_gp</span><span class="p">()</span>
+
+        <span class="n">dist_gp</span> <span class="o">=</span> <span class="n">makefn</span><span class="p">([</span><span class="n">value</span><span class="p">]</span> <span class="o">+</span> <span class="n">params</span><span class="p">,</span> <span class="n">dist</span><span class="p">[</span><span class="n">index</span><span class="p">])</span>
+
+        <span class="n">trans</span> <span class="o">=</span> <span class="n">makefn</span><span class="p">([</span><span class="n">value</span><span class="p">]</span> <span class="o">+</span> <span class="n">params</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">mapping</span><span class="p">(</span><span class="n">value</span><span class="p">))</span>
+        <span class="n">trans_inv</span> <span class="o">=</span> <span class="n">makefn</span><span class="p">([</span><span class="n">value</span><span class="p">]</span> <span class="o">+</span> <span class="n">params</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">mapping</span><span class="o">.</span><span class="n">inv</span><span class="p">(</span><span class="n">value</span><span class="p">))</span>
+        <span class="n">det_jac_trans_inv</span> <span class="o">=</span> <span class="n">makefn</span><span class="p">([</span><span class="n">value</span><span class="p">]</span> <span class="o">+</span> <span class="n">params</span><span class="p">,</span> <span class="n">tt</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mapping</span><span class="o">.</span><span class="n">logdet_dinv</span><span class="p">(</span><span class="n">value</span><span class="p">)))</span>
+
+        <span class="n">value</span><span class="p">,</span> <span class="n">dist</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">marginal_tgp</span><span class="p">()</span>
+        <span class="n">dist_tgp</span> <span class="o">=</span> <span class="n">makefn</span><span class="p">([</span><span class="n">value</span><span class="p">]</span> <span class="o">+</span> <span class="n">params</span><span class="p">,</span> <span class="n">dist</span><span class="p">[</span><span class="n">index</span><span class="p">])</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">compiles</span><span class="p">[</span><span class="s1">&#39;trans&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">trans</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">compiles</span><span class="p">[</span><span class="s1">&#39;trans_inv&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">trans_inv</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">compiles</span><span class="p">[</span><span class="s1">&#39;det_jac_trans_inv&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">det_jac_trans_inv</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">compiles</span><span class="p">[</span><span class="s1">&#39;dist_gp&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">dist_gp</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">compiles</span><span class="p">[</span><span class="s1">&#39;dist_tgp&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">dist_tgp</span>
+        <span class="k">return</span> <span class="n">trans</span><span class="p">,</span> <span class="n">trans_inv</span><span class="p">,</span> <span class="n">det_jac_trans_inv</span><span class="p">,</span> <span class="n">dist_gp</span><span class="p">,</span> <span class="n">dist_tgp</span></div>
+
+<div class="viewcode-block" id="TGP.compile"><a class="viewcode-back" href="../../g3py.html#g3py.tgp.TGP.compile">[docs]</a>    <span class="k">def</span> <span class="nf">compile</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">compile_functions</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">compile_samplers</span><span class="p">()</span></div>
+        <span class="c1">#self.compile_distributions(index)</span>
+
+<div class="viewcode-block" id="TGP.plot_space"><a class="viewcode-back" href="../../g3py.html#g3py.tgp.TGP.plot_space">[docs]</a>    <span class="k">def</span> <span class="nf">plot_space</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">space_t</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">space_x</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">inputs_t</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">inputs_t</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">inputs_x</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="TGP.plot_data"><a class="viewcode-back" href="../../g3py.html#g3py.tgp.TGP.plot_data">[docs]</a>    <span class="k">def</span> <span class="nf">plot_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">big</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">big</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">plot_data_big</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">plot_data_normal</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="TGP.plot_data_normal"><a class="viewcode-back" href="../../g3py.html#g3py.tgp.TGP.plot_data_normal">[docs]</a>    <span class="k">def</span> <span class="nf">plot_data_normal</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">hidden</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">space_t</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">hidden</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Hidden Processes&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">outputs_y</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">outputs_t</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">outputs_y</span><span class="p">,</span> <span class="s1">&#39;.k&#39;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Observations&#39;</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="TGP.plot_data_big"><a class="viewcode-back" href="../../g3py.html#g3py.tgp.TGP.plot_data_big">[docs]</a>    <span class="k">def</span> <span class="nf">plot_data_big</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">hidden</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">space_t</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">hidden</span><span class="p">,</span> <span class="n">linewidth</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Hidden Processes&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">outputs_y</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">outputs_t</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">outputs_y</span><span class="p">,</span> <span class="s1">&#39;.k&#39;</span><span class="p">,</span> <span class="n">ms</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Observations&#39;</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="TGP.plot_gp_moments"><a class="viewcode-back" href="../../g3py.html#g3py.tgp.TGP.plot_gp_moments">[docs]</a>    <span class="k">def</span> <span class="nf">plot_gp_moments</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">params</span><span class="p">,</span> <span class="n">sigma</span><span class="o">=</span><span class="mf">1.96</span><span class="p">):</span>
+        <span class="n">mean</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">compiles</span><span class="p">[</span><span class="s1">&#39;mean&#39;</span><span class="p">](</span><span class="o">**</span><span class="n">params</span><span class="p">)</span>
+        <span class="n">variance</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">compiles</span><span class="p">[</span><span class="s1">&#39;variance&#39;</span><span class="p">](</span><span class="o">**</span><span class="n">params</span><span class="p">)</span>
+        <span class="n">noise</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">compiles</span><span class="p">[</span><span class="s1">&#39;noise&#39;</span><span class="p">](</span><span class="o">**</span><span class="n">params</span><span class="p">)</span>
+        <span class="n">std</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">variance</span><span class="p">)</span>
+        <span class="n">wn</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">noise</span><span class="p">)</span>
+
+        <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">space_t</span><span class="p">,</span> <span class="n">mean</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Mean&#39;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">fill_between</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">space_t</span><span class="p">,</span> <span class="n">mean</span> <span class="o">+</span> <span class="n">sigma</span> <span class="o">*</span> <span class="n">std</span><span class="p">,</span> <span class="n">mean</span> <span class="o">-</span> <span class="n">sigma</span> <span class="o">*</span> <span class="n">std</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;95%&#39;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">fill_between</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">space_t</span><span class="p">,</span> <span class="n">mean</span> <span class="o">+</span> <span class="n">sigma</span> <span class="o">*</span> <span class="n">wn</span><span class="p">,</span> <span class="n">mean</span> <span class="o">-</span> <span class="n">sigma</span> <span class="o">*</span> <span class="n">wn</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;noise&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">mean</span><span class="p">,</span> <span class="n">variance</span><span class="p">,</span> <span class="n">noise</span></div>
+
+<div class="viewcode-block" id="TGP.plot_gp_samples"><a class="viewcode-back" href="../../g3py.html#g3py.tgp.TGP.plot_gp_samples">[docs]</a>    <span class="k">def</span> <span class="nf">plot_gp_samples</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">params</span><span class="p">,</span> <span class="n">samples</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">samples</span><span class="p">):</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">space_x</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">compiles</span><span class="p">[</span><span class="s1">&#39;sampler_gp&#39;</span><span class="p">](</span><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">space_x</span><span class="p">)),</span> <span class="o">**</span><span class="n">params</span><span class="p">),</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.6</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="TGP.plot_tgp_quantiles"><a class="viewcode-back" href="../../g3py.html#g3py.tgp.TGP.plot_tgp_quantiles">[docs]</a>    <span class="k">def</span> <span class="nf">plot_tgp_quantiles</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">params</span><span class="p">):</span>
+        <span class="n">med</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">compiles</span><span class="p">[</span><span class="s1">&#39;median&#39;</span><span class="p">](</span><span class="o">**</span><span class="n">params</span><span class="p">)</span>
+        <span class="n">Iup</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">compiles</span><span class="p">[</span><span class="s1">&#39;I_up&#39;</span><span class="p">](</span><span class="o">**</span><span class="n">params</span><span class="p">)</span>
+        <span class="n">Idown</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">compiles</span><span class="p">[</span><span class="s1">&#39;I_down&#39;</span><span class="p">](</span><span class="o">**</span><span class="n">params</span><span class="p">)</span>
+        <span class="n">noise_up</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">compiles</span><span class="p">[</span><span class="s1">&#39;noise_up&#39;</span><span class="p">](</span><span class="o">**</span><span class="n">params</span><span class="p">)</span>
+        <span class="n">noise_down</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">compiles</span><span class="p">[</span><span class="s1">&#39;noise_down&#39;</span><span class="p">](</span><span class="o">**</span><span class="n">params</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">space_t</span><span class="p">,</span> <span class="n">med</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Median&#39;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">fill_between</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">space_t</span><span class="p">,</span> <span class="n">Iup</span><span class="p">,</span> <span class="n">Idown</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;95%&#39;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">fill_between</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">space_t</span><span class="p">,</span> <span class="n">noise_up</span><span class="p">,</span> <span class="n">noise_down</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Noise&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">med</span><span class="p">,</span> <span class="n">Iup</span><span class="p">,</span> <span class="n">Idown</span></div>
+
+<div class="viewcode-block" id="TGP.plot_tgp_moments"><a class="viewcode-back" href="../../g3py.html#g3py.tgp.TGP.plot_tgp_moments">[docs]</a>    <span class="k">def</span> <span class="nf">plot_tgp_moments</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">params</span><span class="p">):</span>
+        <span class="n">moment1</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">compiles</span><span class="p">[</span><span class="s1">&#39;m1&#39;</span><span class="p">](</span><span class="o">**</span><span class="n">params</span><span class="p">)</span>
+        <span class="n">moment2</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">compiles</span><span class="p">[</span><span class="s1">&#39;m2&#39;</span><span class="p">](</span><span class="o">**</span><span class="n">params</span><span class="p">)</span>
+        <span class="n">std</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">moment2</span><span class="o">-</span><span class="n">moment1</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">space_t</span><span class="p">,</span> <span class="n">moment1</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Mean&#39;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">space_t</span><span class="p">,</span> <span class="n">moment1</span> <span class="o">+</span> <span class="mf">2.0</span> <span class="o">*</span> <span class="n">std</span><span class="p">,</span> <span class="s1">&#39;--k&#39;</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;4.0 std&#39;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">space_t</span><span class="p">,</span> <span class="n">moment1</span> <span class="o">-</span> <span class="mf">2.0</span> <span class="o">*</span> <span class="n">std</span><span class="p">,</span> <span class="s1">&#39;--k&#39;</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.2</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">moment1</span><span class="p">,</span> <span class="n">moment2</span></div>
+
+<div class="viewcode-block" id="TGP.plot_tgp_samples"><a class="viewcode-back" href="../../g3py.html#g3py.tgp.TGP.plot_tgp_samples">[docs]</a>    <span class="k">def</span> <span class="nf">plot_tgp_samples</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">params</span><span class="p">,</span> <span class="n">samples</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">samples</span><span class="p">):</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">space_x</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">compiles</span><span class="p">[</span><span class="s1">&#39;sampler_tgp&#39;</span><span class="p">](</span><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">space_x</span><span class="p">)),</span> <span class="o">**</span><span class="n">params</span><span class="p">),</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.6</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="TGP.plot_gp"><a class="viewcode-back" href="../../g3py.html#g3py.tgp.TGP.plot_gp">[docs]</a>    <span class="k">def</span> <span class="nf">plot_gp</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">params</span><span class="p">,</span> <span class="n">title</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">samples</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">big</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">scores</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">loc</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+        <span class="c1">#if self.space_t is not self.space_x:</span>
+        <span class="c1">#    plt.figure(0)</span>
+        <span class="c1">#    self.plot_space()</span>
+        <span class="c1">#plt.figure(1)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">plot_data</span><span class="p">(</span><span class="n">big</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">plot_gp_moments</span><span class="p">(</span><span class="n">params</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">plot_gp_samples</span><span class="p">(</span><span class="n">params</span><span class="p">,</span> <span class="n">samples</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">scores</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">description</span><span class="p">[</span><span class="s1">&#39;scores&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">scores</span><span class="p">(</span><span class="n">params</span><span class="p">)</span>
+            <span class="n">score_title</span> <span class="o">=</span> <span class="s1">&#39;ll_train=</span><span class="si">{:.2f}</span><span class="s1"> | ll_test=</span><span class="si">{:.2f}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">description</span><span class="p">[</span><span class="s1">&#39;scores&#39;</span><span class="p">][</span><span class="s1">&#39;logp_train&#39;</span><span class="p">],</span>
+                                                                <span class="bp">self</span><span class="o">.</span><span class="n">description</span><span class="p">[</span><span class="s1">&#39;scores&#39;</span><span class="p">][</span><span class="s1">&#39;logp_test&#39;</span><span class="p">])</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">score_title</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+        <span class="k">if</span> <span class="n">title</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">title</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">description</span><span class="p">[</span><span class="s1">&#39;title&#39;</span><span class="p">]</span>
+        <span class="n">text_plot</span><span class="p">(</span><span class="n">title</span> <span class="o">+</span> <span class="s1">&#39;: &#39;</span> <span class="o">+</span> <span class="n">score_title</span><span class="p">,</span>  <span class="bp">self</span><span class="o">.</span><span class="n">description</span><span class="p">[</span><span class="s1">&#39;x&#39;</span><span class="p">],</span>  <span class="bp">self</span><span class="o">.</span><span class="n">description</span><span class="p">[</span><span class="s1">&#39;y&#39;</span><span class="p">],</span> <span class="n">loc</span><span class="o">=</span><span class="n">loc</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="TGP.plot_tgp"><a class="viewcode-back" href="../../g3py.html#g3py.tgp.TGP.plot_tgp">[docs]</a>    <span class="k">def</span> <span class="nf">plot_tgp</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">params</span><span class="p">,</span> <span class="n">title</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">samples</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">big</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">scores</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">loc</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+        <span class="c1">#if self.space_t is not self.space_x:</span>
+        <span class="c1">#    plt.figure(0)</span>
+        <span class="c1">#    self.plot_space()</span>
+        <span class="c1">#plt.figure(1)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">plot_data</span><span class="p">(</span><span class="n">big</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">plot_tgp_moments</span><span class="p">(</span><span class="n">params</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">plot_tgp_quantiles</span><span class="p">(</span><span class="n">params</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">plot_tgp_samples</span><span class="p">(</span><span class="n">params</span><span class="p">,</span> <span class="n">samples</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">scores</span><span class="p">:</span> <span class="c1">#TODO: Check Scores</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">description</span><span class="p">[</span><span class="s1">&#39;scores&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">scores</span><span class="p">(</span><span class="n">params</span><span class="p">)</span>
+            <span class="n">score_title</span> <span class="o">=</span> <span class="s1">&#39;ll_train=</span><span class="si">{:.2f}</span><span class="s1"> | ll_test=</span><span class="si">{:.2f}</span><span class="s1"> | mse=</span><span class="si">{:.2f}</span><span class="s1">  | bias=</span><span class="si">{:.2f}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">description</span><span class="p">[</span><span class="s1">&#39;scores&#39;</span><span class="p">][</span><span class="s1">&#39;logp_train&#39;</span><span class="p">],</span>
+                                                                                          <span class="bp">self</span><span class="o">.</span><span class="n">description</span><span class="p">[</span><span class="s1">&#39;scores&#39;</span><span class="p">][</span><span class="s1">&#39;logp_test&#39;</span><span class="p">],</span>
+                                                                                          <span class="bp">self</span><span class="o">.</span><span class="n">description</span><span class="p">[</span><span class="s1">&#39;scores&#39;</span><span class="p">][</span><span class="s1">&#39;mse_test&#39;</span><span class="p">],</span>
+                                                                                          <span class="bp">self</span><span class="o">.</span><span class="n">description</span><span class="p">[</span><span class="s1">&#39;scores&#39;</span><span class="p">][</span><span class="s1">&#39;mab_test&#39;</span><span class="p">])</span>
+            <span class="n">score_title</span> <span class="o">=</span> <span class="s1">&#39;ll_train=</span><span class="si">{:.2f}</span><span class="s1"> | ll_test=</span><span class="si">{:.2f}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">description</span><span class="p">[</span><span class="s1">&#39;scores&#39;</span><span class="p">][</span><span class="s1">&#39;logp_train&#39;</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">description</span><span class="p">[</span><span class="s1">&#39;scores&#39;</span><span class="p">][</span><span class="s1">&#39;logp_test&#39;</span><span class="p">])</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">score_title</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+        <span class="k">if</span> <span class="n">title</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">title</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">description</span><span class="p">[</span><span class="s1">&#39;title&#39;</span><span class="p">]</span>
+        <span class="n">text_plot</span><span class="p">(</span><span class="n">title</span> <span class="o">+</span> <span class="s1">&#39;: &#39;</span> <span class="o">+</span> <span class="n">score_title</span><span class="p">,</span>  <span class="bp">self</span><span class="o">.</span><span class="n">description</span><span class="p">[</span><span class="s1">&#39;x&#39;</span><span class="p">],</span>  <span class="bp">self</span><span class="o">.</span><span class="n">description</span><span class="p">[</span><span class="s1">&#39;y&#39;</span><span class="p">],</span> <span class="n">loc</span><span class="o">=</span><span class="n">loc</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="TGP.scores"><a class="viewcode-back" href="../../g3py.html#g3py.tgp.TGP.scores">[docs]</a>    <span class="k">def</span> <span class="nf">scores</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">params</span><span class="p">):</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">logp_train</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nanmean</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">logp</span><span class="p">(</span><span class="n">params</span><span class="p">))</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">logp_train</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+
+        <span class="n">mean</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">compiles</span><span class="p">[</span><span class="s1">&#39;m1&#39;</span><span class="p">](</span><span class="o">**</span><span class="n">params</span><span class="p">)</span>
+        <span class="n">var</span> <span class="o">=</span> <span class="n">mean</span><span class="o">**</span><span class="mi">2</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">compiles</span><span class="p">[</span><span class="s1">&#39;m2&#39;</span><span class="p">](</span><span class="o">**</span><span class="n">params</span><span class="p">)</span>
+        <span class="c1">#print(mean.shape)</span>
+        <span class="c1">#print(self.outputs.get_value().shape)</span>
+
+        <span class="n">mse_train</span> <span class="o">=</span> <span class="mi">0</span><span class="c1">#np.nanmean((mean - self.outputs.get_value()) ** 2 + var)</span>
+        <span class="n">bias_train</span> <span class="o">=</span> <span class="mi">0</span><span class="c1">#np.nanmean(np.abs(mean - self.outputs.get_value()))</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">swap_test_obs</span><span class="p">()</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">logp_test</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nanmean</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">logp</span><span class="p">(</span><span class="n">params</span><span class="p">))</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">logp_test</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+        <span class="n">mean</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">compiles</span><span class="p">[</span><span class="s1">&#39;m1&#39;</span><span class="p">](</span><span class="o">**</span><span class="n">params</span><span class="p">)</span>
+        <span class="n">var</span> <span class="o">=</span> <span class="n">mean</span><span class="o">**</span><span class="mi">2</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">compiles</span><span class="p">[</span><span class="s1">&#39;m2&#39;</span><span class="p">](</span><span class="o">**</span><span class="n">params</span><span class="p">)</span>
+        <span class="n">mse_test</span> <span class="o">=</span> <span class="mi">0</span><span class="c1">#np.nanmean((mean - self.outputs.get_value()) ** 2 + var)</span>
+        <span class="n">bias_test</span> <span class="o">=</span> <span class="mi">0</span><span class="c1">#np.nanmean(np.abs(mean - self.outputs.get_value()))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">swap_test_obs</span><span class="p">()</span>
+
+        <span class="n">d</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;logp_train&#39;</span><span class="p">:</span> <span class="n">logp_train</span><span class="p">,</span>
+             <span class="s1">&#39;mse_train&#39;</span><span class="p">:</span> <span class="n">mse_train</span><span class="p">,</span>
+             <span class="s1">&#39;mab_train&#39;</span><span class="p">:</span> <span class="n">bias_train</span><span class="p">,</span>
+             <span class="s1">&#39;logp_test&#39;</span><span class="p">:</span> <span class="n">logp_test</span><span class="p">,</span>
+             <span class="s1">&#39;mse_test&#39;</span><span class="p">:</span> <span class="n">mse_test</span><span class="p">,</span>
+             <span class="s1">&#39;mab_test&#39;</span><span class="p">:</span> <span class="n">bias_test</span><span class="p">}</span>
+        <span class="k">return</span> <span class="n">d</span></div>
+
+<div class="viewcode-block" id="TGP.find_MAP"><a class="viewcode-back" href="../../g3py.html#g3py.tgp.TGP.find_MAP">[docs]</a>    <span class="k">def</span> <span class="nf">find_MAP</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">points</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">plot</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">samples</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+        <span class="n">maps</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">start</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">start</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">find_default</span><span class="p">()</span>
+        <span class="n">maps</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="s1">&#39;start&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">logp</span><span class="p">(</span><span class="n">start</span><span class="p">),</span> <span class="n">start</span><span class="p">))</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">plot_tgp</span><span class="p">(</span><span class="n">start</span><span class="p">,</span> <span class="s1">&#39;start&#39;</span><span class="p">,</span> <span class="n">samples</span><span class="p">)</span>
+        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">points</span><span class="p">):</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">name</span><span class="p">,</span> <span class="n">logp</span><span class="p">,</span> <span class="n">start</span> <span class="o">=</span> <span class="n">maps</span><span class="p">[</span><span class="n">i</span> <span class="o">//</span> <span class="mi">2</span><span class="p">]</span>
+                    <span class="k">if</span> <span class="n">i</span> <span class="o">%</span> <span class="mi">2</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                        <span class="n">name</span> <span class="o">+=</span> <span class="s1">&#39;_bfgs&#39;</span>
+                        <span class="n">new</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">find_MAP</span><span class="p">(</span><span class="n">fmin</span><span class="o">=</span><span class="n">sp</span><span class="o">.</span><span class="n">optimize</span><span class="o">.</span><span class="n">fmin_bfgs</span><span class="p">,</span> <span class="nb">vars</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">sampling_vars</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="n">start</span><span class="p">)</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">name</span> <span class="o">+=</span> <span class="s1">&#39;_powell&#39;</span>
+                        <span class="n">new</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">find_MAP</span><span class="p">(</span><span class="n">fmin</span><span class="o">=</span><span class="n">sp</span><span class="o">.</span><span class="n">optimize</span><span class="o">.</span><span class="n">fmin_powell</span><span class="p">,</span> <span class="nb">vars</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">sampling_vars</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="n">start</span><span class="p">)</span>
+                    <span class="n">maps</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">name</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">logp</span><span class="p">(</span><span class="n">new</span><span class="p">),</span> <span class="n">new</span><span class="p">))</span>
+                    <span class="k">if</span> <span class="n">plot</span><span class="p">:</span>
+                        <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">plot_tgp</span><span class="p">(</span><span class="n">new</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">samples</span><span class="p">)</span>
+                        <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+                <span class="k">except</span><span class="p">:</span>
+                    <span class="k">pass</span>
+
+        <span class="k">return</span> <span class="n">maps</span></div>
+
+<div class="viewcode-block" id="TGP.default_hypers"><a class="viewcode-back" href="../../g3py.html#g3py.tgp.TGP.default_hypers">[docs]</a>    <span class="k">def</span> <span class="nf">default_hypers</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">inputs</span><span class="o">.</span><span class="n">get_value</span><span class="p">()</span>
+        <span class="n">y</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">outputs</span><span class="o">.</span><span class="n">get_value</span><span class="p">()</span>
+        <span class="k">return</span> <span class="p">{</span><span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">kernel</span><span class="o">.</span><span class="n">default_hypers_dims</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">),</span> <span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">mapping</span><span class="o">.</span><span class="n">default_hypers_dims</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">),</span>
+                <span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">mean</span><span class="o">.</span><span class="n">default_hypers_dims</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">)}</span></div>
+
+<div class="viewcode-block" id="TGP.find_default"><a class="viewcode-back" href="../../g3py.html#g3py.tgp.TGP.find_default">[docs]</a>    <span class="k">def</span> <span class="nf">find_default</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">inputs</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">test_point</span>
+        <span class="n">default</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">trans_hypers</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">default_hypers</span><span class="p">())</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">default</span><span class="p">[</span><span class="n">k</span><span class="o">.</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">v</span>
+        <span class="n">default</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fixed_params</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">default</span></div>
+
+<div class="viewcode-block" id="TGP.eval_default"><a class="viewcode-back" href="../../g3py.html#g3py.tgp.TGP.eval_default">[docs]</a>    <span class="k">def</span> <span class="nf">eval_default</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">point_to_eval</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">find_default</span><span class="p">())</span></div>
+
+<div class="viewcode-block" id="TGP.plot_model"><a class="viewcode-back" href="../../g3py.html#g3py.tgp.TGP.plot_model">[docs]</a>    <span class="k">def</span> <span class="nf">plot_model</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">params</span><span class="p">):</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+        <span class="n">_</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">compiles</span><span class="p">[</span><span class="s1">&#39;covariance&#39;</span><span class="p">](</span><span class="o">**</span><span class="n">params</span><span class="p">)[</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">space_x</span><span class="p">)</span> <span class="o">//</span> <span class="mi">2</span><span class="p">,</span> <span class="p">:])</span>
+        <span class="n">text_plot</span><span class="p">(</span><span class="s1">&#39;kernel&#39;</span><span class="p">,</span> <span class="s1">&#39;x1&#39;</span><span class="p">,</span> <span class="s1">&#39;x2&#39;</span><span class="p">)</span>
+        <span class="k">return</span></div>
+
+<div class="viewcode-block" id="TGP.plot_tgp_widget"><a class="viewcode-back" href="../../g3py.html#g3py.tgp.TGP.plot_tgp_widget">[docs]</a>    <span class="k">def</span> <span class="nf">plot_tgp_widget</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">params</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">plot_data</span><span class="p">(</span><span class="n">big</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">plot_tgp_quantiles</span><span class="p">(</span><span class="n">params</span><span class="p">)</span>
+       <span class="c1"># self.plot_tgp_moments(params)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">description</span><span class="p">[</span><span class="s1">&#39;scores&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">scores</span><span class="p">(</span><span class="n">params</span><span class="p">)</span>
+        <span class="n">text_plot</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">description</span><span class="p">[</span><span class="s1">&#39;title&#39;</span><span class="p">],</span>  <span class="bp">self</span><span class="o">.</span><span class="n">description</span><span class="p">[</span><span class="s1">&#39;x&#39;</span><span class="p">],</span>  <span class="bp">self</span><span class="o">.</span><span class="n">description</span><span class="p">[</span><span class="s1">&#39;y&#39;</span><span class="p">],</span> <span class="n">loc</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_widget_params</span> <span class="o">=</span> <span class="n">params</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">plot_model</span><span class="p">(</span><span class="o">**</span><span class="n">params</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="TGP.widget_params"><a class="viewcode-back" href="../../g3py.html#g3py.tgp.TGP.widget_params">[docs]</a>    <span class="k">def</span> <span class="nf">widget_params</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">params</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">params</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_params</span><span class="p">()</span>
+        <span class="n">intervals</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">params</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">v</span> <span class="o">&gt;</span> <span class="mf">0.1</span><span class="p">:</span>
+                <span class="n">intervals</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="o">*</span><span class="n">v</span><span class="p">]</span>
+            <span class="k">elif</span> <span class="n">v</span> <span class="o">&lt;</span> <span class="o">-</span><span class="mf">0.1</span><span class="p">:</span>
+                <span class="n">intervals</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="mi">2</span><span class="o">*</span><span class="n">v</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">intervals</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="o">-</span><span class="mf">5.00</span><span class="p">,</span> <span class="mf">5.00</span><span class="p">]</span>
+        <span class="n">interact</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">plot_tgp_widget</span><span class="p">,</span> <span class="n">__manual</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="o">**</span><span class="n">intervals</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="TGP.get_params"><a class="viewcode-back" href="../../g3py.html#g3py.tgp.TGP.get_params">[docs]</a>    <span class="k">def</span> <span class="nf">get_params</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_widget_params</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">find_default</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_widget_params</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fixed_params</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_widget_params</span></div>
+
+<div class="viewcode-block" id="TGP.get_point"><a class="viewcode-back" href="../../g3py.html#g3py.tgp.TGP.get_point">[docs]</a>    <span class="k">def</span> <span class="nf">get_point</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">trace</span><span class="p">,</span> <span class="n">i</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">{</span><span class="n">v</span><span class="o">.</span><span class="n">name</span><span class="p">:</span> <span class="n">trace</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">v</span><span class="o">.</span><span class="n">name</span><span class="p">]</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">vars</span><span class="p">}</span></div>
+
+<div class="viewcode-block" id="TGP.point"><a class="viewcode-back" href="../../g3py.html#g3py.tgp.TGP.point">[docs]</a>    <span class="k">def</span> <span class="nf">point</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">point</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">{</span><span class="n">v</span><span class="o">.</span><span class="n">name</span><span class="p">:</span> <span class="n">point</span><span class="p">[</span><span class="n">v</span><span class="o">.</span><span class="n">name</span><span class="p">]</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">vars</span><span class="p">}</span></div>
+
+<div class="viewcode-block" id="TGP.plot_trace"><a class="viewcode-back" href="../../g3py.html#g3py.tgp.TGP.plot_trace">[docs]</a>    <span class="k">def</span> <span class="nf">plot_trace</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">id_trace</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_widget_params</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_point</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_widget_trace</span><span class="p">,</span> <span class="n">id_trace</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">plot_tgp_widget</span><span class="p">(</span><span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">_widget_params</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="TGP.widget_trace"><a class="viewcode-back" href="../../g3py.html#g3py.tgp.TGP.widget_trace">[docs]</a>    <span class="k">def</span> <span class="nf">widget_trace</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">trace</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_widget_trace</span> <span class="o">=</span> <span class="n">trace</span>
+        <span class="n">interact</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">plot_trace</span><span class="p">,</span> <span class="n">id_trace</span><span class="o">=</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_widget_trace</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">])</span></div>
+
+<div class="viewcode-block" id="TGP.plot_tgp_trace"><a class="viewcode-back" href="../../g3py.html#g3py.tgp.TGP.plot_tgp_trace">[docs]</a>    <span class="k">def</span> <span class="nf">plot_tgp_trace</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">trace</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">plot_data</span><span class="p">(</span><span class="n">big</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">plot_tgp_quantiles</span><span class="p">(</span><span class="n">params</span><span class="p">)</span>
+       <span class="c1"># self.plot_tgp_moments(params)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">description</span><span class="p">[</span><span class="s1">&#39;scores&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">scores</span><span class="p">(</span><span class="n">params</span><span class="p">)</span>
+        <span class="n">text_plot</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">description</span><span class="p">[</span><span class="s1">&#39;title&#39;</span><span class="p">],</span>  <span class="bp">self</span><span class="o">.</span><span class="n">description</span><span class="p">[</span><span class="s1">&#39;x&#39;</span><span class="p">],</span>  <span class="bp">self</span><span class="o">.</span><span class="n">description</span><span class="p">[</span><span class="s1">&#39;y&#39;</span><span class="p">],</span> <span class="n">loc</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_widget_params</span> <span class="o">=</span> <span class="n">params</span></div>
+
+<div class="viewcode-block" id="TGP.plot_cov"><a class="viewcode-back" href="../../g3py.html#g3py.tgp.TGP.plot_cov">[docs]</a>    <span class="k">def</span> <span class="nf">plot_cov</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">plt</span><span class="o">.</span><span class="n">matshow</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cov_inputs</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="TGP.fix_params"><a class="viewcode-back" href="../../g3py.html#g3py.tgp.TGP.fix_params">[docs]</a>    <span class="k">def</span> <span class="nf">fix_params</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fixed_params</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fixed_params</span> <span class="o">=</span> <span class="n">fixed_params</span></div>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">fixed_vars</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">[</span><span class="n">t</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">vars</span> <span class="k">if</span> <span class="n">t</span><span class="o">.</span><span class="n">name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">fixed_params</span><span class="o">.</span><span class="n">keys</span><span class="p">()]</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">sampling_vars</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">[</span><span class="n">t</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">vars</span> <span class="k">if</span> <span class="n">t</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">fixed_vars</span><span class="p">]</span>
+
+<div class="viewcode-block" id="TGP.sample_hypers"><a class="viewcode-back" href="../../g3py.html#g3py.tgp.TGP.sample_hypers">[docs]</a>    <span class="k">def</span> <span class="nf">sample_hypers</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">samples</span><span class="o">=</span><span class="mi">1000</span><span class="p">,</span> <span class="n">chains</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">advi</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">start</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">start</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">find_default</span><span class="p">()</span>
+        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">advi</span><span class="p">:</span>
+                <span class="n">advi_mu</span><span class="p">,</span> <span class="n">advi_sm</span><span class="p">,</span> <span class="n">advi_elbo</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">advi</span><span class="p">(</span><span class="nb">vars</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">sampling_vars</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="n">start</span><span class="p">,</span> <span class="n">n</span><span class="o">=</span><span class="mi">20000</span><span class="p">)</span> <span class="c1">#OK</span>
+                <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">advi_sm</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                    <span class="n">advi_sm</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">v</span><span class="o">**</span><span class="mi">2</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">advi_mu</span> <span class="o">=</span> <span class="n">start</span>
+                <span class="n">advi_sm</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fixed_params</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">step</span> <span class="o">=</span> <span class="p">[</span><span class="n">ConstantStep</span><span class="p">(</span><span class="nb">vars</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">fixed_vars</span><span class="p">)]</span>  <span class="c1"># Fue eliminado por error en pymc3</span>
+                <span class="n">step</span> <span class="o">+=</span> <span class="p">[</span><span class="n">RobustSlice</span><span class="p">(</span><span class="nb">vars</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">sampling_vars</span><span class="p">)]</span>  <span class="c1"># Slice original se cuelga si parte del óptimo</span>
+                <span class="c1">#step += [pm.Metropolis(vars=self.sampling_vars, tune=False)] # OK</span>
+                <span class="c1">#step += [pm.HamiltonianMC(vars=self.sampling_vars, scaling=advi_sm, is_cov=True)] #Scaling is not positive definite. Simple check failed. Diagonal contains negatives. Check indexes</span>
+                <span class="c1">#step += [pm.NUTS(vars=self.sampling_vars, scaling=advi_sm, is_cov=True)] #BUG float32</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">step</span> <span class="o">=</span> <span class="n">RobustSlice</span><span class="p">()</span>
+            <span class="n">trace</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="n">samples</span><span class="p">,</span> <span class="n">step</span><span class="o">=</span><span class="n">step</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="n">advi_mu</span><span class="p">,</span> <span class="n">njobs</span><span class="o">=</span><span class="n">chains</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">trace</span></div></div>
+
+
+<div class="viewcode-block" id="GP"><a class="viewcode-back" href="../../g3py.html#g3py.tgp.GP">[docs]</a><span class="k">class</span> <span class="nc">GP</span><span class="p">(</span><span class="n">TGP</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">space</span><span class="p">,</span> <span class="n">mean</span><span class="p">,</span> <span class="n">kernel</span><span class="p">,</span> <span class="n">noise</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">hidden</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">space</span><span class="p">,</span> <span class="n">mean</span><span class="p">,</span> <span class="n">kernel</span><span class="p">,</span> <span class="n">Identity</span><span class="p">(),</span> <span class="n">noise</span><span class="o">=</span><span class="n">noise</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">,</span> <span class="n">hidden</span><span class="o">=</span><span class="n">hidden</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="get_space"><a class="viewcode-back" href="../../g3py.html#g3py.tgp.get_space">[docs]</a><span class="k">def</span> <span class="nf">get_space</span><span class="p">(</span><span class="n">space</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">squeeze</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">squeeze</span><span class="p">:</span>
+        <span class="n">space</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">squeeze</span><span class="p">(</span><span class="n">space</span><span class="p">)</span>
+    <span class="n">space_x</span> <span class="o">=</span> <span class="n">space</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">th</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">floatX</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">space</span><span class="p">)</span> <span class="ow">is</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">name</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">space_th</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">space_th</span> <span class="o">=</span> <span class="n">th</span><span class="o">.</span><span class="n">shared</span><span class="p">(</span><span class="n">space_x</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">borrow</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">space_x</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span> <span class="ow">or</span> <span class="n">space_x</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">space_t</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">squeeze</span><span class="p">(</span><span class="n">space_x</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">space_t</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">space_x</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">th</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">floatX</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">name</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">space_th</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">space_th</span> <span class="o">=</span> <span class="n">th</span><span class="o">.</span><span class="n">shared</span><span class="p">(</span><span class="n">space_x</span><span class="o">.</span><span class="n">values</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">borrow</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">space_t</span> <span class="o">=</span> <span class="n">space_x</span><span class="o">.</span><span class="n">index</span>
+    <span class="k">return</span> <span class="n">space_th</span><span class="p">,</span> <span class="n">space_x</span><span class="p">,</span> <span class="n">space_t</span></div>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2016, GAMES UChile.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../../',
+            VERSION:'1.0.0',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true
+        };
+    </script>
+      <script type="text/javascript" src="../../_static/jquery.js"></script>
+      <script type="text/javascript" src="../../_static/underscore.js"></script>
+      <script type="text/javascript" src="../../_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="../../_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>

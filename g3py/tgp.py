@@ -4,7 +4,7 @@ import scipy as sp
 import pandas as pd
 import theano as th
 from g3py import Mean, Kernel, Mapping, Model, KernelSum, WN, tt_to_cov, tt_to_num, TGPDist, zeros, cholesky_robust, \
-    debug, makefn, text_plot, trans_hypers, ConstantStep, RobustSlice, Identity
+    get_space, debug, makefn, text_plot, trans_hypers, ConstantStep, RobustSlice, Identity
 from ipywidgets import interact
 from matplotlib import pyplot as plt
 from theano import tensor as tt
@@ -36,7 +36,6 @@ class TGP:
         self.inputs_t = None
         self.outputs = None
         self.outputs_y = None
-        self.outputs_t = None
         self.mean_inputs = None
         self.cov_inputs = None
         self.inv_outputs = None
@@ -74,7 +73,7 @@ class TGP:
 
     def observed(self, inputs, outputs):
         self.inputs, self.inputs_x, self.inputs_t = get_space(inputs, self.name + '_inputs')
-        self.outputs, self.outputs_y, self.outputs_t = get_space(outputs, self.name + '_outputs', squeeze=True)
+        self.outputs, self.outputs_y, __ = get_space(outputs, self.name + '_outputs', squeeze=True)
         self.mean_inputs = self.mean(self.inputs)
         self.cov_inputs = tt_to_cov(self.kernel.cov(self.inputs))
         self.inv_outputs = tt_to_num(self.mapping.inv(self.outputs))
@@ -155,6 +154,19 @@ class TGP:
 
     def posterior_gp(self, cov=False, noise=False):
         k_ni = self.kernel_f.cov(self.space, self.inputs)
+        mu = self.mean(self.space) + k_ni.dot(sL.solve(self.cov_inputs, self.inv_outputs - self.mean_inputs))
+        if noise:
+            k_cov = self.kernel.cov(self.space) - k_ni.dot(sL.solve(self.cov_inputs, k_ni.T))
+        else:
+            k_cov = self.kernel_f.cov(self.space) - k_ni.dot(sL.solve(self.cov_inputs, k_ni.T))
+        var = nL.extract_diag(debug(k_cov, 'k_cov'))
+        if cov:
+            return mu, var, k_cov
+        else:
+            return mu, var
+
+    def subprocess_gp(self, subkernel, cov=False, noise=False):
+        k_ni = subkernel.cov(self.space, self.inputs)
         mu = self.mean(self.space) + k_ni.dot(sL.solve(self.cov_inputs, self.inv_outputs - self.mean_inputs))
         if noise:
             k_cov = self.kernel.cov(self.space) - k_ni.dot(sL.solve(self.cov_inputs, k_ni.T))
@@ -292,13 +304,13 @@ class TGP:
         if self.hidden is not None:
             plt.plot(self.space_t, self.hidden, label='Hidden Processes')
         if self.outputs_y is not None:
-            plt.plot(self.outputs_t, self.outputs_y, '.k', label='Observations')
+            plt.plot(self.inputs_t, self.outputs_y, '.k', label='Observations')
 
     def plot_data_big(self):
         if self.hidden is not None:
             plt.plot(self.space_t, self.hidden, linewidth=4, label='Hidden Processes')
         if self.outputs_y is not None:
-            plt.plot(self.outputs_t, self.outputs_y, '.k', ms=20, label='Observations')
+            plt.plot(self.inputs_t, self.outputs_y, '.k', ms=20, label='Observations')
 
     def plot_gp_moments(self, params, sigma=1.96):
         mean = self.compiles['mean'](**params)
@@ -314,7 +326,7 @@ class TGP:
 
     def plot_gp_samples(self, params, samples=1):
         for i in range(samples):
-            plt.plot(self.space_x, self.compiles['sampler_gp'](np.random.randn(len(self.space_x)), **params), alpha=0.6)
+            plt.plot(self.space_t, self.compiles['sampler_gp'](np.random.randn(len(self.space_x)), **params), alpha=0.6)
 
     def plot_tgp_quantiles(self, params):
         med = self.compiles['median'](**params)
@@ -338,7 +350,7 @@ class TGP:
 
     def plot_tgp_samples(self, params, samples=1):
         for i in range(samples):
-            plt.plot(self.space_x, self.compiles['sampler_tgp'](np.random.randn(len(self.space_x)), **params), alpha=0.6)
+            plt.plot(self.space_t, self.compiles['sampler_tgp'](np.random.randn(len(self.space_x)), **params), alpha=0.6)
 
     def plot_gp(self, params, title=None, samples=0, big=True, scores=False, loc=1):
         #if self.space_t is not self.space_x:
@@ -420,6 +432,7 @@ class TGP:
         maps.append(('start', self.model.logp(start), start))
         plt.figure(0)
         self.plot_tgp(start, 'start', samples)
+        plt.show()
         with self.model:
             for i in range(points):
                 try:
@@ -437,7 +450,6 @@ class TGP:
                         plt.show()
                 except:
                     pass
-
         return maps
 
     def default_hypers(self):
@@ -464,20 +476,28 @@ class TGP:
         text_plot('kernel', 'x1', 'x2')
         return
 
+    def check_params_dims(self, **params):
+        r = dict()
+        for k, v in params.items():
+            r[k] = np.array(v, dtype=th.config.floatX).reshape(self.model[k].tag.test_value.shape)
+        return r
+
     def plot_tgp_widget(self, **params):
+        params = self.check_params_dims(**params)
+        self._widget_params = params
         self.plot_data(big=True)
         self.plot_tgp_quantiles(params)
-       # self.plot_tgp_moments(params)
-        self.description['scores'] = self.scores(params)
+        self.plot_tgp_moments(params)
+        #self.description['scores'] = self.scores(params)
         text_plot(self.description['title'],  self.description['x'],  self.description['y'], loc=1)
-        self._widget_params = params
-        self.plot_model(**params)
+        #self.plot_model(**params)
 
     def widget_params(self, params=None):
         if params is None:
             params = self.get_params()
         intervals = dict()
         for k, v in params.items():
+            v = np.squeeze(v)
             if v > 0.1:
                 intervals[k] = [0, 2*v]
             elif v < -0.1:
@@ -555,24 +575,3 @@ class GP(TGP):
     def __init__(self, space, mean, kernel, noise=True, name=None, hidden=None):
         super().__init__(space, mean, kernel, Identity(), noise=noise, name=name, hidden=hidden)
 
-
-def get_space(space, name=None, squeeze=False):
-    if squeeze:
-        space = np.squeeze(space)
-    space_x = space.astype(th.config.floatX)
-    if type(space) is np.ndarray:
-        if name is None:
-            space_th = None
-        else:
-            space_th = th.shared(space_x, name, borrow=True)
-        if len(space_x.shape) == 1 or space_x.shape[1] == 1:
-            space_t = np.squeeze(space_x)
-        else:
-            space_t = np.arange(len(space_x), dtype=th.config.floatX)
-    else:
-        if name is None:
-            space_th = None
-        else:
-            space_th = th.shared(space_x.values, name, borrow=True)
-        space_t = space_x.index
-    return space_th, space_x, space_t

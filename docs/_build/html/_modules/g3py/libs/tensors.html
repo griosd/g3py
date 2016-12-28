@@ -1,0 +1,318 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>g3py.libs.tensors &mdash; g3py 1.0.0 documentation</title>
+  
+
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+  
+
+  
+
+  
+        <link rel="index" title="Index"
+              href="../../../genindex.html"/>
+        <link rel="search" title="Search" href="../../../search.html"/>
+    <link rel="top" title="g3py 1.0.0 documentation" href="../../../index.html"/>
+        <link rel="up" title="Module code" href="../../index.html"/> 
+
+  
+  <script src="../../../_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="../../../index.html" class="icon icon-home"> g3py
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                1.0.0
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+                <!-- Local TOC -->
+                <div class="local-toc"></div>
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="../../../index.html">g3py</a>
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../../../index.html">Docs</a> &raquo;</li>
+      
+          <li><a href="../../index.html">Module code</a> &raquo;</li>
+      
+    <li>g3py.libs.tensors</li>
+      <li class="wy-breadcrumbs-aside">
+        
+          
+        
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for g3py.libs.tensors</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">scipy</span> <span class="k">as</span> <span class="nn">sp</span>
+<span class="kn">import</span> <span class="nn">theano</span> <span class="k">as</span> <span class="nn">th</span>
+<span class="kn">import</span> <span class="nn">theano.tensor</span> <span class="k">as</span> <span class="nn">tt</span>
+<span class="kn">import</span> <span class="nn">theano.tensor.slinalg</span> <span class="k">as</span> <span class="nn">sT</span>
+<span class="kn">from</span> <span class="nn">IPython.display</span> <span class="k">import</span> <span class="n">Image</span>
+<span class="n">th</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">on_unused_input</span> <span class="o">=</span> <span class="s1">&#39;ignore&#39;</span>
+
+
+<div class="viewcode-block" id="debug"><a class="viewcode-back" href="../../../g3py.libs.html#g3py.libs.tensors.debug">[docs]</a><span class="k">def</span> <span class="nf">debug</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">th</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">mode</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;NanGuardMode&#39;</span><span class="p">,</span> <span class="s1">&#39;DebugMode&#39;</span><span class="p">]:</span>
+        <span class="k">return</span> <span class="n">th</span><span class="o">.</span><span class="n">printing</span><span class="o">.</span><span class="n">Print</span><span class="p">(</span><span class="n">name</span><span class="p">)(</span><span class="n">x</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">x</span></div>
+
+
+<div class="viewcode-block" id="makefn"><a class="viewcode-back" href="../../../g3py.libs.html#g3py.libs.tensors.makefn">[docs]</a><span class="k">def</span> <span class="nf">makefn</span><span class="p">(</span><span class="n">th_vars</span><span class="p">,</span> <span class="n">fn</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">th</span><span class="o">.</span><span class="n">function</span><span class="p">(</span><span class="n">th_vars</span><span class="p">,</span> <span class="n">fn</span><span class="p">,</span> <span class="n">allow_input_downcast</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">on_unused_input</span><span class="o">=</span><span class="s1">&#39;ignore&#39;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="show_graph"><a class="viewcode-back" href="../../../g3py.libs.html#g3py.libs.tensors.show_graph">[docs]</a><span class="k">def</span> <span class="nf">show_graph</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;temp.png&#39;</span><span class="p">):</span>
+    <span class="n">th</span><span class="o">.</span><span class="n">printing</span><span class="o">.</span><span class="n">pydotprint</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">with_ids</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">outfile</span><span class="o">=</span><span class="n">name</span><span class="p">,</span> <span class="n">var_with_name_simple</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">Image</span><span class="p">(</span><span class="n">name</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="tt_to_num"><a class="viewcode-back" href="../../../g3py.libs.html#g3py.libs.tensors.tt_to_num">[docs]</a><span class="k">def</span> <span class="nf">tt_to_num</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="n">nan</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">inf</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">inf</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">tt</span><span class="o">.</span><span class="n">switch</span><span class="p">(</span><span class="n">tt</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">r</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">nan_to_num</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">(</span><span class="n">nan</span><span class="p">)),</span> <span class="n">tt</span><span class="o">.</span><span class="n">switch</span><span class="p">(</span><span class="n">tt</span><span class="o">.</span><span class="n">isinf</span><span class="p">(</span><span class="n">r</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">nan_to_num</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">(</span><span class="n">inf</span><span class="p">)),</span> <span class="n">r</span><span class="p">))</span></div>
+
+
+<div class="viewcode-block" id="tt_to_cov"><a class="viewcode-back" href="../../../g3py.libs.html#g3py.libs.tensors.tt_to_cov">[docs]</a><span class="k">def</span> <span class="nf">tt_to_cov</span><span class="p">(</span><span class="n">c</span><span class="p">):</span>
+    <span class="n">r</span> <span class="o">=</span> <span class="n">tt_to_num</span><span class="p">(</span><span class="n">c</span><span class="p">)</span>
+    <span class="n">m</span> <span class="o">=</span> <span class="n">tt</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">tt</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="n">r</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">tt</span><span class="o">.</span><span class="n">switch</span><span class="p">(</span><span class="n">m</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">,</span> <span class="n">r</span><span class="p">,</span> <span class="n">r</span> <span class="o">+</span> <span class="p">(</span><span class="mi">1</span><span class="n">e</span><span class="o">-</span><span class="mi">6</span><span class="o">-</span><span class="n">m</span><span class="p">)</span><span class="o">*</span><span class="n">tt</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="n">c</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="CholeskyRobust"><a class="viewcode-back" href="../../../g3py.libs.html#g3py.libs.tensors.CholeskyRobust">[docs]</a><span class="k">class</span> <span class="nc">CholeskyRobust</span><span class="p">(</span><span class="n">th</span><span class="o">.</span><span class="n">gof</span><span class="o">.</span><span class="n">Op</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Return a triangular matrix square root of positive semi-definite `x`.</span>
+
+<span class="sd">    L = cholesky(X, lower=True) implies dot(L, L.T) == X.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">__props__</span> <span class="o">=</span> <span class="p">(</span><span class="s1">&#39;lower&#39;</span><span class="p">,</span> <span class="s1">&#39;destructive&#39;</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">lower</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">destructive</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">maxtries</span> <span class="o">=</span> <span class="mi">20</span>
+
+<div class="viewcode-block" id="CholeskyRobust.infer_shape"><a class="viewcode-back" href="../../../g3py.libs.html#g3py.libs.tensors.CholeskyRobust.infer_shape">[docs]</a>    <span class="k">def</span> <span class="nf">infer_shape</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">,</span> <span class="n">shapes</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">[</span><span class="n">shapes</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span></div>
+
+<div class="viewcode-block" id="CholeskyRobust.make_node"><a class="viewcode-back" href="../../../g3py.libs.html#g3py.libs.tensors.CholeskyRobust.make_node">[docs]</a>    <span class="k">def</span> <span class="nf">make_node</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="n">tt</span><span class="o">.</span><span class="n">as_tensor_variable</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+        <span class="k">assert</span> <span class="n">x</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">2</span>
+        <span class="k">return</span> <span class="n">th</span><span class="o">.</span><span class="n">gof</span><span class="o">.</span><span class="n">Apply</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="p">[</span><span class="n">x</span><span class="p">],</span> <span class="p">[</span><span class="n">x</span><span class="o">.</span><span class="n">type</span><span class="p">()])</span></div>
+
+    <span class="k">def</span> <span class="nf">_cholesky</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">K</span><span class="p">):</span>
+        <span class="c1"># L, info = sp.linalg.lapack.dpotrf(K, lower=1)</span>
+        <span class="c1"># if info == 0:</span>
+        <span class="c1">#    return L</span>
+        <span class="c1"># else:</span>
+        <span class="c1">#print(K)</span>
+        <span class="n">diagK</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="n">K</span><span class="p">)</span>
+        <span class="n">dK</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="n">K</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">*</span> <span class="n">diagK</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span> <span class="o">*</span> <span class="mi">1</span><span class="n">e</span><span class="o">-</span><span class="mi">6</span>
+        <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">diagK</span> <span class="o">&lt;=</span> <span class="mf">0.0</span><span class="p">):</span>
+            <span class="n">K</span> <span class="o">=</span> <span class="n">K</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="n">K</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">*</span> <span class="p">(</span><span class="n">diagK</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span> <span class="o">*</span> <span class="mi">1</span><span class="n">e</span><span class="o">-</span><span class="mi">6</span> <span class="o">-</span> <span class="n">diagK</span><span class="o">.</span><span class="n">min</span><span class="p">()</span> <span class="p">)</span>
+            <span class="c1">#raise sp.linalg.LinAlgError(&quot;not positive-definite: negative diagonal element&quot;)</span>
+        <span class="k">for</span> <span class="n">num_tries</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">maxtries</span><span class="p">):</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">nan_to_num</span><span class="p">(</span><span class="n">sp</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">cholesky</span><span class="p">(</span><span class="n">K</span> <span class="o">+</span> <span class="n">dK</span><span class="p">,</span> <span class="n">lower</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
+            <span class="k">except</span><span class="p">:</span>
+                <span class="n">dK</span> <span class="o">*=</span> <span class="mi">10</span>
+        <span class="k">raise</span> <span class="n">sp</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">LinAlgError</span><span class="p">(</span><span class="s2">&quot;not approximate positive-definite&quot;</span><span class="p">)</span>
+
+<div class="viewcode-block" id="CholeskyRobust.perform"><a class="viewcode-back" href="../../../g3py.libs.html#g3py.libs.tensors.CholeskyRobust.perform">[docs]</a>    <span class="k">def</span> <span class="nf">perform</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">,</span> <span class="n">inputs</span><span class="p">,</span> <span class="n">outputs</span><span class="p">):</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="n">inputs</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">z</span> <span class="o">=</span> <span class="n">outputs</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">z</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cholesky</span><span class="p">(</span><span class="n">x</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">sp</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">LinAlgError</span><span class="p">(</span><span class="s2">&quot;not perform cholesky&quot;</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="CholeskyRobust.grad"><a class="viewcode-back" href="../../../g3py.libs.html#g3py.libs.tensors.CholeskyRobust.grad">[docs]</a>    <span class="k">def</span> <span class="nf">grad</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inputs</span><span class="p">,</span> <span class="n">gradients</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Cholesky decomposition reverse-mode gradient update.</span>
+
+<span class="sd">        Symbolic expression for reverse-mode Cholesky gradient taken from [0]_</span>
+
+<span class="sd">        References</span>
+<span class="sd">        ----------</span>
+<span class="sd">        .. [0] I. Murray, &quot;Differentiation of the Cholesky decomposition&quot;,</span>
+<span class="sd">           http://arxiv.org/abs/1602.07527</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="n">inputs</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">dz</span> <span class="o">=</span> <span class="n">gradients</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">chol_x</span> <span class="o">=</span> <span class="bp">self</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+
+        <span class="c1"># deal with upper triangular by converting to lower triangular</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">lower</span><span class="p">:</span>
+            <span class="n">chol_x</span> <span class="o">=</span> <span class="n">chol_x</span><span class="o">.</span><span class="n">T</span>
+            <span class="n">dz</span> <span class="o">=</span> <span class="n">dz</span><span class="o">.</span><span class="n">T</span>
+
+        <span class="k">def</span> <span class="nf">tril_and_halve_diagonal</span><span class="p">(</span><span class="n">mtx</span><span class="p">):</span>
+            <span class="sd">&quot;&quot;&quot;Extracts lower triangle of square matrix and halves diagonal.&quot;&quot;&quot;</span>
+            <span class="k">return</span> <span class="n">tt</span><span class="o">.</span><span class="n">tril</span><span class="p">(</span><span class="n">mtx</span><span class="p">)</span> <span class="o">-</span> <span class="n">tt</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="n">tt</span><span class="o">.</span><span class="n">diagonal</span><span class="p">(</span><span class="n">mtx</span><span class="p">)</span> <span class="o">/</span> <span class="mf">2.</span><span class="p">)</span>
+
+        <span class="k">def</span> <span class="nf">conjugate_solve_triangular</span><span class="p">(</span><span class="n">outer</span><span class="p">,</span> <span class="n">inner</span><span class="p">):</span>
+            <span class="sd">&quot;&quot;&quot;Computes L^{-T} P L^{-1} for lower-triangular L.&quot;&quot;&quot;</span>
+            <span class="k">return</span> <span class="n">solve_upper_triangular</span><span class="p">(</span>
+                <span class="n">outer</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">solve_upper_triangular</span><span class="p">(</span><span class="n">outer</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">inner</span><span class="o">.</span><span class="n">T</span><span class="p">)</span><span class="o">.</span><span class="n">T</span><span class="p">)</span>
+
+        <span class="n">s</span> <span class="o">=</span> <span class="n">conjugate_solve_triangular</span><span class="p">(</span>
+            <span class="n">chol_x</span><span class="p">,</span> <span class="n">tril_and_halve_diagonal</span><span class="p">(</span><span class="n">tt_to_num</span><span class="p">(</span><span class="n">chol_x</span><span class="o">.</span><span class="n">T</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">dz</span><span class="p">))))</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">lower</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">[</span><span class="n">tt</span><span class="o">.</span><span class="n">tril</span><span class="p">(</span><span class="n">s</span> <span class="o">+</span> <span class="n">s</span><span class="o">.</span><span class="n">T</span><span class="p">)</span> <span class="o">-</span> <span class="n">tt</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="n">tt</span><span class="o">.</span><span class="n">diagonal</span><span class="p">(</span><span class="n">s</span><span class="p">))]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">[</span><span class="n">tt</span><span class="o">.</span><span class="n">triu</span><span class="p">(</span><span class="n">s</span> <span class="o">+</span> <span class="n">s</span><span class="o">.</span><span class="n">T</span><span class="p">)</span> <span class="o">-</span> <span class="n">tt</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="n">tt</span><span class="o">.</span><span class="n">diagonal</span><span class="p">(</span><span class="n">s</span><span class="p">))]</span></div></div>
+
+
+<span class="n">cholesky_robust</span> <span class="o">=</span> <span class="n">CholeskyRobust</span><span class="p">()</span>
+<span class="n">solve_lower_triangular</span> <span class="o">=</span> <span class="n">sT</span><span class="o">.</span><span class="n">solve_lower_triangular</span>
+<span class="n">solve_upper_triangular</span> <span class="o">=</span> <span class="n">sT</span><span class="o">.</span><span class="n">solve_upper_triangular</span>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2016, GAMES UChile.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../../../',
+            VERSION:'1.0.0',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true
+        };
+    </script>
+      <script type="text/javascript" src="../../../_static/jquery.js"></script>
+      <script type="text/javascript" src="../../../_static/underscore.js"></script>
+      <script type="text/javascript" src="../../../_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="../../../_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>

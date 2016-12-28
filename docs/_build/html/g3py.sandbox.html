@@ -1,0 +1,553 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>g3py.sandbox package &mdash; g3py 1.0.0 documentation</title>
+  
+
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  
+
+  
+
+  
+        <link rel="index" title="Index"
+              href="genindex.html"/>
+        <link rel="search" title="Search" href="search.html"/>
+    <link rel="top" title="g3py 1.0.0 documentation" href="index.html"/> 
+
+  
+  <script src="_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="index.html" class="icon icon-home"> g3py
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                1.0.0
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+                <!-- Local TOC -->
+                <div class="local-toc"><ul>
+<li><a class="reference internal" href="#">g3py.sandbox package</a><ul>
+<li><a class="reference internal" href="#submodules">Submodules</a></li>
+<li><a class="reference internal" href="#module-g3py.sandbox.gpmm">g3py.sandbox.gpmm module</a></li>
+<li><a class="reference internal" href="#g3py-sandbox-temp-module">g3py.sandbox.temp module</a></li>
+<li><a class="reference internal" href="#module-g3py.sandbox.tgp">g3py.sandbox.tgp module</a></li>
+<li><a class="reference internal" href="#module-g3py.sandbox">Module contents</a></li>
+</ul>
+</li>
+</ul>
+</div>
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="index.html">g3py</a>
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+ 
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="index.html">Docs</a> &raquo;</li>
+      
+    <li>g3py.sandbox package</li>
+      <li class="wy-breadcrumbs-aside">
+        
+          
+            <a href="_sources/g3py.sandbox.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="g3py-sandbox-package">
+<h1>g3py.sandbox package<a class="headerlink" href="#g3py-sandbox-package" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="module-g3py.sandbox.gpmm">
+<span id="g3py-sandbox-gpmm-module"></span><h2>g3py.sandbox.gpmm module<a class="headerlink" href="#module-g3py.sandbox.gpmm" title="Permalink to this headline">¶</a></h2>
+<dl class="function">
+<dt id="g3py.sandbox.gpmm.CovCholesky">
+<code class="descclassname">g3py.sandbox.gpmm.</code><code class="descname">CovCholesky</code><span class="sig-paren">(</span><em>K</em>, <em>X=None</em>, <em>maxtries=5</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/sandbox/gpmm.html#CovCholesky"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.sandbox.gpmm.CovCholesky" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="g3py.sandbox.gpmm.CovPredFromCho">
+<code class="descclassname">g3py.sandbox.gpmm.</code><code class="descname">CovPredFromCho</code><span class="sig-paren">(</span><em>Kyx</em>, <em>Lx</em>, <em>Kyy</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/sandbox/gpmm.html#CovPredFromCho"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.sandbox.gpmm.CovPredFromCho" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="class">
+<dt id="g3py.sandbox.gpmm.GaussianKernel">
+<em class="property">class </em><code class="descclassname">g3py.sandbox.gpmm.</code><code class="descname">GaussianKernel</code><span class="sig-paren">(</span><em>_noise=1</em>, <em>_H=1</em>, <em>_W=array([1])</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/sandbox/gpmm.html#GaussianKernel"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.sandbox.gpmm.GaussianKernel" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#g3py.sandbox.gpmm.SimpleKernelFunction" title="g3py.sandbox.gpmm.SimpleKernelFunction"><code class="xref py py-class docutils literal"><span class="pre">g3py.sandbox.gpmm.SimpleKernelFunction</span></code></a></p>
+<dl class="method">
+<dt id="g3py.sandbox.gpmm.GaussianKernel.dot">
+<code class="descname">dot</code><span class="sig-paren">(</span><em>X</em>, <em>_x</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/sandbox/gpmm.html#GaussianKernel.dot"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.sandbox.gpmm.GaussianKernel.dot" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="g3py.sandbox.gpmm.KernelFunction">
+<em class="property">class </em><code class="descclassname">g3py.sandbox.gpmm.</code><code class="descname">KernelFunction</code><span class="sig-paren">(</span><em>_noise</em>, <em>_theta</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/sandbox/gpmm.html#KernelFunction"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.sandbox.gpmm.KernelFunction" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/2/library/functions.html#object" title="(in Python v2.7)"><code class="xref py py-class docutils literal"><span class="pre">object</span></code></a></p>
+<dl class="method">
+<dt id="g3py.sandbox.gpmm.KernelFunction.cov">
+<code class="descname">cov</code><span class="sig-paren">(</span><em>X1</em>, <em>X2=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/sandbox/gpmm.html#KernelFunction.cov"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.sandbox.gpmm.KernelFunction.cov" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="g3py.sandbox.gpmm.KernelFunction.dot">
+<code class="descname">dot</code><span class="sig-paren">(</span><em>X</em>, <em>_x</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/sandbox/gpmm.html#KernelFunction.dot"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.sandbox.gpmm.KernelFunction.dot" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="g3py.sandbox.gpmm.KernelFunction.params">
+<code class="descname">params</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/sandbox/gpmm.html#KernelFunction.params"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.sandbox.gpmm.KernelFunction.params" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="g3py.sandbox.gpmm.KernelFunction.sample">
+<code class="descname">sample</code><span class="sig-paren">(</span><em>X</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/sandbox/gpmm.html#KernelFunction.sample"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.sandbox.gpmm.KernelFunction.sample" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="g3py.sandbox.gpmm.KernelFunction.setParameters">
+<code class="descname">setParameters</code><span class="sig-paren">(</span><em>_param</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/sandbox/gpmm.html#KernelFunction.setParameters"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.sandbox.gpmm.KernelFunction.setParameters" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="g3py.sandbox.gpmm.KernelMM">
+<em class="property">class </em><code class="descclassname">g3py.sandbox.gpmm.</code><code class="descname">KernelMM</code><span class="sig-paren">(</span><em>_kern</em>, <em>_steps</em>, <em>_noise</em>, <em>_w</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/sandbox/gpmm.html#KernelMM"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.sandbox.gpmm.KernelMM" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#g3py.sandbox.gpmm.KernelFunction" title="g3py.sandbox.gpmm.KernelFunction"><code class="xref py py-class docutils literal"><span class="pre">g3py.sandbox.gpmm.KernelFunction</span></code></a></p>
+<dl class="method">
+<dt id="g3py.sandbox.gpmm.KernelMM.cov">
+<code class="descname">cov</code><span class="sig-paren">(</span><em>X</em>, <em>X2=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/sandbox/gpmm.html#KernelMM.cov"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.sandbox.gpmm.KernelMM.cov" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="g3py.sandbox.gpmm.KernelMM.cross">
+<code class="descname">cross</code><span class="sig-paren">(</span><em>X</em>, <em>_x</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/sandbox/gpmm.html#KernelMM.cross"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.sandbox.gpmm.KernelMM.cross" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="g3py.sandbox.gpmm.KernelMM.dot">
+<code class="descname">dot</code><span class="sig-paren">(</span><em>X</em>, <em>_x</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/sandbox/gpmm.html#KernelMM.dot"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.sandbox.gpmm.KernelMM.dot" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="g3py.sandbox.gpmm.KernelMM.params">
+<code class="descname">params</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/sandbox/gpmm.html#KernelMM.params"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.sandbox.gpmm.KernelMM.params" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="g3py.sandbox.gpmm.KernelMM.setParameters">
+<code class="descname">setParameters</code><span class="sig-paren">(</span><em>_param</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/sandbox/gpmm.html#KernelMM.setParameters"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.sandbox.gpmm.KernelMM.setParameters" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="g3py.sandbox.gpmm.LaplaceKernel">
+<em class="property">class </em><code class="descclassname">g3py.sandbox.gpmm.</code><code class="descname">LaplaceKernel</code><span class="sig-paren">(</span><em>_noise=1</em>, <em>_H=1</em>, <em>_W=array([1])</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/sandbox/gpmm.html#LaplaceKernel"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.sandbox.gpmm.LaplaceKernel" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#g3py.sandbox.gpmm.SimpleKernelFunction" title="g3py.sandbox.gpmm.SimpleKernelFunction"><code class="xref py py-class docutils literal"><span class="pre">g3py.sandbox.gpmm.SimpleKernelFunction</span></code></a></p>
+<dl class="method">
+<dt id="g3py.sandbox.gpmm.LaplaceKernel.dot">
+<code class="descname">dot</code><span class="sig-paren">(</span><em>X</em>, <em>_x</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/sandbox/gpmm.html#LaplaceKernel.dot"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.sandbox.gpmm.LaplaceKernel.dot" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="g3py.sandbox.gpmm.LearningGP">
+<code class="descclassname">g3py.sandbox.gpmm.</code><code class="descname">LearningGP</code><span class="sig-paren">(</span><em>Kernel</em>, <em>X</em>, <em>Fx</em>, <em>_method='BFGS'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/sandbox/gpmm.html#LearningGP"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.sandbox.gpmm.LearningGP" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="class">
+<dt id="g3py.sandbox.gpmm.LinearKernel">
+<em class="property">class </em><code class="descclassname">g3py.sandbox.gpmm.</code><code class="descname">LinearKernel</code><span class="sig-paren">(</span><em>_noise=1</em>, <em>_C=1</em>, <em>_L=array([1])</em>, <em>_W=array([1])</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/sandbox/gpmm.html#LinearKernel"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.sandbox.gpmm.LinearKernel" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#g3py.sandbox.gpmm.KernelFunction" title="g3py.sandbox.gpmm.KernelFunction"><code class="xref py py-class docutils literal"><span class="pre">g3py.sandbox.gpmm.KernelFunction</span></code></a></p>
+<dl class="method">
+<dt id="g3py.sandbox.gpmm.LinearKernel.dot">
+<code class="descname">dot</code><span class="sig-paren">(</span><em>X</em>, <em>_x</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/sandbox/gpmm.html#LinearKernel.dot"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.sandbox.gpmm.LinearKernel.dot" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="g3py.sandbox.gpmm.MeanPredFromCho">
+<code class="descclassname">g3py.sandbox.gpmm.</code><code class="descname">MeanPredFromCho</code><span class="sig-paren">(</span><em>Kyx</em>, <em>Lx</em>, <em>Fx</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/sandbox/gpmm.html#MeanPredFromCho"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.sandbox.gpmm.MeanPredFromCho" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="g3py.sandbox.gpmm.NLL">
+<code class="descclassname">g3py.sandbox.gpmm.</code><code class="descname">NLL</code><span class="sig-paren">(</span><em>params</em>, <em>Kernel</em>, <em>X</em>, <em>Fx</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/sandbox/gpmm.html#NLL"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.sandbox.gpmm.NLL" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="g3py.sandbox.gpmm.NLLFromCholAndObs">
+<code class="descclassname">g3py.sandbox.gpmm.</code><code class="descname">NLLFromCholAndObs</code><span class="sig-paren">(</span><em>Lx</em>, <em>Fx</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/sandbox/gpmm.html#NLLFromCholAndObs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.sandbox.gpmm.NLLFromCholAndObs" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="class">
+<dt id="g3py.sandbox.gpmm.NeuralNetKernel">
+<em class="property">class </em><code class="descclassname">g3py.sandbox.gpmm.</code><code class="descname">NeuralNetKernel</code><span class="sig-paren">(</span><em>_noise=1</em>, <em>_H=1</em>, <em>_C=1</em>, <em>_L=array([1])</em>, <em>_W=array([1])</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/sandbox/gpmm.html#NeuralNetKernel"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.sandbox.gpmm.NeuralNetKernel" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#g3py.sandbox.gpmm.KernelFunction" title="g3py.sandbox.gpmm.KernelFunction"><code class="xref py py-class docutils literal"><span class="pre">g3py.sandbox.gpmm.KernelFunction</span></code></a></p>
+<dl class="method">
+<dt id="g3py.sandbox.gpmm.NeuralNetKernel.dot">
+<code class="descname">dot</code><span class="sig-paren">(</span><em>X</em>, <em>_x</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/sandbox/gpmm.html#NeuralNetKernel.dot"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.sandbox.gpmm.NeuralNetKernel.dot" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="g3py.sandbox.gpmm.PositiveConstKernel">
+<em class="property">class </em><code class="descclassname">g3py.sandbox.gpmm.</code><code class="descname">PositiveConstKernel</code><span class="sig-paren">(</span><em>_noise=1</em>, <em>_c=0</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/sandbox/gpmm.html#PositiveConstKernel"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.sandbox.gpmm.PositiveConstKernel" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#g3py.sandbox.gpmm.KernelFunction" title="g3py.sandbox.gpmm.KernelFunction"><code class="xref py py-class docutils literal"><span class="pre">g3py.sandbox.gpmm.KernelFunction</span></code></a></p>
+<dl class="method">
+<dt id="g3py.sandbox.gpmm.PositiveConstKernel.dot">
+<code class="descname">dot</code><span class="sig-paren">(</span><em>X</em>, <em>_x</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/sandbox/gpmm.html#PositiveConstKernel.dot"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.sandbox.gpmm.PositiveConstKernel.dot" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="g3py.sandbox.gpmm.PredictorCrossGP">
+<em class="property">class </em><code class="descclassname">g3py.sandbox.gpmm.</code><code class="descname">PredictorCrossGP</code><span class="sig-paren">(</span><em>kernel</em>, <em>X</em>, <em>Fx</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/sandbox/gpmm.html#PredictorCrossGP"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.sandbox.gpmm.PredictorCrossGP" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/2/library/functions.html#object" title="(in Python v2.7)"><code class="xref py py-class docutils literal"><span class="pre">object</span></code></a></p>
+<dl class="method">
+<dt id="g3py.sandbox.gpmm.PredictorCrossGP.cross">
+<code class="descname">cross</code><span class="sig-paren">(</span><em>Y</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/sandbox/gpmm.html#PredictorCrossGP.cross"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.sandbox.gpmm.PredictorCrossGP.cross" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="g3py.sandbox.gpmm.PredictorCrossGP.sample">
+<code class="descname">sample</code><span class="sig-paren">(</span><em>Y</em>, <em>n=1</em>, <em>Plot=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/sandbox/gpmm.html#PredictorCrossGP.sample"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.sandbox.gpmm.PredictorCrossGP.sample" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="g3py.sandbox.gpmm.PredictorGP">
+<em class="property">class </em><code class="descclassname">g3py.sandbox.gpmm.</code><code class="descname">PredictorGP</code><span class="sig-paren">(</span><em>kernel</em>, <em>X</em>, <em>Fx</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/sandbox/gpmm.html#PredictorGP"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.sandbox.gpmm.PredictorGP" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/2/library/functions.html#object" title="(in Python v2.7)"><code class="xref py py-class docutils literal"><span class="pre">object</span></code></a></p>
+<dl class="method">
+<dt id="g3py.sandbox.gpmm.PredictorGP.sample">
+<code class="descname">sample</code><span class="sig-paren">(</span><em>Y</em>, <em>n=1</em>, <em>Plot=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/sandbox/gpmm.html#PredictorGP.sample"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.sandbox.gpmm.PredictorGP.sample" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="g3py.sandbox.gpmm.SimpleKernelFunction">
+<em class="property">class </em><code class="descclassname">g3py.sandbox.gpmm.</code><code class="descname">SimpleKernelFunction</code><span class="sig-paren">(</span><em>_noise=1</em>, <em>_H=1</em>, <em>_W=array([1])</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/sandbox/gpmm.html#SimpleKernelFunction"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.sandbox.gpmm.SimpleKernelFunction" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#g3py.sandbox.gpmm.KernelFunction" title="g3py.sandbox.gpmm.KernelFunction"><code class="xref py py-class docutils literal"><span class="pre">g3py.sandbox.gpmm.KernelFunction</span></code></a></p>
+</dd></dl>
+
+<dl class="function">
+<dt id="g3py.sandbox.gpmm.Solve2Cho">
+<code class="descclassname">g3py.sandbox.gpmm.</code><code class="descname">Solve2Cho</code><span class="sig-paren">(</span><em>Lx</em>, <em>Fx</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/sandbox/gpmm.html#Solve2Cho"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.sandbox.gpmm.Solve2Cho" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="g3py.sandbox.gpmm.SolveCho">
+<code class="descclassname">g3py.sandbox.gpmm.</code><code class="descname">SolveCho</code><span class="sig-paren">(</span><em>Lx</em>, <em>Fx</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/sandbox/gpmm.html#SolveCho"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.sandbox.gpmm.SolveCho" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="g3py.sandbox.gpmm.VarPredFromCho">
+<code class="descclassname">g3py.sandbox.gpmm.</code><code class="descname">VarPredFromCho</code><span class="sig-paren">(</span><em>Kyx</em>, <em>Lx</em>, <em>Kyy</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/sandbox/gpmm.html#VarPredFromCho"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.sandbox.gpmm.VarPredFromCho" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="g3py.sandbox.gpmm.plot">
+<code class="descclassname">g3py.sandbox.gpmm.</code><code class="descname">plot</code><span class="sig-paren">(</span><em>title='title'</em>, <em>x='xlabel'</em>, <em>y='ylabel'</em>, <em>loc=0</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/sandbox/gpmm.html#plot"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.sandbox.gpmm.plot" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="g3py.sandbox.gpmm.plot_style">
+<code class="descclassname">g3py.sandbox.gpmm.</code><code class="descname">plot_style</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/sandbox/gpmm.html#plot_style"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.sandbox.gpmm.plot_style" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</div>
+<div class="section" id="g3py-sandbox-temp-module">
+<h2>g3py.sandbox.temp module<a class="headerlink" href="#g3py-sandbox-temp-module" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="module-g3py.sandbox.tgp">
+<span id="g3py-sandbox-tgp-module"></span><h2>g3py.sandbox.tgp module<a class="headerlink" href="#module-g3py.sandbox.tgp" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="g3py.sandbox.tgp.LambdaPowerT">
+<em class="property">class </em><code class="descclassname">g3py.sandbox.tgp.</code><code class="descname">LambdaPowerT</code><span class="sig-paren">(</span><em>_power=1</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/sandbox/tgp.html#LambdaPowerT"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.sandbox.tgp.LambdaPowerT" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/2/library/functions.html#object" title="(in Python v2.7)"><code class="xref py py-class docutils literal"><span class="pre">object</span></code></a></p>
+<dl class="method">
+<dt id="g3py.sandbox.tgp.LambdaPowerT.NLL">
+<code class="descname">NLL</code><span class="sig-paren">(</span><em>X</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/sandbox/tgp.html#LambdaPowerT.NLL"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.sandbox.tgp.LambdaPowerT.NLL" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="g3py.sandbox.tgp.LambdaPowerT.inv">
+<code class="descname">inv</code><span class="sig-paren">(</span><em>Y</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/sandbox/tgp.html#LambdaPowerT.inv"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.sandbox.tgp.LambdaPowerT.inv" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="g3py.sandbox.tgp.LambdaPowerT.params">
+<code class="descname">params</code><a class="headerlink" href="#g3py.sandbox.tgp.LambdaPowerT.params" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="g3py.sandbox.tgp.LambdaPowerT.setParameters">
+<code class="descname">setParameters</code><span class="sig-paren">(</span><em>_power</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/sandbox/tgp.html#LambdaPowerT.setParameters"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.sandbox.tgp.LambdaPowerT.setParameters" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="g3py.sandbox.tgp.LearningTGP">
+<code class="descclassname">g3py.sandbox.tgp.</code><code class="descname">LearningTGP</code><span class="sig-paren">(</span><em>Kernel</em>, <em>T</em>, <em>X</em>, <em>Fx</em>, <em>_method='BFGS'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/sandbox/tgp.html#LearningTGP"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.sandbox.tgp.LearningTGP" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="class">
+<dt id="g3py.sandbox.tgp.PredictorTGP">
+<em class="property">class </em><code class="descclassname">g3py.sandbox.tgp.</code><code class="descname">PredictorTGP</code><span class="sig-paren">(</span><em>kernel</em>, <em>T</em>, <em>X</em>, <em>Fx</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/sandbox/tgp.html#PredictorTGP"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.sandbox.tgp.PredictorTGP" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/2/library/functions.html#object" title="(in Python v2.7)"><code class="xref py py-class docutils literal"><span class="pre">object</span></code></a></p>
+<dl class="method">
+<dt id="g3py.sandbox.tgp.PredictorTGP.sample">
+<code class="descname">sample</code><span class="sig-paren">(</span><em>Y</em>, <em>n=1</em>, <em>Plot=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/sandbox/tgp.html#PredictorTGP.sample"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.sandbox.tgp.PredictorTGP.sample" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="g3py.sandbox.tgp.ShiftLogT">
+<em class="property">class </em><code class="descclassname">g3py.sandbox.tgp.</code><code class="descname">ShiftLogT</code><span class="sig-paren">(</span><em>_shift=1</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/sandbox/tgp.html#ShiftLogT"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.sandbox.tgp.ShiftLogT" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/2/library/functions.html#object" title="(in Python v2.7)"><code class="xref py py-class docutils literal"><span class="pre">object</span></code></a></p>
+<dl class="method">
+<dt id="g3py.sandbox.tgp.ShiftLogT.NLL">
+<code class="descname">NLL</code><span class="sig-paren">(</span><em>X</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/sandbox/tgp.html#ShiftLogT.NLL"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.sandbox.tgp.ShiftLogT.NLL" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="g3py.sandbox.tgp.ShiftLogT.inv">
+<code class="descname">inv</code><span class="sig-paren">(</span><em>Y</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/sandbox/tgp.html#ShiftLogT.inv"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.sandbox.tgp.ShiftLogT.inv" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="g3py.sandbox.tgp.ShiftLogT.params">
+<code class="descname">params</code><a class="headerlink" href="#g3py.sandbox.tgp.ShiftLogT.params" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="g3py.sandbox.tgp.ShiftLogT.setParameters">
+<code class="descname">setParameters</code><span class="sig-paren">(</span><em>_shift</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/sandbox/tgp.html#ShiftLogT.setParameters"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.sandbox.tgp.ShiftLogT.setParameters" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="g3py.sandbox.tgp.TNLL">
+<code class="descclassname">g3py.sandbox.tgp.</code><code class="descname">TNLL</code><span class="sig-paren">(</span><em>params</em>, <em>Kernel</em>, <em>T</em>, <em>X</em>, <em>Fx</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/sandbox/tgp.html#TNLL"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.sandbox.tgp.TNLL" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="class">
+<dt id="g3py.sandbox.tgp.TShiftBoxCox">
+<em class="property">class </em><code class="descclassname">g3py.sandbox.tgp.</code><code class="descname">TShiftBoxCox</code><span class="sig-paren">(</span><em>_power=1</em>, <em>_shift=0</em>, <em>_learn=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/sandbox/tgp.html#TShiftBoxCox"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.sandbox.tgp.TShiftBoxCox" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/2/library/functions.html#object" title="(in Python v2.7)"><code class="xref py py-class docutils literal"><span class="pre">object</span></code></a></p>
+<dl class="method">
+<dt id="g3py.sandbox.tgp.TShiftBoxCox.NLL">
+<code class="descname">NLL</code><span class="sig-paren">(</span><em>X</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/sandbox/tgp.html#TShiftBoxCox.NLL"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.sandbox.tgp.TShiftBoxCox.NLL" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="g3py.sandbox.tgp.TShiftBoxCox.inv">
+<code class="descname">inv</code><span class="sig-paren">(</span><em>Y</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/sandbox/tgp.html#TShiftBoxCox.inv"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.sandbox.tgp.TShiftBoxCox.inv" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="g3py.sandbox.tgp.TShiftBoxCox.params">
+<code class="descname">params</code><a class="headerlink" href="#g3py.sandbox.tgp.TShiftBoxCox.params" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="g3py.sandbox.tgp.TShiftBoxCox.setParameters">
+<code class="descname">setParameters</code><span class="sig-paren">(</span><em>_power</em>, <em>_shift</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/sandbox/tgp.html#TShiftBoxCox.setParameters"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.sandbox.tgp.TShiftBoxCox.setParameters" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="g3py.sandbox.tgp.TransBoxCox">
+<em class="property">class </em><code class="descclassname">g3py.sandbox.tgp.</code><code class="descname">TransBoxCox</code><span class="sig-paren">(</span><em>_power=1</em>, <em>_shift=0</em>, <em>_scale=0</em>, <em>_learn=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/sandbox/tgp.html#TransBoxCox"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.sandbox.tgp.TransBoxCox" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/2/library/functions.html#object" title="(in Python v2.7)"><code class="xref py py-class docutils literal"><span class="pre">object</span></code></a></p>
+<dl class="method">
+<dt id="g3py.sandbox.tgp.TransBoxCox.NLL">
+<code class="descname">NLL</code><span class="sig-paren">(</span><em>X</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/sandbox/tgp.html#TransBoxCox.NLL"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.sandbox.tgp.TransBoxCox.NLL" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="g3py.sandbox.tgp.TransBoxCox.inv">
+<code class="descname">inv</code><span class="sig-paren">(</span><em>Y</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/sandbox/tgp.html#TransBoxCox.inv"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.sandbox.tgp.TransBoxCox.inv" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="g3py.sandbox.tgp.TransBoxCox.params">
+<code class="descname">params</code><a class="headerlink" href="#g3py.sandbox.tgp.TransBoxCox.params" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="g3py.sandbox.tgp.TransBoxCox.setParameters">
+<code class="descname">setParameters</code><span class="sig-paren">(</span><em>_power</em>, <em>_shift</em>, <em>_scale</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/sandbox/tgp.html#TransBoxCox.setParameters"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.sandbox.tgp.TransBoxCox.setParameters" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="g3py.sandbox.tgp.gauss_hermite">
+<code class="descclassname">g3py.sandbox.tgp.</code><code class="descname">gauss_hermite</code><span class="sig-paren">(</span><em>f</em>, <em>mu</em>, <em>sigma</em>, <em>n=100</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/sandbox/tgp.html#gauss_hermite"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.sandbox.tgp.gauss_hermite" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</div>
+<div class="section" id="module-g3py.sandbox">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-g3py.sandbox" title="Permalink to this headline">¶</a></h2>
+</div>
+</div>
+
+
+           </div>
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2016, GAMES UChile.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'./',
+            VERSION:'1.0.0',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true
+        };
+    </script>
+      <script type="text/javascript" src="_static/jquery.js"></script>
+      <script type="text/javascript" src="_static/underscore.js"></script>
+      <script type="text/javascript" src="_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>

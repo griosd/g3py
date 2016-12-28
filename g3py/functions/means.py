@@ -117,7 +117,7 @@ class Bias(Mean):
         return {self.constant: y.mean().astype(th.config.floatX)}
 
     def eval(self, x):
-        return x*0 + self.constant #TODO: check dims
+        return self.constant #TODO: check dims
 
 
 class Linear(Mean):

@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 import theano as th
 import theano.tensor as tt
 import pymc3 as pm
@@ -34,17 +35,67 @@ def trans_hypers(hypers):
     return trans
 
 
+def get_space(space, name=None, squeeze=False):
+    if squeeze:
+        space = np.squeeze(space)
+        if type(space) is np.ndarray:
+            space_x = space.astype(th.config.floatX)
+            if name is None:
+                space_th = None
+            else:
+                space_th = th.shared(space_x, name, borrow=True)
+            if len(space_x.shape) == 1 or space_x.shape[1] == 1:
+                space_t = np.squeeze(space_x)
+            else:
+                space_t = np.arange(len(space_x), dtype=th.config.floatX)
+        else:
+            space_t = space.index
+            space_x = space.astype(th.config.floatX)
+            if name is None:
+                space_th = None
+            else:
+                space_th = th.shared(space_x.values, name, borrow=True)
+        return space_th, space_x, space_t
+
+    if type(space) is np.ndarray:
+        if len(space.shape) < 2:
+            space = space[:, None]
+        space_x = space.astype(th.config.floatX)
+        if name is None:
+            space_th = None
+        else:
+            space_th = th.shared(space_x, name, borrow=True)
+        if len(space_x.shape) == 1 or space_x.shape[1] == 1:
+            space_t = np.squeeze(space_x)
+        else:
+            space_t = np.arange(len(space_x), dtype=th.config.floatX)
+    else:
+        space_t = space.index
+        space_x = space.astype(th.config.floatX)
+        if len(space.shape) < 2:
+            space_x = pd.DataFrame(space_x)
+        if name is None:
+            space_th = None
+        else:
+            space_th = th.shared(space_x.values, name, borrow=True)
+    return space_th, space_x, space_t
+
+
 class Hypers:
     def __init__(self, x=None, name=None):
         if x is not None:
             if type(x) is tuple:
                 domain, self.dims = x
-                self.shape = domain.shape[1]
+                if len(domain.shape) > 1:
+                    self.shape = domain.shape[1]
+                else:
+                    self.shape = 1
             else:
-                self.shape = x.shape[1]
+                if len(x.shape) > 1:
+                    self.shape = x.shape[1]
+                else:
+                    self.shape = 1
                 self.dims = slice(0, self.shape)
-            #if self.shape == 1:
-            #    self.shape = ()
         else:
             self.shape = ()
             self.dims = slice(None)
@@ -70,6 +121,11 @@ class Hypers:
     def default_hypers_dims(self, x=None, y=None):
         return self.default_hypers(x[:, self.dims], y)
 
+
+    @staticmethod
+    def Null(name, shape=(), testval=zeros):
+        with modelcontext():
+            return pm.NoDistribution(name, shape=shape, testval=testval(shape), dtype=th.config.floatX)
     @staticmethod
     def Flat(name, shape=(), testval=zeros):
         with modelcontext():

@@ -29,6 +29,9 @@ class Kernel(Hypers):
         else:
             return self.metric.default_hypers(x, y)
 
+    def input_sensitivity(self):
+        return self.var*self.metric.input_sensitivity()
+
     def __call__(self, x1, x2):
         pass
 
@@ -311,7 +314,7 @@ class KernelPeriodic(KernelStationary):
         self.hypers += [self.periods, self.scales]
 
     def default_hypers(self, x=None, y=None):
-        return {self.periods: np.abs(x[1:]-x[:-1]).max(axis=0),
+        return {self.periods: (x.max(axis=0)-x.min(axis=0)),
                 self.scales: np.abs(x[1:] - x[:-1]).mean(axis=0),
                 **super().default_hypers(x, y)}
 
@@ -320,19 +323,19 @@ class COS(KernelPeriodic):
     def __init__(self, x, name=None, metric=Difference, var=None, periods=None):
         super().__init__(x, name, metric, var)
         self.periods = periods
-        self.scales = 1
+        self.scales = None
 
     def k(self, d):
-        return tt.prod(tt.cos(2 * pi * d / self.periods))
+        return tt.cos(2 * pi * tt.dot(d, 1/self.periods))
 
 
 class PER(KernelPeriodic):
     def k(self, d):
-        return tt.exp(2 * tt.sum((tt.sin(pi * d / self.periods) ** 2) / self.scales))
+        return tt.exp(2 * tt.dot(tt.sin(pi * tt.dot(d, 1/self.periods) ** 2), 1/self.scales))
 
 
 class SM(KernelPeriodic):
     def k(self, d):
-        return tt.exp(-2 * pi ** 2 * tt.sum(d ** 2 / self.scales)) * tt.prod(tt.cos(2 * pi * d / self.periods))
+        return tt.exp(-2 * pi ** 2 * tt.dot(d ** 2, 1/self.scales)) * tt.cos(2 * pi * tt.dot(d, 1/self.periods))
 
 
