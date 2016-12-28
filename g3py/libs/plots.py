@@ -46,7 +46,7 @@ def style_widget():
 
 
 def plot(*args, **kwargs):
-    return plt.plot(*args, **kwargs)
+    plt.plot(*args, **kwargs)
 
 
 def text_plot(title="title", x="xlabel", y="ylabel", ncol=3, loc=8, axis=None):

@@ -324,6 +324,22 @@ class TGP:
         plt.fill_between(self.space_t, mean + sigma * wn, mean - sigma * wn, alpha=0.1, label='noise')
         return mean, variance, noise
 
+    def predict_gp(self, params, cov=False, noise=False):
+        r = list()
+        r.append(self.compiles['mean'](**params))
+        r.append(self.compiles['variance'](**params))
+        if cov:
+            r.append(self.compiles['covariance'](**params))
+        if noise:
+            r.append(self.compiles['noise'](**params))
+        return r
+
+    def sample_gp(self, params, samples=1):
+        S = np.empty((len(self.space_x), samples))
+        for i in range(samples):
+            S[:, i] = self.compiles['sampler_gp'](np.random.randn(len(self.space_x)), **params)
+        return S
+
     def plot_gp_samples(self, params, samples=1):
         for i in range(samples):
             plt.plot(self.space_t, self.compiles['sampler_gp'](np.random.randn(len(self.space_x)), **params), alpha=0.6)
