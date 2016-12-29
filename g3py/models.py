@@ -1,3 +1,4 @@
+import pickle
 import numpy as np
 import pymc3 as pm
 import scipy as sp
@@ -19,7 +20,11 @@ class Model(pm.Model):
 
     @classmethod
     def get_context(cls):
-        return pm.Model.get_context()
+        try:
+            return pm.Model.get_context()
+        except TypeError:
+            with pm.Model() as model:
+                return model
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -54,6 +59,19 @@ class Model(pm.Model):
     def fastdlogp(self, vars=None):
         """Nan Robust fastdlogp"""
         return self.model.fastfn(tt_to_num(pm.gradient(self.logpt, vars)))
+
+
+
+
+def load_model(path):
+    with Model():
+        with open(path, 'rb') as f:
+            try:
+                r = pickle.load(f)
+                print('Loaded model ' + path)
+                return r
+            except:
+                print('Error loading model '+path)
 
 
 class TGPDist(pm.Continuous):

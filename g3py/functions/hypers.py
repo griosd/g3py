@@ -35,7 +35,15 @@ def trans_hypers(hypers):
     return trans
 
 
-def get_space(space, name=None, squeeze=False):
+def def_space(space=None, name=None, squeeze=False):
+    if space is None:
+        space = np.arange(0, 2, dtype=th.config.floatX)
+        space = space[:, None]
+    elif np.isscalar(space):
+        space_x = np.arange(0, space, dtype=th.config.floatX)
+        space_x = space_x[None, :]
+        return th.shared(space_x, name, borrow=True), None, None
+
     if squeeze:
         space = np.squeeze(space)
         if type(space) is np.ndarray:

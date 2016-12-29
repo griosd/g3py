@@ -1,10 +1,10 @@
+import pickle
 import numpy as np
 import pymc3 as pm
 import scipy as sp
-import pandas as pd
 import theano as th
 from g3py import Mean, Kernel, Mapping, Model, KernelSum, WN, tt_to_cov, tt_to_num, TGPDist, zeros, cholesky_robust, \
-    get_space, debug, makefn, text_plot, trans_hypers, ConstantStep, RobustSlice, Identity
+    def_space, debug, makefn, text_plot, trans_hypers, ConstantStep, RobustSlice, Identity
 from ipywidgets import interact
 from matplotlib import pyplot as plt
 from theano import tensor as tt
@@ -13,14 +13,14 @@ from theano.tensor import nlinalg as nL
 
 
 class TGP:
-    def __init__(self, space, mean: Mean, kernel: Kernel, mapping: Mapping, noise=True, name=None, hidden=None):
+    def __init__(self, space, mean: Mean, kernel: Kernel, mapping: Mapping, noise=True, name=None, hidden=None, description=None):
         self.model = Model.get_context()
         if name is None:
             self.name = self.__class__.__name__
         else:
             self.name = name
 
-        self.space, self.space_x, self.space_t = get_space(space, self.name + '_Space')
+        self.space, self.space_x, self.space_t = def_space(space, self.name + '_Space')
 
         self.mean = mean
         if noise:
@@ -46,15 +46,19 @@ class TGP:
         self._widget_params = {}
         self._widget_trace = None
         self.compiles = {}
-        self.description = {'title': 'title',
-                            'x': 'x',
-                            'y': 'y',
-                            'text': 'text'}
+        if description is None:
+            self.description = {'title': 'title',
+                                'x': 'x',
+                                'y': 'y',
+                                'text': 'text'}
+        else:
+            self.description = description
         if hidden is None:
             self.hidden = None
         else:
             self.hidden = np.squeeze(hidden)
-        self.check_hypers()
+        with self.model:
+            self.check_hypers()
 
     def check_hypers(self):
         self.mean.check_hypers(self.name+'_')
@@ -62,7 +66,7 @@ class TGP:
         self.mapping.check_hypers(self.name+'_')
 
     def set_space(self, space):
-        new_space, self.space_x, self.space_t = get_space(space, self.name + '_Space')
+        new_space, self.space_x, self.space_t = def_space(space, self.name + '_Space')
         self.space.set_value(new_space.get_value())
 
     def describe(self, title, x, y, text=''):
@@ -72,17 +76,19 @@ class TGP:
         self.description['text'] = text
 
     def observed(self, inputs, outputs):
-        self.inputs, self.inputs_x, self.inputs_t = get_space(inputs, self.name + '_inputs')
-        self.outputs, self.outputs_y, __ = get_space(outputs, self.name + '_outputs', squeeze=True)
-        self.mean_inputs = self.mean(self.inputs)
-        self.cov_inputs = tt_to_cov(self.kernel.cov(self.inputs))
-        self.inv_outputs = tt_to_num(self.mapping.inv(self.outputs))
-        self.distribution = TGPDist(self.name, mu=self.mean_inputs, cov=self.cov_inputs, mapping=self.mapping, tgp=self,
-                                    observed=self.outputs, testval=self.outputs, dtype=th.config.floatX)
+        self.inputs, self.inputs_x, self.inputs_t = def_space(inputs, self.name + '_inputs')
+        self.outputs, self.outputs_y, __ = def_space(outputs, self.name + '_outputs', squeeze=True)
+        with Model.get_context():
+            self.mean_inputs = self.mean(self.inputs)
+            self.cov_inputs = tt_to_cov(self.kernel.cov(self.inputs))
+            self.inv_outputs = tt_to_num(self.mapping.inv(self.outputs))
+            self.distribution = TGPDist(self.name, mu=self.mean_inputs, cov=self.cov_inputs, mapping=self.mapping,
+                                        tgp=self, observed=self.outputs, testval=self.outputs, dtype=th.config.floatX)
 
+    # TODO
     def testing(self, inputs, outputs):
-        __, self.inputs_test, __ = get_space(inputs)
-        __, self.outputs_test, __ = get_space(outputs, squeeze=True)
+        __, self.inputs_test, __ = def_space(inputs)
+        __, self.outputs_test, __ = def_space(outputs, squeeze=True)
 
     def point_to_eval(self, point):
         r = dict()
@@ -96,6 +102,7 @@ class TGP:
             r.append(th.In(self.model[k], value=v))
         return r
 
+    # TODO
     def swap_test_obs(self):
         if self.inputs is None:
             return
@@ -324,10 +331,12 @@ class TGP:
         plt.fill_between(self.space_t, mean + sigma * wn, mean - sigma * wn, alpha=0.1, label='noise')
         return mean, variance, noise
 
-    def predict_gp(self, params, cov=False, noise=False):
+    def predict_gp(self, params, mean=True, var=True, cov=False, noise=False):
         r = list()
-        r.append(self.compiles['mean'](**params))
-        r.append(self.compiles['variance'](**params))
+        if mean:
+            r.append(self.compiles['mean'](**params))
+        if var:
+            r.append(self.compiles['variance'](**params))
         if cov:
             r.append(self.compiles['covariance'](**params))
         if noise:
@@ -355,13 +364,14 @@ class TGP:
         plt.fill_between(self.space_t, noise_up, noise_down, alpha=0.1, label='Noise')
         return med, Iup, Idown
 
-    def plot_tgp_moments(self, params):
+    def plot_tgp_moments(self, params, std=False):
         moment1 = self.compiles['m1'](**params)
         moment2 = self.compiles['m2'](**params)
-        std = np.sqrt(moment2-moment1**2)
+        sigma = np.sqrt(moment2-moment1**2)
         plt.plot(self.space_t, moment1, label='Mean')
-        plt.plot(self.space_t, moment1 + 2.0 * std, '--k', alpha=0.2, label='4.0 std')
-        plt.plot(self.space_t, moment1 - 2.0 * std, '--k', alpha=0.2)
+        if std:
+            plt.plot(self.space_t, moment1 + 2.0 * sigma, '--k', alpha=0.2, label='4.0 std')
+            plt.plot(self.space_t, moment1 - 2.0 * sigma, '--k', alpha=0.2)
         return moment1, moment2
 
     def plot_tgp_samples(self, params, samples=1):
@@ -386,13 +396,13 @@ class TGP:
             title = self.description['title']
         text_plot(title + ': ' + score_title,  self.description['x'],  self.description['y'], loc=loc)
 
-    def plot_tgp(self, params, title=None, samples=0, big=True, scores=False, loc=1):
+    def plot_tgp(self, params, title=None, samples=0, std=False, big=True, scores=False, loc=1):
         #if self.space_t is not self.space_x:
         #    plt.figure(0)
         #    self.plot_space()
         #plt.figure(1)
         self.plot_data(big)
-        self.plot_tgp_moments(params)
+        self.plot_tgp_moments(params, std)
         self.plot_tgp_quantiles(params)
         self.plot_tgp_samples(params, samples)
         if scores: #TODO: Check Scores
@@ -441,32 +451,46 @@ class TGP:
              'mab_test': bias_test}
         return d
 
-    def find_MAP(self, start=None, points=1, plot=False, samples=0):
-        maps = list()
+    def find_MAP(self, start=None, points=1, plot=False, return_points=False, display=True):
+        points_list = list()
         if start is None:
             start = self.find_default()
-        maps.append(('start', self.model.logp(start), start))
+        points_list.append(('start', self.model.logp(start), start))
         plt.figure(0)
-        self.plot_tgp(start, 'start', samples)
+        print('Starting function value (-logp): '+str(-self.model.logp(start)))
+        self.plot_tgp(start, 'start')
         plt.show()
         with self.model:
             for i in range(points):
                 try:
-                    name, logp, start = maps[i // 2]
+                    name, logp, start = points_list[i // 2]
                     if i % 2 == 0:
                         name += '_bfgs'
+
                         new = pm.find_MAP(fmin=sp.optimize.fmin_bfgs, vars=self.sampling_vars, start=start)
                     else:
                         name += '_powell'
+                        print(name)
                         new = pm.find_MAP(fmin=sp.optimize.fmin_powell, vars=self.sampling_vars, start=start)
-                    maps.append((name, self.model.logp(new), new))
+                    points_list.append((name, self.model.logp(new), new))
                     if plot:
                         plt.figure(i+1)
-                        self.plot_tgp(new, name, samples)
+                        self.plot_tgp(new, name)
                         plt.show()
                 except:
                     pass
-        return maps
+        optimal = points_list[0]
+        for test in points_list:
+            if test[1] > optimal[1]:
+                optimal = test
+        name, logp, params = optimal
+        if display:
+            #print(params)
+            pass
+        if return_points is False:
+            return params
+        else:
+            return params, points_list
 
     def default_hypers(self):
         x = self.inputs.get_value()
@@ -586,6 +610,14 @@ class TGP:
             trace = pm.sample(samples, step=step, start=advi_mu, njobs=chains)
         return trace
 
+    def save_model(self, path, params=None):
+        try:
+            with self.model:
+                with open(path, 'wb') as f:
+                    pickle.dump((params), f, protocol=-1)
+            print('Saved model '+path)
+        except:
+            print('Error saving model '+path)
 
 class GP(TGP):
     def __init__(self, space, mean, kernel, noise=True, name=None, hidden=None):
