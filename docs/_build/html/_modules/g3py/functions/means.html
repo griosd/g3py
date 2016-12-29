@@ -247,7 +247,7 @@
         <span class="k">return</span> <span class="p">{</span><span class="bp">self</span><span class="o">.</span><span class="n">constant</span><span class="p">:</span> <span class="n">y</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">th</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">floatX</span><span class="p">)}</span></div>
 
 <div class="viewcode-block" id="Bias.eval"><a class="viewcode-back" href="../../../g3py.functions.html#g3py.functions.means.Bias.eval">[docs]</a>    <span class="k">def</span> <span class="nf">eval</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
-        <span class="k">return</span> <span class="n">x</span><span class="o">*</span><span class="mi">0</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">constant</span> <span class="c1">#TODO: check dims</span></div></div>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">constant</span> <span class="c1">#TODO: check dims</span></div></div>
 
 
 <div class="viewcode-block" id="Linear"><a class="viewcode-back" href="../../../g3py.functions.html#g3py.functions.means.Linear">[docs]</a><span class="k">class</span> <span class="nc">Linear</span><span class="p">(</span><span class="n">Mean</span><span class="p">):</span>

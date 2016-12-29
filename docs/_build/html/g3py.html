@@ -208,6 +208,18 @@ fixing parameters at a particular value.</p>
 <dt id="g3py.models.Model">
 <em class="property">class </em><code class="descclassname">g3py.models.</code><code class="descname">Model</code><span class="sig-paren">(</span><em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/models.html#Model"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.models.Model" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">pymc3.model.Model</span></code></p>
+<dl class="method">
+<dt id="g3py.models.Model.dlogp">
+<code class="descname">dlogp</code><span class="sig-paren">(</span><em>vars=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/models.html#Model.dlogp"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.models.Model.dlogp" title="Permalink to this definition">¶</a></dt>
+<dd><p>Nan Robust dlogp</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="g3py.models.Model.fastdlogp">
+<code class="descname">fastdlogp</code><span class="sig-paren">(</span><em>vars=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/models.html#Model.fastdlogp"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.models.Model.fastdlogp" title="Permalink to this definition">¶</a></dt>
+<dd><p>Nan Robust fastdlogp</p>
+</dd></dl>
+
 <dl class="classmethod">
 <dt id="g3py.models.Model.get_context">
 <em class="property">classmethod </em><code class="descname">get_context</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/models.html#Model.get_context"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.models.Model.get_context" title="Permalink to this definition">¶</a></dt>
@@ -256,6 +268,7 @@ fixing parameters at a particular value.</p>
 <li><strong>w</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#float" title="(in Python v2.7)"><em>float</em></a>) &#8211; Initial width of slice (Defaults to 1).</li>
 <li><strong>tune</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#bool" title="(in Python v2.7)"><em>bool</em></a>) &#8211; Flag for tuning (Defaults to True).</li>
 <li><strong>model</strong> (<em>PyMC Model</em>) &#8211; Optional model for sampling step. Defaults to None (taken from context).</li>
+<li><strong>max_iter</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a>) &#8211; Max Iterations before to return the same point (Defaults to 25)</li>
 </ul>
 </td>
 </tr>
@@ -309,6 +322,11 @@ fixing parameters at a particular value.</p>
 
 </dd></dl>
 
+<dl class="function">
+<dt id="g3py.models.load_model">
+<code class="descclassname">g3py.models.</code><code class="descname">load_model</code><span class="sig-paren">(</span><em>path</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/models.html#load_model"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.models.load_model" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
 </div>
 <div class="section" id="module-g3py.tgp">
 <span id="g3py-tgp-module"></span><h2>g3py.tgp module<a class="headerlink" href="#module-g3py.tgp" title="Permalink to this headline">¶</a></h2>
@@ -320,11 +338,16 @@ fixing parameters at a particular value.</p>
 
 <dl class="class">
 <dt id="g3py.tgp.TGP">
-<em class="property">class </em><code class="descclassname">g3py.tgp.</code><code class="descname">TGP</code><span class="sig-paren">(</span><em>space</em>, <em>mean: g3py.functions.means.Mean</em>, <em>kernel: g3py.functions.kernels.Kernel</em>, <em>mapping: g3py.functions.mappings.Mapping</em>, <em>noise=True</em>, <em>name=None</em>, <em>hidden=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/tgp.html#TGP"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.tgp.TGP" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="descclassname">g3py.tgp.</code><code class="descname">TGP</code><span class="sig-paren">(</span><em>space</em>, <em>mean: g3py.functions.means.Mean</em>, <em>kernel: g3py.functions.kernels.Kernel</em>, <em>mapping: g3py.functions.mappings.Mapping</em>, <em>noise=True</em>, <em>name=None</em>, <em>hidden=None</em>, <em>description=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/tgp.html#TGP"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.tgp.TGP" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <a class="reference external" href="https://docs.python.org/2/library/functions.html#object" title="(in Python v2.7)"><code class="xref py py-class docutils literal"><span class="pre">object</span></code></a></p>
 <dl class="method">
 <dt id="g3py.tgp.TGP.check_hypers">
 <code class="descname">check_hypers</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/tgp.html#TGP.check_hypers"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.tgp.TGP.check_hypers" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="g3py.tgp.TGP.check_params_dims">
+<code class="descname">check_params_dims</code><span class="sig-paren">(</span><em>**params</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/tgp.html#TGP.check_params_dims"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.tgp.TGP.check_params_dims" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="method">
@@ -364,7 +387,7 @@ fixing parameters at a particular value.</p>
 
 <dl class="method">
 <dt id="g3py.tgp.TGP.find_MAP">
-<code class="descname">find_MAP</code><span class="sig-paren">(</span><em>start=None</em>, <em>points=1</em>, <em>plot=False</em>, <em>samples=0</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/tgp.html#TGP.find_MAP"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.tgp.TGP.find_MAP" title="Permalink to this definition">¶</a></dt>
+<code class="descname">find_MAP</code><span class="sig-paren">(</span><em>start=None</em>, <em>points=1</em>, <em>plot=False</em>, <em>return_points=False</em>, <em>display=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/tgp.html#TGP.find_MAP"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.tgp.TGP.find_MAP" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="method">
@@ -459,12 +482,12 @@ fixing parameters at a particular value.</p>
 
 <dl class="method">
 <dt id="g3py.tgp.TGP.plot_tgp">
-<code class="descname">plot_tgp</code><span class="sig-paren">(</span><em>params</em>, <em>title=None</em>, <em>samples=0</em>, <em>big=True</em>, <em>scores=False</em>, <em>loc=1</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/tgp.html#TGP.plot_tgp"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.tgp.TGP.plot_tgp" title="Permalink to this definition">¶</a></dt>
+<code class="descname">plot_tgp</code><span class="sig-paren">(</span><em>params</em>, <em>title=None</em>, <em>samples=0</em>, <em>std=False</em>, <em>big=True</em>, <em>scores=False</em>, <em>loc=1</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/tgp.html#TGP.plot_tgp"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.tgp.TGP.plot_tgp" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="method">
 <dt id="g3py.tgp.TGP.plot_tgp_moments">
-<code class="descname">plot_tgp_moments</code><span class="sig-paren">(</span><em>params</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/tgp.html#TGP.plot_tgp_moments"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.tgp.TGP.plot_tgp_moments" title="Permalink to this definition">¶</a></dt>
+<code class="descname">plot_tgp_moments</code><span class="sig-paren">(</span><em>params</em>, <em>std=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/tgp.html#TGP.plot_tgp_moments"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.tgp.TGP.plot_tgp_moments" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="method">
@@ -523,6 +546,11 @@ fixing parameters at a particular value.</p>
 <dd></dd></dl>
 
 <dl class="method">
+<dt id="g3py.tgp.TGP.predict_gp">
+<code class="descname">predict_gp</code><span class="sig-paren">(</span><em>params</em>, <em>mean=True</em>, <em>var=True</em>, <em>cov=False</em>, <em>noise=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/tgp.html#TGP.predict_gp"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.tgp.TGP.predict_gp" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
 <dt id="g3py.tgp.TGP.prior_gp">
 <code class="descname">prior_gp</code><span class="sig-paren">(</span><em>cov=False</em>, <em>noise=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/tgp.html#TGP.prior_gp"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.tgp.TGP.prior_gp" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
@@ -535,6 +563,11 @@ fixing parameters at a particular value.</p>
 <dl class="method">
 <dt id="g3py.tgp.TGP.prior_quantiles_tgp">
 <code class="descname">prior_quantiles_tgp</code><span class="sig-paren">(</span><em>sigma=1.96</em>, <em>noise=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/tgp.html#TGP.prior_quantiles_tgp"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.tgp.TGP.prior_quantiles_tgp" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="g3py.tgp.TGP.sample_gp">
+<code class="descname">sample_gp</code><span class="sig-paren">(</span><em>params</em>, <em>samples=1</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/tgp.html#TGP.sample_gp"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.tgp.TGP.sample_gp" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="method">
@@ -558,6 +591,11 @@ fixing parameters at a particular value.</p>
 <dd></dd></dl>
 
 <dl class="method">
+<dt id="g3py.tgp.TGP.save_model">
+<code class="descname">save_model</code><span class="sig-paren">(</span><em>path</em>, <em>params=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/tgp.html#TGP.save_model"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.tgp.TGP.save_model" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
 <dt id="g3py.tgp.TGP.scores">
 <code class="descname">scores</code><span class="sig-paren">(</span><em>params</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/tgp.html#TGP.scores"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.tgp.TGP.scores" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
@@ -565,6 +603,11 @@ fixing parameters at a particular value.</p>
 <dl class="method">
 <dt id="g3py.tgp.TGP.set_space">
 <code class="descname">set_space</code><span class="sig-paren">(</span><em>space</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/tgp.html#TGP.set_space"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.tgp.TGP.set_space" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="g3py.tgp.TGP.subprocess_gp">
+<code class="descname">subprocess_gp</code><span class="sig-paren">(</span><em>subkernel</em>, <em>cov=False</em>, <em>noise=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/tgp.html#TGP.subprocess_gp"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.tgp.TGP.subprocess_gp" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="method">
@@ -588,11 +631,6 @@ fixing parameters at a particular value.</p>
 <dd></dd></dl>
 
 </dd></dl>
-
-<dl class="function">
-<dt id="g3py.tgp.get_space">
-<code class="descclassname">g3py.tgp.</code><code class="descname">get_space</code><span class="sig-paren">(</span><em>space</em>, <em>name=None</em>, <em>squeeze=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/g3py/tgp.html#get_space"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#g3py.tgp.get_space" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
 
 </div>
 <div class="section" id="module-g3py">

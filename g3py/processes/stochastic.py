@@ -39,11 +39,14 @@ class StochasticProcess:
         __, self.inputs_values, self.observed_index = def_space(inputs)
         __, self.outputs_values, __ = def_space(outputs, squeeze=True)
         self.space = tt.matrix(self.name + '_space', dtype=th.config.floatX)
+        self.random = tt.vector(self.name + '_random', dtype=th.config.floatX)
         self.inputs = tt.matrix(self.name + '_inputs', dtype=th.config.floatX)
         self.outputs = tt.vector(self.name + '_outputs', dtype=th.config.floatX)
+
         self.space.tag.test_value = self.space_values
         self.inputs.tag.test_value = self.inputs_values
         self.outputs.tag.test_value = self.outputs_values
+        self.random.tag.test_value = np.random.randn(len(self.space_values)).astype(dtype=th.config.floatX)
         if hidden is None:
             self.hidden = None
         else:
@@ -93,20 +96,24 @@ class StochasticProcess:
         self.prior_covariance = None
         self.prior_variance = None
         self.prior_noise = None
+        self.prior_median = None
         self.prior_quantile_up = None
         self.prior_quantile_down = None
         self.prior_noise_up = None
         self.prior_noise_down = None
+        self.prior_sampler = None
 
         # Posterior
         self.posterior_mean = None
         self.posterior_covariance = None
         self.posterior_variance = None
         self.posterior_noise = None
+        self.posterior_median = None
         self.posterior_quantile_up = None
         self.posterior_quantile_down = None
         self.posterior_noise_up = None
         self.posterior_noise_down = None
+        self.posterior_sampler = None
 
         self.distribution = None
 
@@ -120,53 +127,60 @@ class StochasticProcess:
         print('Compiling')
 
         params = [self.space] + self.model.vars
+        self.compiles['location_space'] = makefn(params, self.location_space)
+        self.compiles['kernel_space'] = makefn(params, self.kernel_space)
+        self.compiles['kernel_f_space'] = makefn(params, self.kernel_f_space)
+
+        params = [self.inputs] + self.model.vars
+        self.compiles['location_inputs'] = makefn(params, self.location_inputs)
+        self.compiles['kernel_inputs'] = makefn(params, self.kernel_inputs)
+        self.compiles['kernel_f_inputs'] = makefn(params, self.kernel_f_inputs)
+
+        params = [self.space, self.inputs] + self.model.vars
+        self.compiles['kernel_space_inputs'] = makefn(params, self.kernel_space_inputs)
+        self.compiles['kernel_f_space_inputs'] = makefn(params, self.kernel_f_space_inputs)
+
+        params = [self.outputs] + self.model.vars
+        self.compiles['mapping_outputs'] = makefn(params, self.mapping_outputs)
+
+        params = [self.space] + self.model.vars
         self.compiles['prior_mean'] = makefn(params, self.prior_mean)
         self.compiles['prior_covariance'] = makefn(params, self.prior_covariance)
         self.compiles['prior_variance'] = makefn(params, self.prior_variance)
         self.compiles['prior_noise'] = makefn(params, self.prior_noise)
+        self.compiles['prior_median'] = makefn(params, self.prior_median)
         self.compiles['prior_quantile_up'] = makefn(params, self.prior_quantile_up)
         self.compiles['prior_quantile_down'] = makefn(params, self.prior_quantile_down)
         self.compiles['prior_noise_up'] = makefn(params, self.prior_noise_up)
         self.compiles['prior_noise_down'] = makefn(params, self.prior_noise_down)
+        self.compiles['prior_sampler'] = makefn([self.random]+params, self.prior_sampler)
 
         params = [self.space, self.inputs, self.outputs] + self.model.vars
         self.compiles['posterior_mean'] = makefn(params, self.posterior_mean)
         self.compiles['posterior_covariance'] = makefn(params, self.posterior_covariance)
         self.compiles['posterior_variance'] = makefn(params, self.posterior_variance)
         self.compiles['posterior_noise'] = makefn(params, self.posterior_noise)
+        self.compiles['posterior_median'] = makefn(params, self.posterior_median)
         self.compiles['posterior_quantile_up'] = makefn(params, self.posterior_quantile_up)
         self.compiles['posterior_quantile_down'] = makefn(params, self.posterior_quantile_down)
         self.compiles['posterior_noise_up'] = makefn(params, self.posterior_noise_up)
         self.compiles['posterior_noise_down'] = makefn(params, self.posterior_noise_down)
+        self.compiles['posterior_sampler'] = makefn([self.random]+params, self.posterior_sampler)
 
-        return
-
-        params = self.model.vars
-        random, sampler = self.sampler_gp()
-        sampler_gp = makefn([random] + params, sampler)
-        random, sampler = self.sampler_tgp()
-        sampler_tgp = makefn([random] + params, sampler)
-        self.compiles['sampler_gp'] = sampler_gp
-        self.compiles['sampler_tgp'] = sampler_tgp
-
-
-        params = self.model.vars
-        value, dist = self.marginal_gp()
-
-        dist_gp = makefn([value] + params, dist[index])
-
-        trans = makefn([value] + params, self.mapping(value))
-        trans_inv = makefn([value] + params, self.mapping.inv(value))
-        det_jac_trans_inv = makefn([value] + params, tt.exp(self.mapping.logdet_dinv(value)))
-
-        value, dist = self.marginal_tgp()
-        dist_tgp = makefn([value] + params, dist[index])
-
-        self.compiles['trans'] = trans
-        self.compiles['trans_inv'] = trans_inv
-        self.compiles['det_jac_trans_inv'] = det_jac_trans_inv
-        self.compiles['dist_gp'] = dist_gp
-        self.compiles['dist_tgp'] = dist_tgp
+        if False:
+            params = self.model.vars
+            value, dist = self.marginal_gp()
+            dist_gp = makefn([value] + params, dist[index])
+            trans = makefn([value] + params, self.mapping(value))
+            trans_inv = makefn([value] + params, self.mapping.inv(value))
+            det_jac_trans_inv = makefn([value] + params, tt.exp(self.mapping.logdet_dinv(value)))
+            value, dist = self.marginal_tgp()
+            dist_tgp = makefn([value] + params, dist[index])
+            self.compiles['trans'] = trans
+            self.compiles['trans_inv'] = trans_inv
+            self.compiles['det_jac_trans_inv'] = det_jac_trans_inv
+            self.compiles['dist_gp'] = dist_gp
+            self.compiles['dist_tgp'] = dist_tgp
 
     def describe(self, title=None, x=None, y=None, text=None):
         if title is not None:
@@ -179,13 +193,11 @@ class StochasticProcess:
             self.description['text'] = text
 
     def set_space(self, space):
-        new_space, self.space_values, self.space_index = def_space(space, self.name + '_space')
-        self.space.set_value(new_space.get_value())
+        __, self.space_values, self.space_index = def_space(space, self.name + '_space')
 
     def observed(self, inputs, outputs):
         __, self.inputs_values, self.observed_index = def_space(inputs)
         __, self.outputs_values, __ = def_space(outputs, squeeze=True)
-
 
     def fix_params(self, fixed_params):
         self.params_fixed = fixed_params
@@ -196,30 +208,116 @@ class StochasticProcess:
             r[k] = np.array(v, dtype=th.config.floatX).reshape(self.model[k].tag.test_value.shape)
         return r
 
-    def def_process(self):
-        pass
-
+    # TODO
     def marginal(self):
         pass
 
-    def prior(self, mean=True, var=True, cov=False, median=False, quantiles=False, noise=False):
-        pass
-
-    def posterior(self, mean=True, var=True, cov=False, median=False, quantiles=False, noise=False):
-        pass
-
+    # TODO
     def subprocess(self, subkernel, mean=True, cov=False, var=True, median=False, quantiles=False, noise=False):
         pass
 
-    def sampler(self, space=None, params=None, samples=1):
-        pass
+    def prior(self, params=None, space=None, mean=True, var=True, cov=False, median=False, quantiles=False, noise=False, samples=0):
+        if params is None:
+            params = self.get_params_current()
+        if space is None:
+            space = self.space_values
+        values = {}
+        if mean:
+            values['mean'] = self.compiles['prior_mean'](space, **params)
+        if var:
+            values['variance'] = self.compiles['prior_variance'](space, **params)
+        if cov:
+            values['covariance'] = self.compiles['prior_covariance'](space, **params)
+        if median:
+            values['median'] = self.compiles['prior_median'](space, **params)
+        if quantiles:
+            values['quantile_up'] = self.compiles['prior_quantile_up'](space, **params)
+            values['quantile_down'] = self.compiles['prior_quantile_down'](space, **params)
+        if noise:
+            values['noise_up'] = self.compiles['prior_noise_up'](space, **params)
+            values['noise_down'] = self.compiles['prior_noise_down'](space, **params)
+        # TODO: if samples is with another distribution
+        if samples > 0:
+            S = np.empty((len(space), samples))
+            rand = np.random.randn(len(space), samples)
+            for i in range(samples):
+                S[:, i] = self.compiles['prior_sampler'](rand[:, i], space, **params)
+                values['samples'] = S
+        return values
 
-    def predict(self, space=None, params=None, mean=True, var=True, median=False, quantiles=False, noise=False):
-        pass
+    def posterior(self, params=None, space=None, inputs=None, outputs=None, mean=True, var=True, cov=False, median=False, quantiles=False, noise=False, samples=0):
+        if params is None:
+            params = self.get_params_current()
+        if space is None:
+            space = self.space_values
+        if inputs is None:
+            inputs = self.inputs_values
+        if outputs is None:
+            outputs = self.outputs_values
+        values = {}
+        if mean:
+            values['mean'] = self.compiles['posterior_mean'](space, inputs, outputs, **params)
+        if var:
+            values['variance'] = self.compiles['posterior_variance'](space, inputs, outputs, **params)
+        if cov:
+            values['covariance'] = self.compiles['posterior_covariance'](space, inputs, outputs, **params)
+        if median:
+            values['median'] = self.compiles['posterior_median'](space, inputs, outputs, **params)
+        if quantiles:
+            values['quantile_up'] = self.compiles['posterior_quantile_up'](space, inputs, outputs, **params)
+            values['quantile_down'] = self.compiles['posterior_quantile_down'](space, inputs, outputs, **params)
+        if noise:
+            values['noise_up'] = self.compiles['posterior_noise_up'](space, inputs, outputs, **params)
+            values['noise_down'] = self.compiles['posterior_noise_down'](space, inputs, outputs, **params)
+        # TODO: if samples is with another distribution
+        if samples > 0:
+            S = np.empty((len(space), samples))
+            rand = np.random.randn(len(space), samples)
+            for i in range(samples):
+                S[:, i] = self.compiles['posterior_sampler'](rand[:, i], space, inputs, outputs, **params)
+            values['samples'] = S
+        return values
 
-    def plot(self, space=None, params=None, mean=True, var=True, median=False, quantiles=False, noise=False, samples=0,
-             big=True, scores=False, title=None, loc=1):
-        pass
+    def predict(self, params=None, space=None, inputs=None, outputs=None, mean=True, var=True, cov=False, median=False, quantiles=False, noise=False, samples=0):
+        if params is None:
+            params = self.get_params_current()
+        if space is None:
+            space = self.space_values
+        if inputs is None:
+            inputs = self.inputs_values
+        if outputs is None:
+            outputs = self.outputs_values
+        if inputs is None or outputs is None:
+            return self.prior(params=params, space=space, mean=mean, var=var, cov=cov, median=median, quantiles=quantiles, noise=noise, samples=samples)
+        else:
+            return self.posterior(params=params, space=space, inputs=inputs, outputs=outputs, mean=mean, var=var, cov=cov, median=median, quantiles=quantiles, noise=noise, samples=samples)
+
+    def plot(self, params=None, space=None, inputs=None, outputs=None, mean=True, var=True, cov=False, median=True, quantiles=True, noise=True, samples=0,
+             data=True, big=True, scores=False, title=None, loc=1):
+        values = self.predict(params=params, space=space, inputs=inputs, outputs=outputs, mean=mean, var=var, cov=cov, median=median, quantiles=quantiles, noise=noise, samples=samples)
+        if data:
+            self.plot_data(big)
+        if mean:
+            plt.plot(self.space_index, values['mean'], label='Mean')
+        if var:
+            std = np.sqrt(values['variance'])
+            plt.plot(self.space_index, values['mean'] + 2.0 * std, '--k', alpha=0.2, label='4.0 std')
+            plt.plot(self.space_index, values['mean'] - 2.0 * std, '--k', alpha=0.2)
+        if cov:
+            pass
+        if median:
+            plt.plot(self.space_index, values['median'], label='Mean')
+        if quantiles:
+            plt.fill_between(self.space_index, values['quantile_up'], values['quantile_down'], alpha=0.1, label='95%')
+        if noise:
+            plt.fill_between(self.space_index, values['noise_up'], values['noise_down'], alpha=0.1, label='noise')
+        if samples > 0:
+            plt.plot(self.space_index, values['samples'], alpha=0.4)
+        if title is None:
+            title = self.description['title']
+        if scores:
+            pass
+        text_plot(title, self.description['x'], self.description['y'], loc=loc)
 
     def plot_widget(self, **params):
         params = self.check_params_dims(**params)
@@ -282,14 +380,14 @@ class StochasticProcess:
         return default
 
     def get_params_current(self, fixed=True):
-        if len(self.params_current) == 0:
+        if self.params_current is None:
             return self.get_params_default()
         if fixed:
             self.params_current.update(self.params_fixed)
         return self.params_current
 
     def get_params_widget(self, fixed=True):
-        if len(self.params_widget) == 0:
+        if self.params_widget is None:
             return self.get_params_default()
         if fixed:
             self.params_widget.update(self.params_fixed)

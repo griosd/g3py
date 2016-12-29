@@ -128,7 +128,8 @@
            <div itemprop="articleBody">
             
   <h1>Source code for g3py.models</h1><div class="highlight"><pre>
-<span></span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span></span><span class="kn">import</span> <span class="nn">pickle</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 <span class="kn">import</span> <span class="nn">pymc3</span> <span class="k">as</span> <span class="nn">pm</span>
 <span class="kn">import</span> <span class="nn">scipy</span> <span class="k">as</span> <span class="nn">sp</span>
 <span class="kn">import</span> <span class="nn">theano</span> <span class="k">as</span> <span class="nn">th</span>
@@ -149,7 +150,11 @@
 
     <span class="nd">@classmethod</span>
 <div class="viewcode-block" id="Model.get_context"><a class="viewcode-back" href="../../g3py.html#g3py.models.Model.get_context">[docs]</a>    <span class="k">def</span> <span class="nf">get_context</span><span class="p">(</span><span class="n">cls</span><span class="p">):</span>
-        <span class="k">return</span> <span class="n">pm</span><span class="o">.</span><span class="n">Model</span><span class="o">.</span><span class="n">get_context</span><span class="p">()</span></div>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">pm</span><span class="o">.</span><span class="n">Model</span><span class="o">.</span><span class="n">get_context</span><span class="p">()</span>
+        <span class="k">except</span> <span class="ne">TypeError</span><span class="p">:</span>
+            <span class="k">with</span> <span class="n">pm</span><span class="o">.</span><span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">model</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">model</span></div>
 
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
@@ -175,7 +180,28 @@
     <span class="k">def</span> <span class="nf">log_likelihood_t</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Theano scalar of log-likelihood of the model&quot;&quot;&quot;</span>
         <span class="n">factors</span> <span class="o">=</span> <span class="p">[</span><span class="n">var</span><span class="o">.</span><span class="n">logpt</span> <span class="k">for</span> <span class="n">var</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">observed_RVs</span><span class="p">]</span>
-        <span class="k">return</span> <span class="n">tt</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="o">*</span><span class="nb">map</span><span class="p">(</span><span class="n">tt</span><span class="o">.</span><span class="n">sum</span><span class="p">,</span> <span class="n">factors</span><span class="p">))</span></div>
+        <span class="k">return</span> <span class="n">tt</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="o">*</span><span class="nb">map</span><span class="p">(</span><span class="n">tt</span><span class="o">.</span><span class="n">sum</span><span class="p">,</span> <span class="n">factors</span><span class="p">))</span>
+
+<div class="viewcode-block" id="Model.dlogp"><a class="viewcode-back" href="../../g3py.html#g3py.models.Model.dlogp">[docs]</a>    <span class="k">def</span> <span class="nf">dlogp</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">vars</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Nan Robust dlogp&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">fn</span><span class="p">(</span><span class="n">tt_to_num</span><span class="p">(</span><span class="n">pm</span><span class="o">.</span><span class="n">gradient</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">logpt</span><span class="p">,</span> <span class="nb">vars</span><span class="p">)))</span></div>
+
+<div class="viewcode-block" id="Model.fastdlogp"><a class="viewcode-back" href="../../g3py.html#g3py.models.Model.fastdlogp">[docs]</a>    <span class="k">def</span> <span class="nf">fastdlogp</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">vars</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Nan Robust fastdlogp&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">fastfn</span><span class="p">(</span><span class="n">tt_to_num</span><span class="p">(</span><span class="n">pm</span><span class="o">.</span><span class="n">gradient</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">logpt</span><span class="p">,</span> <span class="nb">vars</span><span class="p">)))</span></div></div>
+
+
+
+
+<div class="viewcode-block" id="load_model"><a class="viewcode-back" href="../../g3py.html#g3py.models.load_model">[docs]</a><span class="k">def</span> <span class="nf">load_model</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
+    <span class="k">with</span> <span class="n">Model</span><span class="p">():</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="s1">&#39;rb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">r</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Loaded model &#39;</span> <span class="o">+</span> <span class="n">path</span><span class="p">)</span>
+                <span class="k">return</span> <span class="n">r</span>
+            <span class="k">except</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Error loading model &#39;</span><span class="o">+</span><span class="n">path</span><span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="TGPDist"><a class="viewcode-back" href="../../g3py.html#g3py.models.TGPDist">[docs]</a><span class="k">class</span> <span class="nc">TGPDist</span><span class="p">(</span><span class="n">pm</span><span class="o">.</span><span class="n">Continuous</span><span class="p">):</span>
@@ -260,6 +286,9 @@
 <span class="sd">    model : PyMC Model</span>
 <span class="sd">        Optional model for sampling step. Defaults to None (taken from context).</span>
 
+<span class="sd">    max_iter: int</span>
+<span class="sd">        Max Iterations before to return the same point (Defaults to 25)</span>
+
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">default_blocked</span> <span class="o">=</span> <span class="kc">False</span>
 
@@ -297,7 +326,7 @@
         <span class="k">while</span> <span class="p">(</span><span class="n">y</span> <span class="o">&lt;</span> <span class="n">logp</span><span class="p">(</span><span class="n">q_right</span><span class="p">))</span><span class="o">.</span><span class="n">all</span><span class="p">()</span> <span class="ow">and</span> <span class="nb">iter</span><span class="o">&lt;</span><span class="bp">self</span><span class="o">.</span><span class="n">max_iter</span><span class="p">:</span>
             <span class="n">q_right</span> <span class="o">+=</span> <span class="bp">self</span><span class="o">.</span><span class="n">w</span>
             <span class="nb">iter</span> <span class="o">+=</span> <span class="mi">1</span>
-        <span class="k">if</span> <span class="nb">iter</span><span class="o">&gt;=</span><span class="bp">self</span><span class="o">.</span><span class="n">max_iter</span><span class="p">:</span>
+        <span class="k">if</span> <span class="nb">iter</span> <span class="o">&gt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_iter</span><span class="p">:</span>
             <span class="k">return</span> <span class="n">q0</span>
 
         <span class="n">q</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="n">q_left</span><span class="p">,</span> <span class="n">q_right</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="n">q_left</span><span class="o">.</span><span class="n">size</span><span class="p">)</span>  <span class="c1"># new variable to avoid copies</span>
