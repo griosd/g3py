@@ -11,6 +11,7 @@ búsqueda de óptimos locales y recorrer el espacio en búsqueda de óptimos glo
 * Métodos con derivadas (BFGS para la optimización, HamiltonianMC para el sampling) de forma gratuita, gracias al motor de diferenciación simbólica de Theano
 
 # Installation
+[https://pypi.python.org/pypi/g3py](https://pypi.python.org/pypi/g3py)
 ```
 pip install g3py
 ```
