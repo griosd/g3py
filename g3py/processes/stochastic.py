@@ -1,9 +1,10 @@
+import pickle
 import numpy as np
 import pymc3 as pm
 import scipy as sp
 import theano as th
 from g3py.functions import Mean, Kernel, Mapping, KernelSum, WN, tt_to_num, zeros, def_space, debug, trans_hypers, Identity
-from g3py.libs import tt_to_cov, cholesky_robust, makefn, text_plot
+from g3py.libs import tt_to_cov, cholesky_robust, makefn, text_plot, clone
 from g3py.models import Model, TGPDist, ConstantStep, RobustSlice
 from ipywidgets import interact
 from matplotlib import pyplot as plt
@@ -36,17 +37,19 @@ class StochasticProcess:
 
         # Space, Hidden, Observed
         __, self.space_values, self.space_index = def_space(space)
-        __, self.inputs_values, self.observed_index = def_space(inputs)
-        __, self.outputs_values, __ = def_space(outputs, squeeze=True)
-        self.space = tt.matrix(self.name + '_space', dtype=th.config.floatX)
-        self.random = tt.vector(self.name + '_random', dtype=th.config.floatX)
-        self.inputs = tt.matrix(self.name + '_inputs', dtype=th.config.floatX)
-        self.outputs = tt.vector(self.name + '_outputs', dtype=th.config.floatX)
+        self.inputs, self.inputs_values, self.observed_index = def_space(inputs, self.name + '_inputs')
+        self.outputs, self.outputs_values, __ = def_space(outputs, self.name + '_outputs', squeeze=True)
 
-        self.space.tag.test_value = self.space_values
-        self.inputs.tag.test_value = self.inputs_values
-        self.outputs.tag.test_value = self.outputs_values
-        self.random.tag.test_value = np.random.randn(len(self.space_values)).astype(dtype=th.config.floatX)
+        self.space_th = tt.matrix(self.name + '_space_th', dtype=th.config.floatX)
+        self.inputs_th = tt.matrix(self.name + '_inputs_th', dtype=th.config.floatX)
+        self.outputs_th = tt.vector(self.name + '_outputs_th', dtype=th.config.floatX)
+        self.random_th = tt.vector(self.name + '_random_th', dtype=th.config.floatX)
+
+        self.space_th.tag.test_value = self.space_values
+        self.inputs_th.tag.test_value = self.inputs_values
+        self.outputs_th.tag.test_value = self.outputs_values
+        self.random_th.tag.test_value = np.random.randn(len(self.space_values)).astype(dtype=th.config.floatX)
+
         if hidden is None:
             self.hidden = None
         else:
@@ -69,25 +72,26 @@ class StochasticProcess:
             self.mapping.check_hypers(self.name + '_')
 
         print('Space Dimensions: ', self.space_values.shape)
-        print('Inputs Dimensions: ', self.inputs_values.shape)
-        print('Output Dimensions: ', self.outputs_values.shape)
+        #print('Inputs Dimensions: ', self.inputs_values.shape)
+        #print('Output Dimensions: ', self.outputs_values.shape)
 
         # Hyper-parameters values
+        self._widget_traces = None
         self.params_current = None
         self.params_widget = None
         self.params_fixed = {}
 
         # Basic Tensors
-        self.location_space = self.location(self.space)
+        self.location_space = self.location(self.space_th)
         self.location_inputs = self.location(self.inputs)
 
-        self.kernel_space = tt_to_cov(self.kernel.cov(self.space))
+        self.kernel_space = tt_to_cov(self.kernel.cov(self.space_th))
         self.kernel_inputs = tt_to_cov(self.kernel.cov(self.inputs))
-        self.kernel_space_inputs = tt_to_num(self.kernel.cov(self.space, self.inputs))
+        self.kernel_space_inputs = tt_to_num(self.kernel.cov(self.space_th, self.inputs))
 
-        self.kernel_f_space = tt_to_cov(self.kernel_f.cov(self.space))
+        self.kernel_f_space = tt_to_cov(self.kernel_f.cov(self.space_th))
         self.kernel_f_inputs = tt_to_cov(self.kernel_f.cov(self.inputs))
-        self.kernel_f_space_inputs = tt_to_num(self.kernel_f.cov(self.space, self.inputs))
+        self.kernel_f_space_inputs = tt_to_num(self.kernel_f.cov(self.space_th, self.inputs))
 
         self.mapping_outputs = tt_to_num(self.mapping.inv(self.outputs))
 
@@ -95,6 +99,7 @@ class StochasticProcess:
         self.prior_mean = None
         self.prior_covariance = None
         self.prior_variance = None
+        self.prior_std = None
         self.prior_noise = None
         self.prior_median = None
         self.prior_quantile_up = None
@@ -107,6 +112,7 @@ class StochasticProcess:
         self.posterior_mean = None
         self.posterior_covariance = None
         self.posterior_variance = None
+        self.posterior_std = None
         self.posterior_noise = None
         self.posterior_median = None
         self.posterior_quantile_up = None
@@ -119,53 +125,59 @@ class StochasticProcess:
 
         self.compiles = {}
 
+        self.define_process()
+        print('Definition OK')
+
+        self.compile()
+        print('Compilation OK')
+
     def define_process(self):
         pass
 
     def compile(self):
-        self.define_process()
-        print('Compiling')
 
-        params = [self.space] + self.model.vars
+        params = [self.space_th] + self.model.vars
         self.compiles['location_space'] = makefn(params, self.location_space)
         self.compiles['kernel_space'] = makefn(params, self.kernel_space)
         self.compiles['kernel_f_space'] = makefn(params, self.kernel_f_space)
 
-        params = [self.inputs] + self.model.vars
+        params = [self.inputs_th] + self.model.vars
         self.compiles['location_inputs'] = makefn(params, self.location_inputs)
         self.compiles['kernel_inputs'] = makefn(params, self.kernel_inputs)
         self.compiles['kernel_f_inputs'] = makefn(params, self.kernel_f_inputs)
 
-        params = [self.space, self.inputs] + self.model.vars
+        params = [self.space_th, self.inputs_th] + self.model.vars
         self.compiles['kernel_space_inputs'] = makefn(params, self.kernel_space_inputs)
         self.compiles['kernel_f_space_inputs'] = makefn(params, self.kernel_f_space_inputs)
 
-        params = [self.outputs] + self.model.vars
+        params = [self.outputs_th] + self.model.vars
         self.compiles['mapping_outputs'] = makefn(params, self.mapping_outputs)
 
-        params = [self.space] + self.model.vars
+        params = [self.space_th] + self.model.vars
         self.compiles['prior_mean'] = makefn(params, self.prior_mean)
         self.compiles['prior_covariance'] = makefn(params, self.prior_covariance)
         self.compiles['prior_variance'] = makefn(params, self.prior_variance)
+        self.compiles['prior_std'] = makefn(params, self.prior_std)
         self.compiles['prior_noise'] = makefn(params, self.prior_noise)
         self.compiles['prior_median'] = makefn(params, self.prior_median)
         self.compiles['prior_quantile_up'] = makefn(params, self.prior_quantile_up)
         self.compiles['prior_quantile_down'] = makefn(params, self.prior_quantile_down)
         self.compiles['prior_noise_up'] = makefn(params, self.prior_noise_up)
         self.compiles['prior_noise_down'] = makefn(params, self.prior_noise_down)
-        self.compiles['prior_sampler'] = makefn([self.random]+params, self.prior_sampler)
+        self.compiles['prior_sampler'] = makefn([self.random_th] + params, self.prior_sampler)
 
-        params = [self.space, self.inputs, self.outputs] + self.model.vars
+        params = [self.space_th, self.inputs_th, self.outputs_th] + self.model.vars
         self.compiles['posterior_mean'] = makefn(params, self.posterior_mean)
         self.compiles['posterior_covariance'] = makefn(params, self.posterior_covariance)
         self.compiles['posterior_variance'] = makefn(params, self.posterior_variance)
+        self.compiles['posterior_std'] = makefn(params, self.posterior_std)
         self.compiles['posterior_noise'] = makefn(params, self.posterior_noise)
         self.compiles['posterior_median'] = makefn(params, self.posterior_median)
         self.compiles['posterior_quantile_up'] = makefn(params, self.posterior_quantile_up)
         self.compiles['posterior_quantile_down'] = makefn(params, self.posterior_quantile_down)
         self.compiles['posterior_noise_up'] = makefn(params, self.posterior_noise_up)
         self.compiles['posterior_noise_down'] = makefn(params, self.posterior_noise_down)
-        self.compiles['posterior_sampler'] = makefn([self.random]+params, self.posterior_sampler)
+        self.compiles['posterior_sampler'] = makefn([self.random_th] + params, self.posterior_sampler)
 
         if False:
             params = self.model.vars
@@ -193,28 +205,17 @@ class StochasticProcess:
             self.description['text'] = text
 
     def set_space(self, space):
-        __, self.space_values, self.space_index = def_space(space, self.name + '_space')
+        __, self.space_values, self.space_index = def_space(space)
 
     def observed(self, inputs, outputs):
         __, self.inputs_values, self.observed_index = def_space(inputs)
         __, self.outputs_values, __ = def_space(outputs, squeeze=True)
-
-    def fix_params(self, fixed_params):
-        self.params_fixed = fixed_params
-
-    def check_params_dims(self, **params):
-        r = dict()
-        for k, v in params.items():
-            r[k] = np.array(v, dtype=th.config.floatX).reshape(self.model[k].tag.test_value.shape)
-        return r
-
-    # TODO
-    def marginal(self):
-        pass
-
-    # TODO
-    def subprocess(self, subkernel, mean=True, cov=False, var=True, median=False, quantiles=False, noise=False):
-        pass
+        self.inputs.set_value(self.inputs_values)
+        self.outputs.set_value(self.outputs_values)
+        if self.distribution is None:
+            with self.model:
+                self.distribution = TGPDist(self.name, mu=self.location(self.inputs), cov=tt_to_cov(self.kernel.cov(self.inputs)),
+                                            mapping=self.mapping, tgp=self, observed=self.outputs, testval=self.outputs, dtype=th.config.floatX)
 
     def prior(self, params=None, space=None, mean=True, var=True, cov=False, median=False, quantiles=False, noise=False, samples=0):
         if params is None:
@@ -226,6 +227,7 @@ class StochasticProcess:
             values['mean'] = self.compiles['prior_mean'](space, **params)
         if var:
             values['variance'] = self.compiles['prior_variance'](space, **params)
+            values['std'] = self.compiles['prior_std'](space, **params)
         if cov:
             values['covariance'] = self.compiles['prior_covariance'](space, **params)
         if median:
@@ -234,6 +236,7 @@ class StochasticProcess:
             values['quantile_up'] = self.compiles['prior_quantile_up'](space, **params)
             values['quantile_down'] = self.compiles['prior_quantile_down'](space, **params)
         if noise:
+            values['noise'] = self.compiles['prior_noise'](space, **params)
             values['noise_up'] = self.compiles['prior_noise_up'](space, **params)
             values['noise_down'] = self.compiles['prior_noise_down'](space, **params)
         # TODO: if samples is with another distribution
@@ -259,6 +262,7 @@ class StochasticProcess:
             values['mean'] = self.compiles['posterior_mean'](space, inputs, outputs, **params)
         if var:
             values['variance'] = self.compiles['posterior_variance'](space, inputs, outputs, **params)
+            values['std'] = self.compiles['posterior_std'](space, inputs, outputs, **params)
         if cov:
             values['covariance'] = self.compiles['posterior_covariance'](space, inputs, outputs, **params)
         if median:
@@ -267,6 +271,7 @@ class StochasticProcess:
             values['quantile_up'] = self.compiles['posterior_quantile_up'](space, inputs, outputs, **params)
             values['quantile_down'] = self.compiles['posterior_quantile_down'](space, inputs, outputs, **params)
         if noise:
+            values['noise'] = self.compiles['posterior_noise'](space, inputs, outputs, **params)
             values['noise_up'] = self.compiles['posterior_noise_up'](space, inputs, outputs, **params)
             values['noise_down'] = self.compiles['posterior_noise_down'](space, inputs, outputs, **params)
         # TODO: if samples is with another distribution
@@ -278,7 +283,7 @@ class StochasticProcess:
             values['samples'] = S
         return values
 
-    def predict(self, params=None, space=None, inputs=None, outputs=None, mean=True, var=True, cov=False, median=False, quantiles=False, noise=False, samples=0):
+    def predict(self, params=None, space=None, inputs=None, outputs=None, mean=True, var=True, cov=False, median=False, quantiles=False, noise=False, samples=0, prior=True):
         if params is None:
             params = self.get_params_current()
         if space is None:
@@ -287,22 +292,23 @@ class StochasticProcess:
             inputs = self.inputs_values
         if outputs is None:
             outputs = self.outputs_values
-        if inputs is None or outputs is None:
+        if inputs is None or outputs is None or prior:
             return self.prior(params=params, space=space, mean=mean, var=var, cov=cov, median=median, quantiles=quantiles, noise=noise, samples=samples)
         else:
             return self.posterior(params=params, space=space, inputs=inputs, outputs=outputs, mean=mean, var=var, cov=cov, median=median, quantiles=quantiles, noise=noise, samples=samples)
 
-    def plot(self, params=None, space=None, inputs=None, outputs=None, mean=True, var=True, cov=False, median=True, quantiles=True, noise=True, samples=0,
+    def plot(self, params=None, space=None, inputs=None, outputs=None, mean=True, var=True, cov=False, median=True, quantiles=True, noise=True, samples=0, prior=False,
              data=True, big=True, scores=False, title=None, loc=1):
-        values = self.predict(params=params, space=space, inputs=inputs, outputs=outputs, mean=mean, var=var, cov=cov, median=median, quantiles=quantiles, noise=noise, samples=samples)
+        values = self.predict(params=params, space=space, inputs=inputs, outputs=outputs, mean=mean, var=var, cov=cov, median=median, quantiles=quantiles, noise=noise, samples=samples, prior=prior)
+        if space is not None:
+            self.set_space(space)
         if data:
             self.plot_data(big)
         if mean:
             plt.plot(self.space_index, values['mean'], label='Mean')
         if var:
-            std = np.sqrt(values['variance'])
-            plt.plot(self.space_index, values['mean'] + 2.0 * std, '--k', alpha=0.2, label='4.0 std')
-            plt.plot(self.space_index, values['mean'] - 2.0 * std, '--k', alpha=0.2)
+            plt.plot(self.space_index, values['mean'] + 2.0 * values['std'], '--k', alpha=0.2, label='4.0 std')
+            plt.plot(self.space_index, values['mean'] - 2.0 * values['std'], '--k', alpha=0.2)
         if cov:
             pass
         if median:
@@ -319,35 +325,13 @@ class StochasticProcess:
             pass
         text_plot(title, self.description['x'], self.description['y'], loc=loc)
 
-    def plot_widget(self, **params):
-        params = self.check_params_dims(**params)
-        self._widget_params = params
-        self.plot_data(big=True)
-        self.plot_tgp_quantiles(params)
-        self.plot_tgp_moments(params)
-        #self.description['scores'] = self.scores(params)
-        text_plot(self.description['title'],  self.description['x'],  self.description['y'], loc=1)
-        #self.plot_model(**params)
+    def set_params(self, params):
+        self.params_current = params
 
-    def widget_params(self, params=None, space=None):
-        if params is None:
-            params = self.get_params()
-        intervals = dict()
-        for k, v in params.items():
-            v = np.squeeze(v)
-            if v > 0.1:
-                intervals[k] = [0, 2*v]
-            elif v < -0.1:
-                intervals[k] = [2*v, 0]
-            else:
-                intervals[k] = [-5.00, 5.00]
-        interact(self.plot_widget, __manual=True, **intervals)
-
-    def widget_trace(self, trace, space=None):
-        self.params_widget = trace
-        self.get_point(self.params_widget, id_trace)
-        interact(self.plot_widget, __manual=True, id_trace=[0, len(self.params_widget) - 1])
-
+    def fix_params(self, fixed_params=None):
+        if fixed_params is None:
+            fixed_params = {}
+        self.params_fixed = fixed_params
 
     @property
     def fixed_vars(self):
@@ -357,17 +341,48 @@ class StochasticProcess:
     def sampling_vars(self):
         return [t for t in self.model.vars if t not in self.fixed_vars]
 
+    def check_params_dims(self, params):
+        r = dict()
+        for k, v in params.items():
+            try:
+                r[k] = np.array(v, dtype=th.config.floatX).reshape(self.model[k].tag.test_value.shape)
+            except KeyError:
+                pass
+        return r
+
     def default_hypers(self):
         x = self.inputs_values
         y = self.outputs_values
         return {**self.location.default_hypers_dims(x, y), **self.kernel.default_hypers_dims(x, y),
                 **self.mapping.default_hypers_dims(x, y)}
 
-    def get_params_dims(self, params):
-        r = dict()
+    def widget_plot(self, params):
+        self.params_widget = params
+        self.plot(params = self.params_widget)
+
+    def widget_traces(self, traces):
+        self._widget_traces = traces
+        interact(self.widget_plot_trace, __manual=True, id_trace=[0, len(self._widget_traces) - 1])
+
+    def widget_plot_trace(self, id_trace):
+        self.widget_plot(self.check_params_dims(self._widget_traces[id_trace]))
+
+    def widget_plot_params(self, **params):
+        self.widget_plot(self.check_params_dims(params))
+
+    def widget_params(self, params=None):
+        if params is None:
+            params = self.get_params_widget()
+        intervals = dict()
         for k, v in params.items():
-            r[k] = np.array(v, dtype=th.config.floatX).reshape(self.model[k].tag.test_value.shape)
-        return r
+            v = np.squeeze(v)
+            if v > 0.1:
+                intervals[k] = [0, 2*v]
+            elif v < -0.1:
+                intervals[k] = [2*v, 0]
+            else:
+                intervals[k] = [-5.00, 5.00]
+        interact(self.widget_plot_params, __manual=True, **intervals)
 
     def get_params_default(self, fixed=True):
         if self.inputs is None:
@@ -384,14 +399,122 @@ class StochasticProcess:
             return self.get_params_default()
         if fixed:
             self.params_current.update(self.params_fixed)
-        return self.params_current
+        return clone(self.params_current)
 
-    def get_params_widget(self, fixed=True):
+    def get_params_widget(self, fixed=False):
         if self.params_widget is None:
             return self.get_params_default()
         if fixed:
             self.params_widget.update(self.params_fixed)
-        return self.params_widget
+        return clone(self.params_widget)
+
+    def find_MAP(self, start=None, points=1, plot=False, return_points=False, display=True):
+        points_list = list()
+        if start is None:
+            start = self.get_params_current()
+        points_list.append(('start', self.model.logp(start), start))
+        print('Starting function value (-logp): ' + str(-self.model.logp(start)))
+        if plot:
+            plt.figure(0)
+            self.plot(params=start, title='start')
+            plt.show()
+        with self.model:
+            for i in range(points):
+                try:
+                    name, logp, start = points_list[i // 2]
+                    if i % 2 == 0:
+                        name += '_bfgs'
+                        print('\n' + name)
+                        new = pm.find_MAP(fmin=sp.optimize.fmin_bfgs, vars=self.sampling_vars, start=start)
+                    else:
+                        name += '_powell'
+                        print('\n' + name)
+                        new = pm.find_MAP(fmin=sp.optimize.fmin_powell, vars=self.sampling_vars, start=start)
+                    points_list.append((name, self.model.logp(new), new))
+                    if plot:
+                        plt.figure(i+1)
+                        self.plot(params=new, title=name)
+                        plt.show()
+                except:
+                    pass
+        optimal = points_list[0]
+        for test in points_list:
+            if test[1] > optimal[1]:
+                optimal = test
+        name, logp, params = optimal
+        if display:
+            #print(params)
+            pass
+        if return_points is False:
+            return params
+        else:
+            return params, points_list
+
+    def sample_hypers(self, start=None, samples=1000, chains=1, advi=True):
+        if start is None:
+            start = self.get_params_current()
+        with self.model:
+            if advi:
+                advi_mu, advi_sm, advi_elbo = pm.advi(vars=self.sampling_vars, start=start, n=20000) #OK
+                for k, v in advi_sm.items():
+                    advi_sm[k] = v**2
+            else:
+                advi_mu = start
+                advi_sm = None
+            if len(self.fixed_vars) > 0:
+                step = [ConstantStep(vars=self.fixed_vars)]  # Fue eliminado por error en pymc3
+                step += [RobustSlice(vars=self.sampling_vars)]  # Slice original se cuelga si parte del óptimo
+                #step += [pm.Metropolis(vars=self.sampling_vars, tune=False)] # OK
+                #step += [pm.HamiltonianMC(vars=self.sampling_vars, scaling=advi_sm, is_cov=True)] #Scaling is not positive definite. Simple check failed. Diagonal contains negatives. Check indexes
+                #step += [pm.NUTS(vars=self.sampling_vars, scaling=advi_sm, is_cov=True)] #BUG float32
+            else:
+                step = RobustSlice()
+            trace = pm.sample(samples, step=step, start=advi_mu, njobs=chains)
+        return trace
+
+    def save_model(self, path, params=None):
+        if params is None:
+            params = self.get_params_current()
+        try:
+            with self.model:
+                with open(path, 'wb') as f:
+                    pickle.dump((params, self), f, protocol=-1)
+            print('Saved model '+path)
+        except:
+            print('Error saving model '+path)
+
+    # TODO:
+    def plot_space(self):
+        plt.plot(self.space_index, self.space_values)
+        if self.observed_index is not None:
+            plt.plot(self.observed_index, self.inputs_values)
+
+    def plot_data(self, big=False):
+        if big:
+            self.plot_data_big()
+        else:
+            self.plot_data_normal()
+
+    def plot_data_normal(self):
+        if self.hidden is not None:
+            plt.plot(self.space_index, self.hidden[0:len(self.space_index)], label='Hidden Processes')
+        if self.outputs_values is not None:
+            plt.plot(self.observed_index, self.outputs_values, '.k', label='Observations')
+
+    def plot_concentration(self):
+        return plt.matshow(self.cov_inputs)
+
+    def plot_data_big(self):
+        if self.hidden is not None:
+            plt.plot(self.space_index, self.hidden[0:len(self.space_index)], linewidth=4, label='Hidden Processes')
+        if self.outputs_values is not None:
+            plt.plot(self.observed_index, self.outputs_values, '.k', ms=20, label='Observations')
+
+    def marginal(self):
+        pass
+
+    def subprocess(self, subkernel, mean=True, cov=False, var=True, median=False, quantiles=False, noise=False):
+        pass
 
     def scores_params(self, params=None):
         try:
@@ -426,47 +549,6 @@ class StochasticProcess:
              'mab_test': bias_test}
         return d
 
-    def find_MAP(self, start=None, points=1, plot=False, return_points=False, display=True):
-        points_list = list()
-        if start is None:
-            start = self.get_params_current()
-        points_list.append(('start', self.model.logp(start), start))
-        plt.figure(0)
-        print('Starting function value (-logp): '+str(-self.model.logp(start)))
-        self.plot_tgp(start, 'start')
-        plt.show()
-        with self.model:
-            for i in range(points):
-                try:
-                    name, logp, start = points_list[i // 2]
-                    if i % 2 == 0:
-                        name += '_bfgs'
-                        print('\n' + name)
-                        new = pm.find_MAP(fmin=sp.optimize.fmin_bfgs, vars=self.sampling_vars, start=start)
-                    else:
-                        name += '_powell'
-                        print('\n' + name)
-                        new = pm.find_MAP(fmin=sp.optimize.fmin_powell, vars=self.sampling_vars, start=start)
-                    points_list.append((name, self.model.logp(new), new))
-                    if plot:
-                        plt.figure(i+1)
-                        self.plot_tgp(new, name)
-                        plt.show()
-                except:
-                    pass
-        optimal = points_list[0]
-        for test in points_list:
-            if test[1] > optimal[1]:
-                optimal = test
-        name, logp, params = optimal
-        if display:
-            #print(params)
-            pass
-        if return_points is False:
-            return params
-        else:
-            return params, points_list
-
     def get_point(self, point):
         return {v.name: point[v.name] for v in self.model.vars}
 
@@ -490,63 +572,6 @@ class StochasticProcess:
 
     def eval_widget(self):
         return self.eval_point(self.get_params_widget())
-
-    def sample_hypers(self, start=None, samples=1000, chains=1, advi=True):
-        if start is None:
-            start = self.find_default()
-        with self.model:
-            if advi:
-                advi_mu, advi_sm, advi_elbo = pm.advi(vars=self.sampling_vars, start=start, n=20000) #OK
-                for k, v in advi_sm.items():
-                    advi_sm[k] = v**2
-            else:
-                advi_mu = start
-                advi_sm = None
-            if len(self.fixed_params) > 0:
-                step = [ConstantStep(vars=self.fixed_vars)]  # Fue eliminado por error en pymc3
-                step += [RobustSlice(vars=self.sampling_vars)]  # Slice original se cuelga si parte del óptimo
-                #step += [pm.Metropolis(vars=self.sampling_vars, tune=False)] # OK
-                #step += [pm.HamiltonianMC(vars=self.sampling_vars, scaling=advi_sm, is_cov=True)] #Scaling is not positive definite. Simple check failed. Diagonal contains negatives. Check indexes
-                #step += [pm.NUTS(vars=self.sampling_vars, scaling=advi_sm, is_cov=True)] #BUG float32
-            else:
-                step = RobustSlice()
-            trace = pm.sample(samples, step=step, start=advi_mu, njobs=chains)
-        return trace
-
-    def save_model(self, path, params=None):
-        try:
-            with self.model:
-                with open(path, 'wb') as f:
-                    pickle.dump((params), f, protocol=-1)
-            print('Saved model '+path)
-        except:
-            print('Error saving model '+path)
-
-    def plot_space(self):
-        plt.plot(self.space_index, self.space_values)
-        if self.observed_index is not None:
-            plt.plot(self.observed_index, self.inputs_values)
-
-    def plot_data(self, big=False):
-        if big:
-            self.plot_data_big()
-        else:
-            self.plot_data_normal()
-
-    def plot_data_normal(self):
-        if self.hidden is not None:
-            plt.plot(self.space_index, self.hidden, label='Hidden Processes')
-        if self.outputs_values is not None:
-            plt.plot(self.observed_index, self.outputs_values, '.k', label='Observations')
-
-    def plot_data_big(self):
-        if self.hidden is not None:
-            plt.plot(self.space_index, self.hidden, linewidth=4, label='Hidden Processes')
-        if self.outputs_values is not None:
-            plt.plot(self.observed_index, self.outputs_values, '.k', ms=20, label='Observations')
-
-    def plot_concentration(self):
-        return plt.matshow(self.cov_inputs)
 
 
 def gauss_hermite(f, mu, sigma, a, w):

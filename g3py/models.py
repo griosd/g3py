@@ -89,6 +89,11 @@ class TGPDist(pm.Continuous):
                + self.mapping.logdet_dinv(value)
 
     def logp_cho(self, value):
+
+        self.mu = debug(self.mu, 'MU')
+        value = debug(value, 'value')
+        debug(self.mapping.inv(value), 'inv')
+
         delta = tt_to_num(self.mapping.inv(value)) - self.mu
         L = sL.solve_lower_triangular(self.cho, delta)
         return -np.float32(0.5) * (self.cov.shape[0].astype(th.config.floatX) * tt.log(np.float32(2.0 * np.pi))
@@ -108,7 +113,7 @@ class TGPDist(pm.Continuous):
             raise sp.linalg.LinAlgError("not cholesky")
 
     def random(self, point=None, size=None):
-        point = self.tgp.point(self.tgp, point)
+        point = self.tgp.get_params(self.tgp, point)
         mu = self.tgp.compiles['mean'](**point)
         cov = self.tgp.compiles['covariance'](**point)
 

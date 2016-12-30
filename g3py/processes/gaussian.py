@@ -4,7 +4,7 @@ from g3py import StochasticProcess, Kernel, Mean, Mapping, TGPDist, gauss_hermit
 
 class GaussianProcess(StochasticProcess):
     def __init__(self, space=1, location: Mean=None, kernel: Kernel=None, noise=True,
-                 name=None, inputs=None, outputs=None, hidden=None):
+                 name='GP', inputs=None, outputs=None, hidden=None):
         super().__init__(space=space, location=location, kernel=kernel, mapping=Identity(), noise=noise,
                          freedom=None, name=name, inputs=inputs, outputs=outputs, hidden=hidden)
 
@@ -13,33 +13,31 @@ class GaussianProcess(StochasticProcess):
         self.prior_mean = self.location_space
         self.prior_covariance = self.kernel_f_space
         self.prior_variance = nL.extract_diag(self.prior_covariance)
-        self.prior_noise = nL.extract_diag(self.kernel_space)
+        self.prior_std = tt.sqrt(self.prior_variance)
+        self.prior_noise = tt.sqrt(nL.extract_diag(self.kernel_space))
         self.prior_median = self.prior_mean
-        self.prior_quantile_up = self.prior_mean + 1.96 * tt.sqrt(self.prior_variance)
-        self.prior_quantile_down = self.prior_mean - 1.96 * tt.sqrt(self.prior_variance)
-        self.prior_noise_up = self.prior_mean + 1.96 * tt.sqrt(self.prior_noise)
-        self.prior_noise_down = self.prior_mean - 1.96 * tt.sqrt(self.prior_noise)
-        self.prior_sampler = self.prior_mean + cholesky_robust(self.prior_covariance).dot(self.random)
+        self.prior_quantile_up = self.prior_mean + 1.96 * self.prior_std
+        self.prior_quantile_down = self.prior_mean - 1.96 * self.prior_std
+        self.prior_noise_up = self.prior_mean + 1.96 * self.prior_noise
+        self.prior_noise_down = self.prior_mean - 1.96 * self.prior_noise
+        self.prior_sampler = self.prior_mean + cholesky_robust(self.prior_covariance).dot(self.random_th)
 
         # Posterior
         self.posterior_mean = self.location_space + self.kernel_f_space_inputs.dot(
             sL.solve(self.kernel_inputs, self.mapping_outputs - self.location_inputs))
-        self.posterior_covariance = self.kernel_f.cov(self.space) - self.kernel_f_space_inputs.dot(
+        self.posterior_covariance = self.kernel_f.cov(self.space_th) - self.kernel_f_space_inputs.dot(
             sL.solve(self.kernel_inputs, self.kernel_f_space_inputs.T))
-        self.posterior_variance = nL.extract_diag(self.prior_covariance)
-        self.posterior_noise = nL.extract_diag(self.kernel.cov(self.space) - self.kernel_f_space_inputs.dot(
-            sL.solve(self.kernel_inputs, self.kernel_f_space_inputs.T)))
+        self.posterior_variance = nL.extract_diag(self.posterior_covariance)
+        self.posterior_std = tt.sqrt(self.posterior_variance)
+        self.posterior_noise = tt.sqrt(nL.extract_diag(self.kernel.cov(self.space_th) - self.kernel_f_space_inputs.dot(
+            sL.solve(self.kernel_inputs, self.kernel_f_space_inputs.T))))
         self.posterior_median = self.posterior_mean
-        self.posterior_quantile_up = self.posterior_mean + 1.96 * tt.sqrt(self.posterior_variance)
-        self.posterior_quantile_down = self.posterior_mean - 1.96 * tt.sqrt(self.posterior_variance)
-        self.posterior_noise_up = self.posterior_mean + 1.96 * tt.sqrt(self.posterior_noise)
-        self.posterior_noise_down = self.posterior_mean - 1.96 * tt.sqrt(self.posterior_noise)
-        self.posterior_sampler = self.posterior_mean + cholesky_robust(self.posterior_covariance).dot(self.random)
+        self.posterior_quantile_up = self.posterior_mean + 1.96 * self.posterior_std
+        self.posterior_quantile_down = self.posterior_mean - 1.96 * self.posterior_std
+        self.posterior_noise_up = self.posterior_mean + 1.96 * self.posterior_noise
+        self.posterior_noise_down = self.posterior_mean - 1.96 * self.posterior_noise
+        self.posterior_sampler = self.posterior_mean + cholesky_robust(self.posterior_covariance).dot(self.random_th)
 
-        # TODO
-        self.distribution = TGPDist(self.name, mu=self.location_inputs, cov=self.kernel_inputs,
-                                    mapping=self.mapping, tgp=self, observed=self.outputs,
-                                    testval=self.outputs, dtype=th.config.floatX)
         # TODO
         def marginal(self):
             value = tt.vector('marginal_gp')
@@ -60,7 +58,7 @@ class GaussianProcess(StochasticProcess):
 
 class TransformedGaussianProcess(StochasticProcess):
     def __init__(self, space=1, location: Mean=None, kernel: Kernel=None, mapping: Mapping=None, noise=True,
-                 name=None, inputs=None, outputs=None, hidden=None):
+                 name='TGP', inputs=None, outputs=None, hidden=None):
         super().__init__(space=space, location=location, kernel=kernel, mapping=mapping, noise=noise,
                          freedom=None, name=name, inputs=inputs, outputs=outputs, hidden=hidden)
 
@@ -86,40 +84,40 @@ class TransformedGaussianProcess(StochasticProcess):
         self.latent_prior_std = np.sqrt(nL.extract_diag(self.latent_prior_covariance))
         self.latent_prior_noise = np.sqrt(nL.extract_diag(self.kernel_space))
         self.latent_posterior_mean = self.location_space + self.kernel_f_space_inputs.dot(sL.solve(self.kernel_inputs, self.mapping_outputs - self.location_inputs))
-        self.latent_posterior_covariance = self.kernel_f.cov(self.space) - self.kernel_f_space_inputs.dot(sL.solve(self.kernel_inputs, self.kernel_f_space_inputs.T))
+        self.latent_posterior_covariance = self.kernel_f.cov(self.space_th) - self.kernel_f_space_inputs.dot(sL.solve(self.kernel_inputs, self.kernel_f_space_inputs.T))
         self.latent_posterior_std = np.sqrt(nL.extract_diag(self.latent_posterior_covariance))
-        self.latent_posterior_noise = np.sqrt(nL.extract_diag(self.kernel.cov(self.space) - self.kernel_f_space_inputs.dot(sL.solve(self.kernel_inputs, self.kernel_f_space_inputs.T))))
+        self.latent_posterior_noise = np.sqrt(nL.extract_diag(self.kernel.cov(self.space_th) - self.kernel_f_space_inputs.dot(sL.solve(self.kernel_inputs, self.kernel_f_space_inputs.T))))
 
         # Prior
         self.prior_mean = gauss_hermite(self.mapping, self.latent_prior_mean, self.latent_prior_std, a, w)
         self.prior_variance = gauss_hermite(lambda v: self.mapping(v) ** 2, self.latent_prior_mean,
                                             self.latent_prior_std, a, w) - self.prior_mean ** 2
+        self.prior_std = tt.sqrt(self.prior_variance)
         self.prior_covariance = None
         self.prior_noise = None
         self.prior_median = self.mapping(self.latent_prior_mean)
         self.prior_quantile_up = self.mapping(self.latent_prior_mean + 1.96 * self.latent_prior_std)
         self.prior_quantile_down = self.mapping(self.latent_prior_mean - 1.96 * self.latent_prior_std)
-        self.prior_noise_up = self.mapping(self.latent_prior_mean + 1.96*self.latent_prior_noise)
-        self.prior_noise_down = self.mapping(self.latent_prior_mean - 1.96*self.latent_prior_noise)
-        self.prior_sampler = self.mapping(self.latent_prior_mean + cholesky_robust(self.latent_prior_covariance).dot(self.random))
+        self.prior_noise_up = self.mapping(self.latent_prior_mean + 1.96 * self.latent_prior_noise)
+        self.prior_noise_down = self.mapping(self.latent_prior_mean - 1.96 * self.latent_prior_noise)
+        self.prior_sampler = self.mapping(self.latent_prior_mean + cholesky_robust(self.latent_prior_covariance).dot(self.random_th))
 
         # Posterior
-        self.posterior_mean = gauss_hermite(self.mapping, self.latent_prior_mean, self.latent_prior_std, a, w)
-        self.posterior_variance = gauss_hermite(lambda v: self.mapping(v) ** 2, self.latent_prior_mean,
-                                            self.latent_prior_std, a, w) - self.prior_mean ** 2
+        self.posterior_mean = gauss_hermite(self.mapping, self.latent_posterior_mean, self.latent_posterior_std, a, w)
+        self.posterior_variance = gauss_hermite(lambda v: self.mapping(v) ** 2, self.latent_posterior_mean,
+                                                self.latent_posterior_std, a, w) - self.posterior_mean ** 2
+        self.posterior_std = tt.sqrt(self.posterior_variance)
         self.posterior_covariance = None
         self.posterior_noise = None
         self.posterior_median = self.mapping(self.latent_posterior_mean)
         self.posterior_quantile_up = self.mapping(self.latent_posterior_mean + 1.96 * self.latent_posterior_std)
         self.posterior_quantile_down = self.mapping(self.latent_posterior_mean - 1.96 * self.latent_posterior_std)
-        self.posterior_noise_up = self.mapping(self.latent_posterior_mean + 1.96*self.latent_posterior_noise)
-        self.posterior_noise_down = self.mapping(self.latent_posterior_mean - 1.96*self.latent_posterior_noise)
-        self.posterior_sampler = self.mapping(self.latent_posterior_mean + cholesky_robust(self.latent_posterior_covariance).dot(self.random))
+        self.posterior_noise_up = self.mapping(self.latent_posterior_mean + 1.96 * self.latent_posterior_noise)
+        self.posterior_noise_down = self.mapping(self.latent_posterior_mean - 1.96 * self.latent_posterior_noise)
+        self.posterior_sampler = self.mapping(self.latent_posterior_mean + cholesky_robust(self.latent_posterior_covariance).dot(self.random_th))
 
         # TODO
-        self.distribution = TGPDist(self.name, mu=self.location_inputs, cov=self.kernel_inputs,
-                                    mapping=self.mapping, tgp=self, observed=self.outputs,
-                                    testval=self.outputs, dtype=th.config.floatX)
+
         # TODO
         def marginal_tgp(self):
             value = tt.vector('marginal_tgp')
