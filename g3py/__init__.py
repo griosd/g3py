@@ -12,8 +12,5 @@ from g3py.libs.traces import *
 
 from .models import *
 from .tgp import *
+from .config import *
 
-
-th.config.floatX = 'float32'
-th.config.on_unused_input = 'ignore'
-th.config.mode = 'FAST_RUN'

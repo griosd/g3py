@@ -3,14 +3,13 @@ import numpy as np
 import pymc3 as pm
 import scipy as sp
 import theano as th
-from g3py.functions import Mean, Kernel, Mapping, KernelSum, WN, tt_to_num, zeros, def_space, debug, trans_hypers, Identity
-from g3py.libs import tt_to_cov, cholesky_robust, makefn, text_plot, clone
+from g3py.functions import Mean, Kernel, Mapping, KernelSum, WN, tt_to_num, def_space, trans_hypers
+from g3py.libs import tt_to_cov, makefn, text_plot, clone
 from g3py.models import Model, TGPDist, ConstantStep, RobustSlice
+from g3py import config
 from ipywidgets import interact
 from matplotlib import pyplot as plt
 from theano import tensor as tt
-from theano.tensor import slinalg as sL
-from theano.tensor import nlinalg as nL
 
 
 class StochasticProcess:
@@ -67,13 +66,16 @@ class StochasticProcess:
         self.freedom = freedom
 
         with self.model:
+
+            self.location.check_dims(self.inputs_values)
+            self.kernel.check_dims(self.inputs_values)
+            self.mapping.check_dims(self.outputs_values)
+
             self.location.check_hypers(self.name + '_')
             self.kernel.check_hypers(self.name + '_')
             self.mapping.check_hypers(self.name + '_')
 
         print('Space Dimensions: ', self.space_values.shape)
-        #print('Inputs Dimensions: ', self.inputs_values.shape)
-        #print('Output Dimensions: ', self.outputs_values.shape)
 
         # Hyper-parameters values
         self._widget_traces = None
@@ -128,6 +130,7 @@ class StochasticProcess:
         self.define_process()
         print('Definition OK')
 
+        self.observed(inputs, outputs)
         self.compile()
         print('Compilation OK')
 
@@ -207,7 +210,13 @@ class StochasticProcess:
     def set_space(self, space):
         __, self.space_values, self.space_index = def_space(space)
 
-    def observed(self, inputs, outputs):
+    def observed(self, inputs=None, outputs=None):
+        if inputs is None or outputs is None or len(inputs) == 0 or len(inputs) == 0:
+            self.inputs_values, self.outputs_values, self.observed_index = None, None, None
+            self.inputs.set_value(self.inputs_values)
+            self.outputs.set_value(self.outputs_values)
+            return
+
         __, self.inputs_values, self.observed_index = def_space(inputs)
         __, self.outputs_values, __ = def_space(outputs, squeeze=True)
         self.inputs.set_value(self.inputs_values)
@@ -283,7 +292,11 @@ class StochasticProcess:
             values['samples'] = S
         return values
 
-    def predict(self, params=None, space=None, inputs=None, outputs=None, mean=True, var=True, cov=False, median=False, quantiles=False, noise=False, samples=0, prior=True):
+    def sample(self, params=None, space=None, inputs=None, outputs=None, samples=1, prior=False):
+        S = self.predict(params=params, space=space, inputs=inputs, outputs=outputs, mean=False, var=False, cov=False, median=False, quantiles=False, noise=False, samples=samples, prior=False)
+        return S['samples']
+
+    def predict(self, params=None, space=None, inputs=None, outputs=None, mean=True, var=True, cov=False, median=False, quantiles=False, noise=False, samples=0, prior=False):
         if params is None:
             params = self.get_params_current()
         if space is None:
@@ -292,13 +305,13 @@ class StochasticProcess:
             inputs = self.inputs_values
         if outputs is None:
             outputs = self.outputs_values
-        if inputs is None or outputs is None or prior:
+        if prior or self.observed_index is None:
             return self.prior(params=params, space=space, mean=mean, var=var, cov=cov, median=median, quantiles=quantiles, noise=noise, samples=samples)
         else:
             return self.posterior(params=params, space=space, inputs=inputs, outputs=outputs, mean=mean, var=var, cov=cov, median=median, quantiles=quantiles, noise=noise, samples=samples)
 
     def plot(self, params=None, space=None, inputs=None, outputs=None, mean=True, var=True, cov=False, median=True, quantiles=True, noise=True, samples=0, prior=False,
-             data=True, big=True, scores=False, title=None, loc=1):
+             data=True, big=None, scores=False, title=None, loc=1):
         values = self.predict(params=params, space=space, inputs=inputs, outputs=outputs, mean=mean, var=var, cov=cov, median=median, quantiles=quantiles, noise=noise, samples=samples, prior=prior)
         if space is not None:
             self.set_space(space)
@@ -385,7 +398,7 @@ class StochasticProcess:
         interact(self.widget_plot_params, __manual=True, **intervals)
 
     def get_params_default(self, fixed=True):
-        if self.inputs is None:
+        if self.observed_index is None:
             return self.model.test_point
         default = {}
         for k, v in trans_hypers(self.default_hypers()).items():
@@ -412,6 +425,9 @@ class StochasticProcess:
         points_list = list()
         if start is None:
             start = self.get_params_current()
+        if self.outputs.get_value() is None:
+            print('For find_MAP it is necessary to have observations')
+            return start
         points_list.append(('start', self.model.logp(start), start))
         print('Starting function value (-logp): ' + str(-self.model.logp(start)))
         if plot:
@@ -453,6 +469,9 @@ class StochasticProcess:
     def sample_hypers(self, start=None, samples=1000, chains=1, advi=True):
         if start is None:
             start = self.get_params_current()
+        if self.outputs.get_value() is None:
+            print('For sample_hypers it is necessary to have observations')
+            return start
         with self.model:
             if advi:
                 advi_mu, advi_sm, advi_elbo = pm.advi(vars=self.sampling_vars, start=start, n=20000) #OK
@@ -484,12 +503,16 @@ class StochasticProcess:
             print('Error saving model '+path)
 
     # TODO:
-    def plot_space(self):
+    def plot_space(self, space = None):
+        if space is not None:
+            self.set_space(space)
         plt.plot(self.space_index, self.space_values)
         if self.observed_index is not None:
-            plt.plot(self.observed_index, self.inputs_values)
+            plt.plot(self.observed_index, self.inputs_values, '.k')
 
-    def plot_data(self, big=False):
+    def plot_data(self, big=None):
+        if big is None:
+            big = config.plot_big
         if big:
             self.plot_data_big()
         else:
@@ -572,7 +595,3 @@ class StochasticProcess:
 
     def eval_widget(self):
         return self.eval_point(self.get_params_widget())
-
-
-def gauss_hermite(f, mu, sigma, a, w):
-    return tt.dot(w, f(mu + sigma * np.sqrt(2) * a)) / np.sqrt(np.pi)

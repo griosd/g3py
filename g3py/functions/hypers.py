@@ -91,6 +91,25 @@ def def_space(space=None, name=None, squeeze=False):
 
 class Hypers:
     def __init__(self, x=None, name=None):
+        if name is None:
+            self.name = self.__class__.__name__
+        else:
+            self.name = name
+        self.hypers = []
+        self.shape = None
+        self.dims = None
+        self.check_dims(x)
+
+    def __str__(self):
+        if len(self.hypers) is 0:
+            return str(self.__class__.__name__)
+        else:
+            return str(self.__class__.__name__)+'[h='+str(self.hypers) + ']'
+    __repr__ = __str__
+
+    def check_dims(self, x=None):
+        if self.shape is not None:
+            return
         if x is not None:
             if type(x) is tuple:
                 domain, self.dims = x
@@ -105,20 +124,9 @@ class Hypers:
                     self.shape = 1
                 self.dims = slice(0, self.shape)
         else:
-            self.shape = ()
+            self.shape = None
             self.dims = slice(None)
-        if name is None:
-            self.name = self.__class__.__name__
-        else:
-            self.name = name
-        self.hypers = []
 
-    def __str__(self):
-        if len(self.hypers) is 0:
-            return str(self.__class__.__name__)
-        else:
-            return str(self.__class__.__name__)+'[h='+str(self.hypers) + ']'
-    __repr__ = __str__
 
     def check_hypers(self, parent=''):
         pass

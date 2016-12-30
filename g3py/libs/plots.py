@@ -1,11 +1,12 @@
 import matplotlib.pyplot as plt
 import seaborn as sb
 import IPython.display as display
-
+from g3py import config
 
 def style_seaborn():
     sb.set(style='darkgrid', color_codes=False)
     plt.rcParams['figure.figsize'] = (20, 6)  #figure size
+    config.plot_big = False
 
 
 def style_normal():
@@ -17,6 +18,7 @@ def style_normal():
     plt.rcParams['ytick.labelsize'] = 16 #y-numbers size
     plt.rcParams['legend.fontsize'] = 18  # legend size
     #plt.rcParams['legend.fancybox'] = True
+    config.plot_big = False
 
 
 def style_big():
@@ -27,6 +29,7 @@ def style_big():
     plt.rcParams['axes.labelsize'] = 36  # xy-label size
     plt.rcParams['axes.titlesize'] = 36  # xy-label size
     plt.rcParams['legend.fontsize'] = 20  # legend size
+    config.plot_big = True
 
 
 def style_big_seaborn():
@@ -36,6 +39,7 @@ def style_big_seaborn():
     plt.rcParams['axes.labelsize'] = 36  # xy-label size
     plt.rcParams['axes.titlesize'] = 36  # xy-label size
     plt.rcParams['legend.fontsize'] = 30  # legend size
+    config.plot_big = True
 
 
 def style_widget():

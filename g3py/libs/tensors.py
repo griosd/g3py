@@ -24,6 +24,10 @@ def show_graph(f, name='temp.png'):
     return Image(name)
 
 
+def print_graph(f):
+    return th.printing.debugprint(f)
+
+
 def tt_to_num(r, nan=0, inf=np.inf):
     return tt.switch(tt.isnan(r), np.nan_to_num(np.float32(nan)), tt.switch(tt.isinf(r), np.nan_to_num(np.float32(inf)), r))
 

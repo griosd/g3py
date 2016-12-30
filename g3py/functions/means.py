@@ -42,6 +42,9 @@ class MeanOperation(Mean):
         self.m.check_hypers(parent=parent)
         self.hypers = self.m.hypers
 
+    def check_dims(self, x=None):
+        self.m.check_dims(x)
+
     def default_hypers_dims(self, x=None, y=None):
         return self.m.default_hypers_dims(x, y)
 
@@ -58,6 +61,10 @@ class MeanComposition(Mean):
         self.m1.check_hypers(parent=parent)
         self.m2.check_hypers(parent=parent)
         self.hypers = self.m1.hypers + self.m2.hypers
+
+    def check_dims(self, x=None):
+        self.m1.check_dims(x)
+        self.m2.check_dims(x)
 
     def default_hypers_dims(self, x=None, y=None):
         return {**self.m1.default_hypers_dims(x, y), **self.m2.default_hypers_dims(x, y)}
@@ -109,6 +116,7 @@ class Bias(Mean):
         self.constant = constant
 
     def check_hypers(self, parent=''):
+        super().check_hypers(parent=parent)
         if self.constant is None:
             self.constant = Hypers.Flat(parent+self.name+'_Constant')
         self.hypers += [self.constant]
@@ -127,6 +135,7 @@ class Linear(Mean):
         self.coeff = coeff
 
     def check_hypers(self, parent=''):
+        super().check_hypers(parent=parent)
         if self.constant is None:
             self.constant = Hypers.Flat(parent+self.name+'_Constant')
         if self.coeff is None:

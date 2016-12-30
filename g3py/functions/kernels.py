@@ -8,9 +8,9 @@ pi = np.float32(np.pi)
 
 
 class Kernel(Hypers):
-    def __init__(self, x, name=None, metric=Delta, var=None):
-        super().__init__(x, name)
+    def __init__(self, x=None, name=None, metric=Delta, var=None):
         self.metric = metric(x)
+        super().__init__(x, name)
         self.var = var
 
     def check_hypers(self, parent=''):
@@ -19,6 +19,10 @@ class Kernel(Hypers):
         if isinstance(self.var, tt.TensorVariable):
             self.hypers += [self.var]
         self.metric.check_hypers(parent+self.name+'_')
+
+    def check_dims(self, x=None):
+        super().check_dims(x)
+        self.metric.check_dims(x)
 
     def default_hypers(self, x=None, y=None):
         if isinstance(self.var, tt.TensorVariable):
@@ -70,7 +74,7 @@ class Kernel(Hypers):
 
 
 class KernelDot(Kernel):
-    def __init__(self, x, name=None, metric=ARD_Dot, var=None):
+    def __init__(self, x=None, name=None, metric=ARD_Dot, var=None):
         super().__init__(x, name, metric, var)
 
     def __call__(self, x1, x2):
@@ -84,7 +88,7 @@ class KernelDot(Kernel):
 
 
 class KernelStationary(Kernel):
-    def __init__(self, x, name=None, metric=ARD_L2, var=None):
+    def __init__(self, x=None, name=None, metric=ARD_L2, var=None):
         super().__init__(x, name, metric, var)
 
     def k(self, d):
@@ -111,6 +115,9 @@ class KernelOperation(Kernel):
         self.k.check_hypers(parent=parent)
         self.hypers = self.k.hypers
 
+    def check_dims(self, x=None):
+        self.k.check_dims(x)
+
     def default_hypers_dims(self, x=None, y=None):
         return self.k.default_hypers_dims(x, y)
 
@@ -129,6 +136,10 @@ class KernelComposition(Kernel):
         self.k1.check_hypers(parent=parent)
         self.k2.check_hypers(parent=parent)
         self.hypers = self.k1.hypers + self.k2.hypers
+
+    def check_dims(self, x=None):
+        self.k1.check_dims(x)
+        self.k2.check_dims(x)
 
     def default_hypers_dims(self, x=None, y=None):
         return {**self.k1.default_hypers_dims(x, y), **self.k2.default_hypers_dims(x, y)}
@@ -195,17 +206,17 @@ class KernelSum(KernelComposition):
 
 
 class BW(KernelDot):
-    def __init__(self, x, name=None, metric=Minimum, var=None):
+    def __init__(self, x=None, name=None, metric=Minimum, var=None):
         super().__init__(x, name, metric, var)
 
 
 class LIN(KernelDot):
-    def __init__(self, x, name=None, metric=ARD_DotBias, var=1):
+    def __init__(self, x=None, name=None, metric=ARD_DotBias, var=1):
         super().__init__(x, name, metric, var)
 
 
 class POL(KernelDot):
-    def __init__(self, x, p=2, name=None, metric=ARD_DotBias, var=1):
+    def __init__(self, x=None, p=2, name=None, metric=ARD_DotBias, var=1):
         super().__init__(x, name, metric, var)
         self.p = p
 
@@ -220,7 +231,7 @@ class POL(KernelDot):
 
 
 class NN(KernelDot):
-    def __init__(self, x, name=None, metric=ARD_DotBias, var=None):
+    def __init__(self, x=None, name=None, metric=ARD_DotBias, var=None):
         super().__init__(x, name, metric, var)
 
     def __call__(self, x1, x2):
@@ -235,7 +246,7 @@ class NN(KernelDot):
 
 
 class WN(KernelStationary):
-    def __init__(self, x, name=None, metric=Delta, var=None):
+    def __init__(self, x=None, name=None, metric=Delta, var=None):
         super().__init__(x, name, metric, var)
 
     def __call__(self, x1, x2):
@@ -249,7 +260,7 @@ class WN(KernelStationary):
 
 
 class RQ(KernelStationary):
-    def __init__(self, x, name=None, metric=ARD_L2, var=None, alpha=None):
+    def __init__(self, x=None, name=None, metric=ARD_L2, var=None, alpha=None):
         super().__init__(x, name, metric, var)
         self.alpha = alpha
 
@@ -267,7 +278,7 @@ class RQ(KernelStationary):
 
 
 class MAT32(KernelStationary):
-    def __init__(self, x, name=None, metric=ARD_L1, var=None):
+    def __init__(self, x=None, name=None, metric=ARD_L1, var=None):
         super().__init__(x, name, metric, var)
 
     def k(self, d):
@@ -276,7 +287,7 @@ class MAT32(KernelStationary):
 
 
 class MAT52(KernelStationary):
-    def __init__(self, x, name=None, metric=ARD_L2, var=None):
+    def __init__(self, x=None, name=None, metric=ARD_L2, var=None):
         super().__init__(x, name, metric, var)
 
     def k(self, d):
@@ -290,17 +301,17 @@ class KernelStationaryExponential(KernelStationary):
 
 
 class OU(KernelStationaryExponential):
-    def __init__(self, x, name=None, metric=ARD_L1, var=None):
+    def __init__(self, x=None, name=None, metric=ARD_L1, var=None):
         super().__init__(x, name, metric, var)
 
 
 class SE(KernelStationaryExponential):
-    def __init__(self, x, name=None, metric=ARD_L2, var=None):
+    def __init__(self, x=None, name=None, metric=ARD_L2, var=None):
         super().__init__(x, name, metric, var)
 
 
 class KernelPeriodic(KernelStationary):
-    def __init__(self, x, name=None, metric=Difference, var=None, periods=None, scales=None):
+    def __init__(self, x=None, name=None, metric=Difference, var=None, periods=None, scales=None):
         super().__init__(x, name, metric, var)
         self.periods = periods
         self.scales = scales
@@ -320,7 +331,7 @@ class KernelPeriodic(KernelStationary):
 
 
 class COS(KernelPeriodic):
-    def __init__(self, x, name=None, metric=Difference, var=None, periods=None):
+    def __init__(self, x=None, name=None, metric=Difference, var=None, periods=None):
         super().__init__(x, name, metric, var)
         self.periods = periods
         self.scales = None

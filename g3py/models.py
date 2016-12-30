@@ -61,8 +61,6 @@ class Model(pm.Model):
         return self.model.fastfn(tt_to_num(pm.gradient(self.logpt, vars)))
 
 
-
-
 def load_model(path):
     with Model():
         with open(path, 'rb') as f:
@@ -89,7 +87,6 @@ class TGPDist(pm.Continuous):
                + self.mapping.logdet_dinv(value)
 
     def logp_cho(self, value):
-
         self.mu = debug(self.mu, 'MU')
         value = debug(value, 'value')
         debug(self.mapping.inv(value), 'inv')

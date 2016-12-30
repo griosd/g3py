@@ -46,6 +46,10 @@ class MappingOperation(Mapping):
         self.m2.check_hypers(parent=parent)
         self.hypers = self.m1.hypers + self.m2.hypers
 
+    def check_dims(self, x=None):
+        self.m1.check_dims(x)
+        self.m2.check_dims(x)
+
     def default_hypers_dims(self, x=None, y=None):
         return {**self.m1.default_hypers_dims(x, y), **self.m2.default_hypers_dims(x, y)}
 
@@ -99,7 +103,7 @@ class Identity(Mapping):
 
 
 class LogShifted(Mapping):
-    def __init__(self, y, name=None, shift=None):
+    def __init__(self, y=None, name=None, shift=None):
         super().__init__(y, name)
         self.shift = shift
 
@@ -122,7 +126,7 @@ class LogShifted(Mapping):
 
 
 class BoxCoxShifted(Mapping):
-    def __init__(self, y, name='BoxCoxShifted', shift=None, power=None):
+    def __init__(self, y=None, name='BoxCoxShifted', shift=None, power=None):
         super().__init__(y, name)
         self.shift = shift
         self.power = power
@@ -152,7 +156,7 @@ class BoxCoxShifted(Mapping):
 
 
 class Logistic(Mapping):
-    def __init__(self, y, name='Logistic', lower=None, high=None, location=None, scale=None):
+    def __init__(self, y=None, name='Logistic', lower=None, high=None, location=None, scale=None):
         super().__init__(y, name)
         self.lower = lower
         self.high = high
