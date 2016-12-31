@@ -53,7 +53,11 @@ def plot(*args, **kwargs):
     plt.plot(*args, **kwargs)
 
 
-def text_plot(title="title", x="xlabel", y="ylabel", ncol=3, loc=8, axis=None):
+def show(*args, **kwargs):
+    plt.show(*args, **kwargs)
+
+
+def plot_text(title="title", x="xlabel", y="ylabel", ncol=3, loc=8, axis=None):
     plt.axis('tight')
     plt.title(title)
     plt.xlabel(x)

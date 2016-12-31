@@ -4,7 +4,7 @@ import pymc3 as pm
 import scipy as sp
 import theano as th
 from g3py import Mean, Kernel, Mapping, Model, KernelSum, WN, tt_to_cov, tt_to_num, TGPDist, zeros, cholesky_robust, \
-    def_space, debug, makefn, text_plot, trans_hypers, ConstantStep, RobustSlice, Identity
+    def_space, debug, makefn, plot_text, trans_hypers, ConstantStep, RobustSlice, Identity
 from ipywidgets import interact
 from matplotlib import pyplot as plt
 from theano import tensor as tt
@@ -394,7 +394,7 @@ class TGP:
             score_title = ''
         if title is None:
             title = self.description['title']
-        text_plot(title + ': ' + score_title,  self.description['x'],  self.description['y'], loc=loc)
+        plot_text(title + ': ' + score_title, self.description['x'], self.description['y'], loc=loc)
 
     def plot_tgp(self, params, title=None, samples=0, std=False, big=True, scores=False, loc=1):
         #if self.space_t is not self.space_x:
@@ -416,7 +416,7 @@ class TGP:
             score_title = ''
         if title is None:
             title = self.description['title']
-        text_plot(title + ': ' + score_title,  self.description['x'],  self.description['y'], loc=loc)
+        plot_text(title + ': ' + score_title, self.description['x'], self.description['y'], loc=loc)
 
     def scores(self, params):
         try:
@@ -513,7 +513,7 @@ class TGP:
     def plot_model(self, **params):
         plt.figure(2)
         _ = plt.plot(self.compiles['covariance'](**params)[len(self.space_x) // 2, :])
-        text_plot('kernel', 'x1', 'x2')
+        plot_text('kernel', 'x1', 'x2')
         return
 
     def check_params_dims(self, **params):
@@ -529,7 +529,7 @@ class TGP:
         self.plot_tgp_quantiles(params)
         self.plot_tgp_moments(params)
         #self.description['scores'] = self.scores(params)
-        text_plot(self.description['title'],  self.description['x'],  self.description['y'], loc=1)
+        plot_text(self.description['title'], self.description['x'], self.description['y'], loc=1)
         #self.plot_model(**params)
 
     def widget_params(self, params=None):
@@ -571,7 +571,7 @@ class TGP:
         self.plot_tgp_quantiles(params)
        # self.plot_tgp_moments(params)
         self.description['scores'] = self.scores(params)
-        text_plot(self.description['title'],  self.description['x'],  self.description['y'], loc=1)
+        plot_text(self.description['title'], self.description['x'], self.description['y'], loc=1)
         self._widget_params = params
 
     def plot_cov(self):

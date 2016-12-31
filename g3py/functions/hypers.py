@@ -127,7 +127,6 @@ class Hypers:
             self.shape = None
             self.dims = slice(None)
 
-
     def check_hypers(self, parent=''):
         pass
 
@@ -135,7 +134,7 @@ class Hypers:
         return {}
 
     def default_hypers_dims(self, x=None, y=None):
-        return self.default_hypers(x[:, self.dims], y)
+        return get_hypers_floatX(self.default_hypers(x[:, self.dims], y))
 
 
     @staticmethod
@@ -162,3 +161,10 @@ class Hypers:
     def Exponential(name, lam=ones, shape=(), testval=ones):
         with modelcontext():
             return pm.Exponential(name, shape=shape, lam=lam(shape), testval=testval(shape), dtype=th.config.floatX)
+
+
+def get_hypers_floatX(params):
+    paramsX = {}
+    for k, v in params.items():
+        paramsX[k] = np.float32(v)
+    return paramsX

@@ -38,9 +38,6 @@ def tt_to_cov(c):
     return tt.switch(m > 0, r, r + (1e-6-m)*tt.eye(c.shape[0]) )
 
 
-def clone(c):
-    return copy.copy(c)
-
 class CholeskyRobust(th.gof.Op):
     """
     Return a triangular matrix square root of positive semi-definite `x`.

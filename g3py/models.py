@@ -23,7 +23,7 @@ class Model(pm.Model):
         try:
             return pm.Model.get_context()
         except TypeError:
-            with pm.Model() as model:
+            with Model() as model:
                 return model
 
     def __init__(self, *args, **kwargs):

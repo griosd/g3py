@@ -4,7 +4,7 @@ import pymc3 as pm
 import scipy as sp
 import theano as th
 from g3py.functions import Mean, Kernel, Mapping, KernelSum, WN, tt_to_num, def_space, trans_hypers
-from g3py.libs import tt_to_cov, makefn, text_plot, clone
+from g3py.libs import tt_to_cov, makefn, plot_text, clone, DictObj
 from g3py.models import Model, TGPDist, ConstantStep, RobustSlice
 from g3py import config
 from ipywidgets import interact
@@ -36,8 +36,8 @@ class StochasticProcess:
 
         # Space, Hidden, Observed
         __, self.space_values, self.space_index = def_space(space)
-        self.inputs, self.inputs_values, self.observed_index = def_space(inputs, self.name + '_inputs')
-        self.outputs, self.outputs_values, __ = def_space(outputs, self.name + '_outputs', squeeze=True)
+        self.inputs, self.inputs_values, self.observed_index = def_space(space, self.name + '_inputs')
+        self.outputs, self.outputs_values, __ = def_space(np.zeros(len(space)), self.name + '_outputs', squeeze=True)
 
         self.space_th = tt.matrix(self.name + '_space_th', dtype=th.config.floatX)
         self.inputs_th = tt.matrix(self.name + '_inputs_th', dtype=th.config.floatX)
@@ -130,9 +130,10 @@ class StochasticProcess:
         self.define_process()
         print('Definition OK')
 
-        self.observed(inputs, outputs)
         self.compile()
         print('Compilation OK')
+
+        self.observed(inputs, outputs)
 
     def define_process(self):
         pass
@@ -231,7 +232,7 @@ class StochasticProcess:
             params = self.get_params_current()
         if space is None:
             space = self.space_values
-        values = {}
+        values = DictObj()
         if mean:
             values['mean'] = self.compiles['prior_mean'](space, **params)
         if var:
@@ -266,7 +267,7 @@ class StochasticProcess:
             inputs = self.inputs_values
         if outputs is None:
             outputs = self.outputs_values
-        values = {}
+        values = DictObj()
         if mean:
             values['mean'] = self.compiles['posterior_mean'](space, inputs, outputs, **params)
         if var:
@@ -336,7 +337,7 @@ class StochasticProcess:
             title = self.description['title']
         if scores:
             pass
-        text_plot(title, self.description['x'], self.description['y'], loc=loc)
+        plot_text(title, self.description['x'], self.description['y'], loc=loc)
 
     def set_params(self, params):
         self.params_current = params
@@ -364,8 +365,8 @@ class StochasticProcess:
         return r
 
     def default_hypers(self):
-        x = self.inputs_values
-        y = self.outputs_values
+        x = np.array(self.inputs_values)
+        y = np.squeeze(np.array(self.outputs_values))
         return {**self.location.default_hypers_dims(x, y), **self.kernel.default_hypers_dims(x, y),
                 **self.mapping.default_hypers_dims(x, y)}
 
@@ -436,7 +437,7 @@ class StochasticProcess:
             plt.show()
         with self.model:
             for i in range(points):
-                try:
+
                     name, logp, start = points_list[i // 2]
                     if i % 2 == 0:
                         name += '_bfgs'
@@ -451,8 +452,7 @@ class StochasticProcess:
                         plt.figure(i+1)
                         self.plot(params=new, title=name)
                         plt.show()
-                except:
-                    pass
+
         optimal = points_list[0]
         for test in points_list:
             if test[1] > optimal[1]:
@@ -502,7 +502,6 @@ class StochasticProcess:
         except:
             print('Error saving model '+path)
 
-    # TODO:
     def plot_space(self, space = None):
         if space is not None:
             self.set_space(space)
@@ -524,14 +523,15 @@ class StochasticProcess:
         if self.outputs_values is not None:
             plt.plot(self.observed_index, self.outputs_values, '.k', label='Observations')
 
-    def plot_concentration(self):
-        return plt.matshow(self.cov_inputs)
-
     def plot_data_big(self):
         if self.hidden is not None:
             plt.plot(self.space_index, self.hidden[0:len(self.space_index)], linewidth=4, label='Hidden Processes')
         if self.outputs_values is not None:
             plt.plot(self.observed_index, self.outputs_values, '.k', ms=20, label='Observations')
+
+    # TODO:
+    def plot_concentration(self):
+        return plt.matshow(self.cov_inputs)
 
     def marginal(self):
         pass
