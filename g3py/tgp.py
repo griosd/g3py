@@ -451,7 +451,7 @@ class TGP:
              'mab_test': bias_test}
         return d
 
-    def find_MAP(self, start=None, points=1, plot=False, return_points=False, display=True):
+    def find_MAP(self, start=None, points=1, plot=False, return_points=False, display=False):
         points_list = list()
         if start is None:
             start = self.find_default()
@@ -467,11 +467,11 @@ class TGP:
                     if i % 2 == 0:
                         name += '_bfgs'
 
-                        new = pm.find_MAP(fmin=sp.optimize.fmin_bfgs, vars=self.sampling_vars, start=start)
+                        new = pm.find_MAP(fmin=sp.optimize.fmin_bfgs, vars=self.sampling_vars, start=start, disp=display)
                     else:
                         name += '_powell'
                         print(name)
-                        new = pm.find_MAP(fmin=sp.optimize.fmin_powell, vars=self.sampling_vars, start=start)
+                        new = pm.find_MAP(fmin=sp.optimize.fmin_powell, vars=self.sampling_vars, start=start, disp=display)
                     points_list.append((name, self.model.logp(new), new))
                     if plot:
                         plt.figure(i+1)
@@ -485,8 +485,7 @@ class TGP:
                 optimal = test
         name, logp, params = optimal
         if display:
-            #print(params)
-            pass
+            print(params)
         if return_points is False:
             return params
         else:

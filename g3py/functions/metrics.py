@@ -2,7 +2,7 @@ import numpy as np
 import theano as th
 import theano.tensor as tt
 from g3py.functions.hypers import Hypers, ones
-from g3py.libs.tensors import tt_to_num
+from g3py.libs.tensors import tt_to_num, debug
 
 
 class Metric(Hypers):
@@ -30,7 +30,7 @@ class Delta(Metric):
 
 class Minimum(Metric):
     def __call__(self, x1, x2):
-        return tt.prod(tt.minimum(x1-x2*0, x2-x1*0))
+        return tt.prod(tt.minimum(x1-x2*0, x2-x1*0), axis=2)
 
 
 class Difference(Metric):
@@ -84,10 +84,10 @@ class ARD_L2(ARD):
 
 class ARD_Dot(ARD):
     def __call__(self, x1, x2):
-        return tt.dot(tt.dot(x1, 1/self.scales), tt.dot(x2, 1/self.scales))
+        return tt.dot(x1 * x2, 1 / self.scales**2)
 
     def default_hypers(self, x=None, y=None):
-        return {self.scales: (np.sqrt(np.abs(y)).mean(axis=0))/np.abs(x).mean(axis=0)}
+        return {self.scales: (np.sqrt(np.abs(x)).mean(axis=0))/np.abs(y).mean(axis=0)}
 
 
 class ARD_DotBias(ARD):
@@ -102,8 +102,9 @@ class ARD_DotBias(ARD):
         self.hypers += [self.bias]
 
     def __call__(self, x1, x2):
-        return self.bias + tt.dot(tt.dot(x1, 1/self.scales), tt.dot(x2, 1/self.scales))
+        return self.bias + tt.dot(x1 * x2, 1 / self.scales**2)
+        #return self.bias + tt.dot(tt.dot(x1, 1/self.scales), tt.dot(x2, 1/self.scales))
 
     def default_hypers(self, x=None, y=None):
         return {self.bias: (np.abs(y).mean(axis=0))/np.abs(x).mean(axis=0),
-                self.scales: (np.sqrt(np.abs(y)).mean(axis=0))/np.abs(x).mean(axis=0)}
+                self.scales: np.abs(x).mean(axis=0)/(np.sqrt(np.abs(y)).mean(axis=0))}

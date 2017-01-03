@@ -11,6 +11,10 @@ class GaussianProcess(StochasticProcess):
         super().__init__(space=space, location=location, kernel=kernel, mapping=Identity(), noise=noise,
                          freedom=None, name=name, inputs=inputs, outputs=outputs, hidden=hidden)
 
+    def define_distribution(self):
+        return TGPDist(self.name, mu=self.location(self.inputs), cov=tt_to_cov(self.kernel.cov(self.inputs)),
+                mapping=Identity(), tgp=self, observed=self.outputs, testval=self.outputs, dtype=th.config.floatX)
+
     def define_process(self):
         # Prior
         self.prior_mean = self.location_space
@@ -75,6 +79,10 @@ class TransformedGaussianProcess(StochasticProcess):
         self.latent_posterior_std = None
         self.latent_posterior_noise = None
 
+    def define_distribution(self):
+        return TGPDist(self.name, mu=self.location(self.inputs), cov=tt_to_cov(self.kernel.cov(self.inputs)),
+                mapping=self.mapping, tgp=self, observed=self.outputs, testval=self.outputs, dtype=th.config.floatX)
+
     def define_process(self, n=20):
         # Gauss-Hermite
         _a, _w = np.polynomial.hermite.hermgauss(n)
@@ -119,7 +127,6 @@ class TransformedGaussianProcess(StochasticProcess):
         self.posterior_noise_down = self.mapping(self.latent_posterior_mean - 1.96 * self.latent_posterior_noise)
         self.posterior_sampler = self.mapping(self.latent_posterior_mean + cholesky_robust(self.latent_posterior_covariance).dot(self.random_th))
 
-        # TODO
 
         # TODO
         def marginal_tgp(self):

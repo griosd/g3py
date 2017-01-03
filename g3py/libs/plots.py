@@ -67,5 +67,5 @@ def plot_text(title="title", x="xlabel", y="ylabel", ncol=3, loc=8, axis=None):
         plt.axis(axis)
 
 
-def save_plot(file='example.pdf'):
+def plot_save(file='example.pdf'):
     plt.savefig(file, bbox_inches='tight')

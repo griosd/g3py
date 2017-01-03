@@ -1,5 +1,6 @@
 from g3py.processes.stochastic import *
 from g3py.processes.gaussian import *
+from g3py.processes.studentT import *
 from g3py.functions.hypers import *
 from g3py.functions.kernels import *
 from g3py.functions.mappings import *

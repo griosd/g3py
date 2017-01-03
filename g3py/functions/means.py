@@ -9,9 +9,6 @@ class Mean(Hypers):
         if call is not None:
             self.eval = call
 
-    def __call__(self, x):
-        pass
-
     def __mul__(self, other):
         if issubclass(type(other), Mean):
             return MeanProd(self, other)

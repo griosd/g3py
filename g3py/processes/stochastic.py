@@ -5,7 +5,7 @@ import scipy as sp
 import theano as th
 from g3py.functions import Mean, Kernel, Mapping, KernelSum, WN, tt_to_num, def_space, trans_hypers
 from g3py.libs import tt_to_cov, makefn, plot_text, clone, DictObj
-from g3py.models import Model, TGPDist, ConstantStep, RobustSlice
+from g3py.models import Model, TGPDist, STPDist, ConstantStep, RobustSlice
 from g3py import config
 from ipywidgets import interact
 from matplotlib import pyplot as plt
@@ -43,11 +43,14 @@ class StochasticProcess:
         self.inputs_th = tt.matrix(self.name + '_inputs_th', dtype=th.config.floatX)
         self.outputs_th = tt.vector(self.name + '_outputs_th', dtype=th.config.floatX)
         self.random_th = tt.vector(self.name + '_random_th', dtype=th.config.floatX)
+        self.random_scalar = tt.scalar(self.name + '_random_scalar', dtype=th.config.floatX)
+
 
         self.space_th.tag.test_value = self.space_values
         self.inputs_th.tag.test_value = self.inputs_values
         self.outputs_th.tag.test_value = self.outputs_values
         self.random_th.tag.test_value = np.random.randn(len(self.space_values)).astype(dtype=th.config.floatX)
+        self.random_scalar.tag.test_value = np.float32(10)
 
         if hidden is None:
             self.hidden = None
@@ -66,7 +69,6 @@ class StochasticProcess:
         self.freedom = freedom
 
         with self.model:
-
             self.location.check_dims(self.inputs_values)
             self.kernel.check_dims(self.inputs_values)
             self.mapping.check_dims(self.outputs_values)
@@ -74,6 +76,10 @@ class StochasticProcess:
             self.location.check_hypers(self.name + '_')
             self.kernel.check_hypers(self.name + '_')
             self.mapping.check_hypers(self.name + '_')
+
+            if self.freedom is not None:
+                self.freedom.check_dims(None)
+                self.freedom.check_hypers(self.name + '_')
 
         print('Space Dimensions: ', self.space_values.shape)
 
@@ -135,6 +141,9 @@ class StochasticProcess:
 
         self.observed(inputs, outputs)
 
+    def define_distribution(self):
+        pass
+
     def define_process(self):
         pass
 
@@ -168,7 +177,10 @@ class StochasticProcess:
         self.compiles['prior_quantile_down'] = makefn(params, self.prior_quantile_down)
         self.compiles['prior_noise_up'] = makefn(params, self.prior_noise_up)
         self.compiles['prior_noise_down'] = makefn(params, self.prior_noise_down)
-        self.compiles['prior_sampler'] = makefn([self.random_th] + params, self.prior_sampler)
+        try:
+            self.compiles['prior_sampler'] = makefn([self.random_th] + params, self.prior_sampler)
+        except:
+            self.compiles['prior_sampler'] = makefn([self.random_scalar, self.random_th] + params, self.prior_sampler)
 
         params = [self.space_th, self.inputs_th, self.outputs_th] + self.model.vars
         self.compiles['posterior_mean'] = makefn(params, self.posterior_mean)
@@ -181,7 +193,10 @@ class StochasticProcess:
         self.compiles['posterior_quantile_down'] = makefn(params, self.posterior_quantile_down)
         self.compiles['posterior_noise_up'] = makefn(params, self.posterior_noise_up)
         self.compiles['posterior_noise_down'] = makefn(params, self.posterior_noise_down)
-        self.compiles['posterior_sampler'] = makefn([self.random_th] + params, self.posterior_sampler)
+        try:
+            self.compiles['posterior_sampler'] = makefn([self.random_th] + params, self.posterior_sampler)
+        except:
+            self.compiles['posterior_sampler'] = makefn([self.random_scalar, self.random_th] + params, self.posterior_sampler)
 
         if False:
             params = self.model.vars
@@ -224,8 +239,7 @@ class StochasticProcess:
         self.outputs.set_value(self.outputs_values)
         if self.distribution is None:
             with self.model:
-                self.distribution = TGPDist(self.name, mu=self.location(self.inputs), cov=tt_to_cov(self.kernel.cov(self.inputs)),
-                                            mapping=self.mapping, tgp=self, observed=self.outputs, testval=self.outputs, dtype=th.config.floatX)
+                self.distribution = self.define_distribution()
 
     def prior(self, params=None, space=None, mean=True, var=True, cov=False, median=False, quantiles=False, noise=False, samples=0):
         if params is None:
@@ -430,23 +444,25 @@ class StochasticProcess:
             print('For find_MAP it is necessary to have observations')
             return start
         points_list.append(('start', self.model.logp(start), start))
-        print('Starting function value (-logp): ' + str(-self.model.logp(start)))
+        if display:
+            print('Starting function value (-logp): ' + str(-self.model.logp(start)))
         if plot:
             plt.figure(0)
             self.plot(params=start, title='start')
             plt.show()
         with self.model:
             for i in range(points):
-
                     name, logp, start = points_list[i // 2]
                     if i % 2 == 0:
                         name += '_bfgs'
-                        print('\n' + name)
-                        new = pm.find_MAP(fmin=sp.optimize.fmin_bfgs, vars=self.sampling_vars, start=start)
+                        if display:
+                            print('\n' + name)
+                        new = pm.find_MAP(fmin=sp.optimize.fmin_bfgs, vars=self.sampling_vars, start=start, disp=display)
                     else:
                         name += '_powell'
-                        print('\n' + name)
-                        new = pm.find_MAP(fmin=sp.optimize.fmin_powell, vars=self.sampling_vars, start=start)
+                        if display:
+                            print('\n' + name)
+                        new = pm.find_MAP(fmin=sp.optimize.fmin_powell, vars=self.sampling_vars, start=start, disp=display)
                     points_list.append((name, self.model.logp(new), new))
                     if plot:
                         plt.figure(i+1)

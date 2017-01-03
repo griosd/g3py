@@ -3,6 +3,8 @@ import theano as th
 import theano.tensor as tt
 from g3py.functions.hypers import Hypers
 from g3py.functions.metrics import Delta, Minimum, Difference, L1, ARD_Dot, ARD_DotBias, ARD_L1, ARD_L2
+from g3py.libs.tensors import debug
+
 
 pi = np.float32(np.pi)
 
@@ -121,6 +123,10 @@ class KernelOperation(Kernel):
     def default_hypers_dims(self, x=None, y=None):
         return self.k.default_hypers_dims(x, y)
 
+    @property
+    def name(self):
+        return str(self.element) + " "+self.op+" " + self.k.name
+
     def __str__(self):
         return str(self.element) + " "+self.op+" " + str(self.k)
     __repr__ = __str__
@@ -143,6 +149,10 @@ class KernelComposition(Kernel):
 
     def default_hypers_dims(self, x=None, y=None):
         return {**self.k1.default_hypers_dims(x, y), **self.k2.default_hypers_dims(x, y)}
+
+    @property
+    def name(self):
+        return self.k1.name + " "+self.op+" " + self.k2.name
 
     def __str__(self):
         return str(self.k1) + " "+self.op+" " + str(self.k2)
@@ -240,6 +250,7 @@ class NN(KernelDot):
     def cov(self, x1, x2=None):
         if x2 is None:
             xx = self.metric.gram(x1, x1)
+            debug(tt.arcsin(2*xx/((1 + 2*xx)**2)),'xx')
             return self.var * tt.arcsin(2*xx/((1 + 2*xx)**2))
         else:
             return self.var * tt.arcsin(2*self.metric.gram(x1, x2)/((1 + 2*self.metric.gram(x1, x1))*(1 + 2*self.metric.gram(x2, x2))))
@@ -256,7 +267,7 @@ class WN(KernelStationary):
         if x2 is None:
             return self.var * tt.eye(x1.shape[0])
         else:
-            return 0.0
+            return tt.zeros((x1.shape[0], x2.shape[0]))
 
 
 class RQ(KernelStationary):
@@ -278,11 +289,11 @@ class RQ(KernelStationary):
 
 
 class MAT32(KernelStationary):
-    def __init__(self, x=None, name=None, metric=ARD_L1, var=None):
+    def __init__(self, x=None, name=None, metric=ARD_L2, var=None):
         super().__init__(x, name, metric, var)
 
     def k(self, d):
-        d3 = np.sqrt(3)*d
+        d3 = tt.sqrt(3*d)
         return (1 + d3)*tt.exp(-d3)
 
 
@@ -291,8 +302,8 @@ class MAT52(KernelStationary):
         super().__init__(x, name, metric, var)
 
     def k(self, d):
-        d5 = np.sqrt(5)*d
-        return (1 + d5 + (d5**2)/3)*tt.exp(-d5)
+        d5 = tt.sqrt(5*d)
+        return (1 + d5 + 5*d/3)*tt.exp(-d5)
 
 
 class KernelStationaryExponential(KernelStationary):
@@ -337,16 +348,16 @@ class COS(KernelPeriodic):
         self.scales = None
 
     def k(self, d):
-        return tt.cos(2 * pi * tt.dot(d, 1/self.periods))
+        return tt.prod(tt.cos(2 * pi * d/self.periods), axis=2)
 
 
 class PER(KernelPeriodic):
     def k(self, d):
-        return tt.exp(2 * tt.dot(tt.sin(pi * tt.dot(d, 1/self.periods) ** 2), 1/self.scales))
+        return tt.exp(2 * tt.dot(tt.sin(pi * d/self.periods) ** 2, 1/self.scales) )
 
 
 class SM(KernelPeriodic):
     def k(self, d):
-        return tt.exp(-2 * pi ** 2 * tt.dot(d ** 2, 1/self.scales)) * tt.cos(2 * pi * tt.dot(d, 1/self.periods))
+        return tt.exp(-2 * pi ** 2 * tt.dot(d ** 2, 1/self.scales ** 2)) * tt.prod(tt.cos(2 * pi * d/self.periods), axis=2)
 
 

@@ -120,6 +120,48 @@ class TGPDist(pm.Continuous):
         return samples
 
 
+class STPDist(pm.Continuous):
+    def __init__(self, mu, cov, mapping, freedom, stp, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.mean = self.median = self.mode = self.mu = mu
+        self.cov = cov
+        self.mapping = mapping
+        self.freedom = freedom
+        self.stp = stp
+
+    def logp_cov(self, value):  # es más rápido pero se cae
+        delta = value - self.mu
+        beta = delta.T.dot(sL.solve(self.cov, delta))
+        n = self.cov.shape[0].astype(th.config.floatX)
+        degree = self.freedom()
+        return -np.float32(0.5) * (tt.log(nL.det(self.cov)) + (degree + n) * tt.log1p( beta / (degree-2))
+                                   + n * tt.log(np.float32((degree-2) * np.pi))) \
+               - tt.log(tt.gamma(degree / 2)) + tt.log(tt.gamma((degree + n) / 2))
+
+    def logp_cho(self, value):
+        delta = value - self.mu
+        L = sL.solve_lower_triangular(self.cho, delta)
+        beta = L.T.dot(L)
+        n = self.cov.shape[0].astype(th.config.floatX)
+        degree = self.freedom()
+        return -np.float32(0.5) * ( (degree + n) * tt.log1p(beta / (degree-2)) + n * tt.log(np.float32((degree-2) * np.pi))) \
+               - tt.sum(tt.log(nL.diag(self.cho))) - tt.log(tt.gamma(degree / 2)) + tt.log(tt.gamma((degree + n) / 2))
+
+    def logp(self, value):
+        if False:
+            return tt_to_num(debug(self.logp_cov(value), 'logp_cov'), -np.inf, -np.inf)
+        else:
+            return tt_to_num(debug(self.logp_cho(value), 'logp_cho'), -np.inf, -np.inf)
+
+    @property
+    def cho(self):
+        try:
+            return cholesky_robust(self.cov)
+        except:
+            raise sp.linalg.LinAlgError("not cholesky")
+
+
+
 class ConstantStep(pm.step_methods.arraystep.ArrayStep):
     """
     Dummy sampler that returns the current value at every iteration. Useful for

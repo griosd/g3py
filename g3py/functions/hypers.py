@@ -25,6 +25,10 @@ def ones(shape):
     return np.ones(shape, dtype=th.config.floatX)
 
 
+def cvalues(shape, val):
+    return np.float32(np.ones(shape, dtype=th.config.floatX) *val)
+
+
 def trans_hypers(hypers):
     trans = {}
     for k, v in hypers.items():
@@ -161,6 +165,25 @@ class Hypers:
     def Exponential(name, lam=ones, shape=(), testval=ones):
         with modelcontext():
             return pm.Exponential(name, shape=shape, lam=lam(shape), testval=testval(shape), dtype=th.config.floatX)
+
+
+class Freedom(Hypers):
+    def __init__(self, x=None, name=None, degree=None, bound=2):
+        super().__init__(x, name)
+        self.degree = degree
+        self.bound = bound
+
+    def check_hypers(self, parent=''):
+        super().check_hypers(parent=parent)
+        if self.degree is None:
+            self.degree = Hypers.FlatExp(parent+self.name+'_degree')
+        self.hypers += [self.degree]
+
+    def default_hypers(self, x=None, y=None):
+        return {self.degree: y.shape[0].astype(th.config.floatX)}
+
+    def __call__(self, x=None):
+        return self.bound + self.degree
 
 
 def get_hypers_floatX(params):
