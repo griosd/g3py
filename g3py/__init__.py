@@ -12,6 +12,6 @@ from g3py.libs.tensors import *
 from g3py.libs.traces import *
 
 from .models import *
-from .tgp import *
+from .sandbox.tgp import *
 from .config import *
 

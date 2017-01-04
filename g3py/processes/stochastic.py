@@ -32,9 +32,12 @@ class StochasticProcess:
                                 'text': 'text'}
         else:
             self.description = description
-        self.model = Model.get_context()
+        try:
+            self.model = Model.get_context()
+        except:
+            self.model = Model()
 
-        # Space, Hidden, Observed
+            # Space, Hidden, Observed
         __, self.space_values, self.space_index = def_space(space)
         self.inputs, self.inputs_values, self.observed_index = def_space(space, self.name + '_inputs')
         self.outputs, self.outputs_values, __ = def_space(np.zeros(len(space)), self.name + '_outputs', squeeze=True)
@@ -508,12 +511,12 @@ class StochasticProcess:
         return trace
 
     def save_model(self, path, params=None):
-        if params is None:
-            params = self.get_params_current()
+        if params is not None:
+            self.set_params(params)
         try:
             with self.model:
                 with open(path, 'wb') as f:
-                    pickle.dump((params, self), f, protocol=-1)
+                    pickle.dump(self, f, protocol=-1)
             print('Saved model '+path)
         except:
             print('Error saving model '+path)

@@ -4,11 +4,6 @@ from g3py.functions.hypers import Hypers
 
 
 class Mean(Hypers):
-    def __init__(self, call=None, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        if call is not None:
-            self.eval = call
-
     def __mul__(self, other):
         if issubclass(type(other), Mean):
             return MeanProd(self, other)
@@ -25,8 +20,23 @@ class Mean(Hypers):
     __iadd__ = __add__
     __radd__ = __add__
 
+    def eval(self, x):
+        pass
+
     def __call__(self, x):
         return self.eval(x[:, self.dims])
+
+
+class BlackBox(Mean):
+    def __init__(self, element, x=None, name=None):
+        super().__init__(x, name)
+        self.element = element
+
+    def eval(self, x):
+        return self.element
+
+    def __call__(self, x):
+        return self.element
 
 
 class MeanOperation(Mean):
@@ -67,27 +77,27 @@ class MeanComposition(Mean):
         return {**self.m1.default_hypers_dims(x, y), **self.m2.default_hypers_dims(x, y)}
 
     def __str__(self):
-        return str(self.m) + " op " + str(self.m)
+        return str(self.m1) + " op " + str(self.m2)
 
 
 class MeanScale(MeanOperation):
-    def eval(self, x):
+    def __call__(self, x):
         return self.element * self.m(x)
 
     def __str__(self):
-        return str(self.element) + " * " + str(self.k)
+        return str(self.element) + " * " + str(self.m)
 
 
 class MeanShift(MeanOperation):
-    def eval(self, x):
+    def __call__(self, x):
         return self.element + self.m(x)
 
     def __str__(self):
-        return str(self.element) + " * " + str(self.k)
+        return str(self.element) + " * " + str(self.m)
 
 
 class MeanProd(MeanComposition):
-    def eval(self, x):
+    def __call__(self, x):
         return self.m1(x) * self.m2(x)
 
     def __str__(self):
@@ -95,7 +105,7 @@ class MeanProd(MeanComposition):
 
 
 class MeanSum(MeanComposition):
-    def eval(self, x):
+    def __call__(self, x):
         return self.m1(x) + self.m2(x)
 
     def __str__(self):
@@ -108,21 +118,21 @@ class Zero(Mean):
 
 
 class Bias(Mean):
-    def __init__(self, x=None, name=None, constant=None):
+    def __init__(self, x=None, name=None, bias=None):
         super().__init__(x, name)
-        self.constant = constant
+        self.bias = bias
 
     def check_hypers(self, parent=''):
         super().check_hypers(parent=parent)
-        if self.constant is None:
-            self.constant = Hypers.Flat(parent+self.name+'_Constant')
-        self.hypers += [self.constant]
+        if self.bias is None:
+            self.bias = Hypers.Flat(parent + self.name + '_Bias')
+        self.hypers += [self.bias]
 
     def default_hypers(self, x=None, y=None):
-        return {self.constant: y.mean().astype(th.config.floatX)}
+        return {self.bias: y.mean().astype(th.config.floatX)}
 
     def eval(self, x):
-        return self.constant #TODO: check dims
+        return self.bias #TODO: check dims
 
 
 class Linear(Mean):

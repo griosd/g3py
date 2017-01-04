@@ -14,18 +14,6 @@ from .libs.tensors import cholesky_robust, tt_to_num, debug
 
 class Model(pm.Model):
 
-    @classmethod
-    def get_contexts(cls):
-        return pm.Model.get_contexts()
-
-    @classmethod
-    def get_context(cls):
-        try:
-            return pm.Model.get_context()
-        except TypeError:
-            with Model() as model:
-                return model
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.prior = False
