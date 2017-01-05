@@ -5,6 +5,9 @@ import theano as th
 import theano.tensor as tt
 import theano.tensor.slinalg as sT
 from IPython.display import Image
+from pymc3.memoize import memoize
+from theano.compile.ops import as_op
+
 th.config.on_unused_input = 'ignore'
 
 
@@ -15,6 +18,7 @@ def debug(x, name=''):
         return x
 
 
+@memoize
 def makefn(th_vars, fn):
     return th.function(th_vars, fn, allow_input_downcast=True, on_unused_input='ignore')
 
@@ -36,6 +40,17 @@ def tt_to_cov(c):
     r = tt_to_num(c)
     m = tt.min(tt.diag(r))
     return tt.switch(m > 0, r, r + (1e-6-m)*tt.eye(c.shape[0]) )
+
+
+def infer_shape(node, input_shapes):
+    ashp, bshp = input_shapes
+    return [ashp[:-1] + bshp[-1:]]
+
+
+@as_op(itypes=[tt.fvector, tt.fvector],
+       otypes=[tt.fvector])
+def inverse_function(f, y):
+    return sp.optimize.minimize(lambda y: f - y, y, method='krylov', options={'maxiter': 100, 'ftol':1e-6}).x.astype(dtype=th.config.floatX)
 
 
 class CholeskyRobust(th.gof.Op):

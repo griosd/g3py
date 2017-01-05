@@ -132,7 +132,7 @@ class Bias(Mean):
         return {self.bias: y.mean().astype(th.config.floatX)}
 
     def eval(self, x):
-        return self.bias #TODO: check dims
+        return self.bias * tt.ones(shape=(x.shape[0],)) #TODO: check dims
 
 
 class Linear(Mean):

@@ -11,53 +11,18 @@ from scipy.stats._multivariate import multivariate_normal
 
 from .libs.tensors import cholesky_robust, tt_to_num, debug
 
-
-class Model(pm.Model):
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.prior = False
-
-    def use_prior(self, prior=True):
-        self.prior = prior
-
-    @property
-    def logpt(self):
-        if self.prior:
-            return self.log_posterior_t
-        else:
-            return self.log_likelihood_t
-
-    @property
-    def log_posterior_t(self):
-        """Theano scalar of log-posterior of the model"""
-        factors = [var.logpt for var in self.basic_RVs] + self.potentials
-        return tt.add(*map(tt.sum, factors))
-
-    @property
-    def log_likelihood_t(self):
-        """Theano scalar of log-likelihood of the model"""
-        factors = [var.logpt for var in self.observed_RVs]
-        return tt.add(*map(tt.sum, factors))
-
-    def dlogp(self, vars=None):
-        """Nan Robust dlogp"""
-        return self.model.fn(tt_to_num(pm.gradient(self.logpt, vars)))
-
-    def fastdlogp(self, vars=None):
-        """Nan Robust fastdlogp"""
-        return self.model.fastfn(tt_to_num(pm.gradient(self.logpt, vars)))
+Model = pm.Model
 
 
 def load_model(path):
-    with Model():
-        with open(path, 'rb') as f:
-            try:
-                r = pickle.load(f)
-                print('Loaded model ' + path)
-                return r
-            except:
-                print('Error loading model '+path)
+    # with pm.Model():
+    with open(path, 'rb') as f:
+        try:
+            r = pickle.load(f)
+            print('Loaded model ' + path)
+            return r
+        except:
+            print('Error loading model '+path)
 
 
 class TGPDist(pm.Continuous):
@@ -79,7 +44,7 @@ class TGPDist(pm.Continuous):
         value = debug(value, 'value')
         debug(self.mapping.inv(value), 'inv')
 
-        delta = tt_to_num(self.mapping.inv(value)) - self.mu
+        delta = tt_to_num(self.mapping.inv(value) - self.mu)
         L = sL.solve_lower_triangular(self.cho, delta)
         return -np.float32(0.5) * (self.cov.shape[0].astype(th.config.floatX) * tt.log(np.float32(2.0 * np.pi))
                                    + L.T.dot(L)) - tt.sum(tt.log(nL.diag(self.cho))) + self.mapping.logdet_dinv(value)

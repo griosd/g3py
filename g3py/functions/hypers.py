@@ -150,13 +150,13 @@ class Hypers:
         with modelcontext():
             return pm.Flat(name, shape=shape, testval=testval(shape), dtype=th.config.floatX)
     @staticmethod
-    def ExpFlat(name, shape=(), testval=zeros):
+    def ExpFlat(name, shape=(), testval=ones):
         with modelcontext():
-            return tt.exp(pm.Flat(name, shape=shape, testval=testval(shape), dtype=th.config.floatX))
+            return pm.Flat(name, transform=pm.distributions.transforms.log, shape=shape, testval=testval(shape), dtype=th.config.floatX)
     @staticmethod
     def FlatExp(name, shape=(), testval=ones):
         with modelcontext():
-            return pm.Flat(name, transform=pm.distributions.transforms.log, shape=shape, testval=testval(shape), dtype=th.config.floatX)
+            return pm.Flat(name, transform=non_transform_log, shape=shape, testval=testval(shape), dtype=th.config.floatX)
     @staticmethod
     def FlatExpId(name, shape=(), testval=ones):
         with modelcontext():
@@ -165,6 +165,19 @@ class Hypers:
     def Exponential(name, lam=ones, shape=(), testval=ones):
         with modelcontext():
             return pm.Exponential(name, shape=shape, lam=lam(shape), testval=testval(shape), dtype=th.config.floatX)
+
+
+class NonTransformLog(pm.distributions.transforms.ElemwiseTransform):
+
+    def backward(self, x):
+        return tt.exp(x)
+
+    def forward(self, x):
+        return tt.log(x)
+
+    def jacobian_det(self, x):
+        return 0
+non_transform_log = NonTransformLog()
 
 
 class Freedom(Hypers):

@@ -1,6 +1,6 @@
 from .stochastic import *
 from ..functions import Kernel, Mean, Mapping, Identity
-from ..libs import cholesky_robust
+from ..libs import cholesky_robust, debug
 import theano.tensor.slinalg as tsl
 import theano.tensor.nlinalg as tnl
 
@@ -94,10 +94,12 @@ class TransformedGaussianProcess(StochasticProcess):
         self.latent_prior_covariance = self.kernel_f_space
         self.latent_prior_std = np.sqrt(tnl.extract_diag(self.latent_prior_covariance))
         self.latent_prior_noise = np.sqrt(tnl.extract_diag(self.kernel_space))
+
         self.latent_posterior_mean = self.location_space + self.kernel_f_space_inputs.dot(tsl.solve(self.kernel_inputs, self.mapping_outputs - self.location_inputs))
         self.latent_posterior_covariance = self.kernel_f.cov(self.space_th) - self.kernel_f_space_inputs.dot(tsl.solve(self.kernel_inputs, self.kernel_f_space_inputs.T))
         self.latent_posterior_std = np.sqrt(tnl.extract_diag(self.latent_posterior_covariance))
         self.latent_posterior_noise = np.sqrt(tnl.extract_diag(self.kernel.cov(self.space_th) - self.kernel_f_space_inputs.dot(tsl.solve(self.kernel_inputs, self.kernel_f_space_inputs.T))))
+        print('Latent OK')
 
         # Prior
         self.prior_mean = gauss_hermite(self.mapping, self.latent_prior_mean, self.latent_prior_std, a, w)
@@ -112,6 +114,8 @@ class TransformedGaussianProcess(StochasticProcess):
         self.prior_noise_up = self.mapping(self.latent_prior_mean + 1.96 * self.latent_prior_noise)
         self.prior_noise_down = self.mapping(self.latent_prior_mean - 1.96 * self.latent_prior_noise)
         self.prior_sampler = self.mapping(self.latent_prior_mean + cholesky_robust(self.latent_prior_covariance).dot(self.random_th))
+        print('Prior OK')
+
 
         # Posterior
         self.posterior_mean = gauss_hermite(self.mapping, self.latent_posterior_mean, self.latent_posterior_std, a, w)
@@ -126,6 +130,7 @@ class TransformedGaussianProcess(StochasticProcess):
         self.posterior_noise_up = self.mapping(self.latent_posterior_mean + 1.96 * self.latent_posterior_noise)
         self.posterior_noise_down = self.mapping(self.latent_posterior_mean - 1.96 * self.latent_posterior_noise)
         self.posterior_sampler = self.mapping(self.latent_posterior_mean + cholesky_robust(self.latent_posterior_covariance).dot(self.random_th))
+        print('Posterior OK')
 
 
         # TODO
@@ -147,4 +152,5 @@ class TransformedGaussianProcess(StochasticProcess):
 
 
 def gauss_hermite(f, mu, sigma, a, w):
-    return tt.dot(w, f(mu + sigma * np.sqrt(2) * a)) / np.sqrt(np.pi)
+    grille = mu + sigma * np.sqrt(2).astype(th.config.floatX) * a
+    return tt.dot(w, f(grille.flatten()).reshape(grille.shape)) / np.sqrt(np.pi).astype(th.config.floatX)

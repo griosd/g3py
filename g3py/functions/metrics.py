@@ -49,50 +49,50 @@ class L2(Metric):
 
 
 class ARD(Metric):
-    def __init__(self, x, name=None, scales=None):
+    def __init__(self, x, name=None, rate=None):
         super().__init__(x, name)
-        self.scales = scales
+        self.rate = rate
 
     def check_hypers(self, parent=''):
         super().check_hypers(parent=parent)
-        if self.scales is None:
-            self.scales = Hypers.FlatExp(parent+self.name+'_Scales', shape=self.shape)
-        self.hypers += [self.scales]
+        if self.rate is None:
+            self.rate = Hypers.FlatExp(parent + self.name + '_rate', shape=self.shape)
+        self.hypers += [self.rate]
 
     def input_sensitivity(self):
-        return ones(self.shape) / self.scales**2
+        return ones(self.shape) * self.rate ** 2
 
 
 class ARD_L1(ARD):
     def __call__(self, x1, x2):
-        return tt.dot(tt.abs_(x1 - x2), 1 / self.scales)
+        return tt.dot(tt.abs_(x1 - x2), self.rate)
 
     def default_hypers(self, x=None, y=None):
-        return {self.scales: np.abs(x[1:]-x[:-1]).mean(axis=0)}
+        return {self.rate: 1 / np.abs(x[1:] - x[:-1]).mean(axis=0)}
 
     def input_sensitivity(self):
-        return ones(self.shape) / self.scales
+        return ones(self.shape) * self.rate
 
 
 class ARD_L2(ARD):
     def __call__(self, x1, x2):
-        return tt.dot((x1 - x2) ** 2, 1 / (2 * self.scales**2))
+        return tt.dot((x1 - x2) ** 2, (0.5 * self.rate ** 2))
 
     def default_hypers(self, x=None, y=None):
-        return {self.scales: np.abs(x[1:]-x[:-1]).mean(axis=0)}
+        return {self.rate: 1 / np.abs(x[1:] - x[:-1]).mean(axis=0)}
 
 
 class ARD_Dot(ARD):
     def __call__(self, x1, x2):
-        return tt.dot(x1 * x2, 1 / self.scales**2)
+        return tt.dot(x1 * x2, self.rate ** 2)
 
     def default_hypers(self, x=None, y=None):
-        return {self.scales: (np.sqrt(np.abs(x)).mean(axis=0))/np.abs(y).mean(axis=0)}
+        return {self.rate: 1 / ((np.sqrt(np.abs(x)).mean(axis=0)) / np.abs(y).mean(axis=0))}
 
 
 class ARD_DotBias(ARD):
-    def __init__(self, x, name=None, scales=None, bias=None):
-        super().__init__(x, name, scales)
+    def __init__(self, x, name=None, rate=None, bias=None):
+        super().__init__(x, name, rate)
         self.bias = bias
 
     def check_hypers(self, parent=''):
@@ -102,9 +102,9 @@ class ARD_DotBias(ARD):
         self.hypers += [self.bias]
 
     def __call__(self, x1, x2):
-        return self.bias + tt.dot(x1 * x2, 1 / self.scales**2)
-        #return self.bias + tt.dot(tt.dot(x1, 1/self.scales), tt.dot(x2, 1/self.scales))
+        return self.bias + tt.dot(x1 * x2, self.rate ** 2)
+        #return self.bias + tt.dot(tt.dot(x1, self.rate), tt.dot(x2, self.rate))
 
     def default_hypers(self, x=None, y=None):
         return {self.bias: (np.abs(y).mean(axis=0))/np.abs(x).mean(axis=0),
-                self.scales: np.abs(x).mean(axis=0)/(np.sqrt(np.abs(y)).mean(axis=0))}
+                self.rate: np.sqrt(np.abs(y)).mean(axis=0) / np.abs(x).mean(axis=0)}

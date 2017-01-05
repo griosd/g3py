@@ -1,21 +1,19 @@
 import numpy as np
 import theano.tensor as tt
 import theano.sandbox.linalg as sT
-from g3py.functions.hypers import Hypers
-from g3py.libs.tensors import tt_to_num, debug
+from g3py.functions.hypers import Hypers, ones, zeros
+from g3py.libs.tensors import tt_to_num, debug, inverse_function
 
 
 class Mapping(Hypers):
-    def __call__(self, x):
-        pass
+
+    def __call__(self, z):
+        return inverse_function(self.inv(z), z)
 
     def inv(self, y):
         pass
 
     def logdet_dinv(self, y):
-        pass
-
-    def automatic_logdet_dinv(self, y):
         return debug(tt.log(sT.det(debug(tt.jacobian(self.inv(y), y), 'jacobian_inv'))), 'automatic_logdet_dinv')
 
     def __mul__(self, other):
@@ -126,7 +124,7 @@ class LogShifted(Mapping):
 
 
 class BoxCoxShifted(Mapping):
-    def __init__(self, y=None, name='BoxCoxShifted', shift=None, power=None):
+    def __init__(self, y=None, name=None, shift=None, power=None):
         super().__init__(y, name)
         self.shift = shift
         self.power = power
@@ -156,7 +154,7 @@ class BoxCoxShifted(Mapping):
 
 
 class Logistic(Mapping):
-    def __init__(self, y=None, name='Logistic', lower=None, high=None, location=None, scale=None):
+    def __init__(self, y=None, name=None, lower=None, high=None, location=None, scale=None):
         super().__init__(y, name)
         self.lower = lower
         self.high = high
@@ -190,3 +188,30 @@ class Logistic(Mapping):
     def logdet_dinv(self, y):
         p = tt.switch(y < self.lower, 0, tt.switch(y > self.lower + self.high, 1, (y - self.lower) / self.high))
         return debug(tt.sum(tt_to_num(tt.log(self.scale / (self.high * p * (1-p))))), 'logdet_dinv')
+
+
+class WarpingTanh(Mapping):
+    def __init__(self, y=None, n=1, name=None, a=None, b=None, c=None):
+        super().__init__(y, name)
+        self.n = n
+        self.a = a
+        self.b = b
+        self.c = c
+
+    def check_hypers(self, parent=''):
+        if self.a is None:
+            self.a = Hypers.FlatExp(parent+self.name+'_a', shape=self.n)
+        if self.b is None:
+            self.b = Hypers.FlatExp(parent+self.name+'_b', shape=self.n)
+        if self.c is None:
+            self.c = Hypers.Flat(parent+self.name+'_c', shape=self.n)
+        self.hypers += [self.a, self.b, self.c]
+
+    def default_hypers(self, x=None, y=None):
+        return {self.a: 0.1 * ones(self.n)*np.abs(y).max() / self.n,
+                self.b: 0.1 * ones(self.n)/np.abs(y).max(),
+                self.c: zeros(self.n)}
+
+    def inv(self, y):
+        z = y.dimshuffle(0, 'x')
+        return y + tt.dot(tt.tanh(self.b*(z + self.c)), self.a).reshape(y.shape)

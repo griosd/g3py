@@ -322,22 +322,22 @@ class SE(KernelStationaryExponential):
 
 
 class KernelPeriodic(KernelStationary):
-    def __init__(self, x=None, name=None, metric=Difference, var=None, periods=None, scales=None):
+    def __init__(self, x=None, name=None, metric=Difference, var=None, periods=None, rate=None):
         super().__init__(x, name, metric, var)
         self.periods = periods
-        self.scales = scales
+        self.rate = rate
 
     def check_hypers(self, parent=''):
         super().check_hypers(parent=parent)
         if self.periods is None:
             self.periods = Hypers.FlatExp(parent + self.name + '_PER', shape=self.shape)
-        if self.scales is None:
-            self.scales = Hypers.FlatExp(parent + self.name + '_SCALE', shape=self.shape)
-        self.hypers += [self.periods, self.scales]
+        if self.rate is None:
+            self.rate = Hypers.FlatExp(parent + self.name + '_RATE', shape=self.shape)
+        self.hypers += [self.periods, self.rate]
 
     def default_hypers(self, x=None, y=None):
         return {self.periods: (x.max(axis=0)-x.min(axis=0)),
-                self.scales: np.abs(x[1:] - x[:-1]).mean(axis=0),
+                self.rate: 1 / np.abs(x[1:] - x[:-1]).mean(axis=0),
                 **super().default_hypers(x, y)}
 
 
@@ -345,7 +345,7 @@ class COS(KernelPeriodic):
     def __init__(self, x=None, name=None, metric=Difference, var=None, periods=None):
         super().__init__(x, name, metric, var)
         self.periods = periods
-        self.scales = None
+        self.rate = None
 
     def k(self, d):
         return tt.prod(tt.cos(2 * pi * d/self.periods), axis=2)
@@ -353,11 +353,11 @@ class COS(KernelPeriodic):
 
 class PER(KernelPeriodic):
     def k(self, d):
-        return tt.exp(2 * tt.dot(tt.sin(pi * d/self.periods) ** 2, 1/self.scales) )
+        return tt.exp(2 * tt.dot(tt.sin(pi * d/self.periods) ** 2, self.rate))
 
 
 class SM(KernelPeriodic):
     def k(self, d):
-        return tt.exp(-2 * pi ** 2 * tt.dot(d ** 2, 1/self.scales ** 2)) * tt.prod(tt.cos(2 * pi * d/self.periods), axis=2)
+        return tt.exp(-2 * pi ** 2 * tt.dot(d ** 2, self.rate ** 2)) * tt.prod(tt.cos(2 * pi * d / self.periods), axis=2)
 
 

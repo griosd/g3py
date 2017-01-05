@@ -5,7 +5,7 @@ import scipy as sp
 import theano as th
 from g3py.functions import Mean, Kernel, Mapping, KernelSum, WN, tt_to_num, def_space, trans_hypers
 from g3py.libs import tt_to_cov, makefn, plot_text, clone, DictObj
-from g3py.models import Model, TGPDist, STPDist, ConstantStep, RobustSlice
+from g3py.models import TGPDist, STPDist, ConstantStep, RobustSlice
 from g3py import config
 from ipywidgets import interact
 from matplotlib import pyplot as plt
@@ -32,10 +32,7 @@ class StochasticProcess:
                                 'text': 'text'}
         else:
             self.description = description
-        try:
-            self.model = Model.get_context()
-        except:
-            self.model = Model()
+        self.model = self.get_model()
 
             # Space, Hidden, Observed
         __, self.space_values, self.space_index = def_space(space)
@@ -47,7 +44,6 @@ class StochasticProcess:
         self.outputs_th = tt.vector(self.name + '_outputs_th', dtype=th.config.floatX)
         self.random_th = tt.vector(self.name + '_random_th', dtype=th.config.floatX)
         self.random_scalar = tt.scalar(self.name + '_random_scalar', dtype=th.config.floatX)
-
 
         self.space_th.tag.test_value = self.space_values
         self.inputs_th.tag.test_value = self.inputs_values
@@ -135,7 +131,7 @@ class StochasticProcess:
         self.distribution = None
 
         self.compiles = {}
-
+        print('Init Definition')
         self.define_process()
         print('Definition OK')
 
@@ -143,6 +139,27 @@ class StochasticProcess:
         print('Compilation OK')
 
         self.observed(inputs, outputs)
+
+    def get_model(self):
+        try:
+            model = pm.Model.get_context()
+            return model
+        except:
+            model = pm.Model()
+
+        def dlogp(self, vars=None):
+            """Nan Robust dlogp"""
+            return self.model.fn(tt_to_num(pm.gradient(self.logpt, vars)))
+
+        def fastdlogp(self, vars=None):
+            """Nan Robust fastdlogp"""
+            return self.model.fastfn(tt_to_num(pm.gradient(self.logpt, vars)))
+
+        import types
+        model.dlogp = types.MethodType(dlogp, model)
+        model.fastdlogp = types.MethodType(fastdlogp, model)
+
+        return model
 
     def define_distribution(self):
         pass
@@ -343,7 +360,7 @@ class StochasticProcess:
         if cov:
             pass
         if median:
-            plt.plot(self.space_index, values['median'], label='Mean')
+            plt.plot(self.space_index, values['median'], label='Median')
         if quantiles:
             plt.fill_between(self.space_index, values['quantile_up'], values['quantile_down'], alpha=0.1, label='95%')
         if noise:
@@ -485,29 +502,24 @@ class StochasticProcess:
         else:
             return params, points_list
 
-    def sample_hypers(self, start=None, samples=1000, chains=1, advi=True):
+    def sample_hypers(self, start=None, samples=1000, chains=1, trace=None, method='HMC'):
         if start is None:
             start = self.get_params_current()
         if self.outputs.get_value() is None:
             print('For sample_hypers it is necessary to have observations')
             return start
         with self.model:
-            if advi:
-                advi_mu, advi_sm, advi_elbo = pm.advi(vars=self.sampling_vars, start=start, n=20000) #OK
-                for k, v in advi_sm.items():
-                    advi_sm[k] = v**2
-            else:
-                advi_mu = start
-                advi_sm = None
             if len(self.fixed_vars) > 0:
                 step = [ConstantStep(vars=self.fixed_vars)]  # Fue eliminado por error en pymc3
-                step += [RobustSlice(vars=self.sampling_vars)]  # Slice original se cuelga si parte del óptimo
+                if method == 'HMC':
+                    step += [pm.HamiltonianMC(vars=self.sampling_vars, scaling=self.get_params_default(), is_cov=True)]
+                else:
+                    step += [RobustSlice(vars=self.sampling_vars)]  # Slice original se cuelga si parte del óptimo
                 #step += [pm.Metropolis(vars=self.sampling_vars, tune=False)] # OK
-                #step += [pm.HamiltonianMC(vars=self.sampling_vars, scaling=advi_sm, is_cov=True)] #Scaling is not positive definite. Simple check failed. Diagonal contains negatives. Check indexes
                 #step += [pm.NUTS(vars=self.sampling_vars, scaling=advi_sm, is_cov=True)] #BUG float32
             else:
                 step = RobustSlice()
-            trace = pm.sample(samples, step=step, start=advi_mu, njobs=chains)
+            trace = pm.sample(samples, step=step, start=start, njobs=chains, trace=trace)
         return trace
 
     def save_model(self, path, params=None):
@@ -521,7 +533,7 @@ class StochasticProcess:
         except:
             print('Error saving model '+path)
 
-    def plot_space(self, space = None):
+    def plot_space(self, space=None):
         if space is not None:
             self.set_space(space)
         plt.plot(self.space_index, self.space_values)
@@ -614,3 +626,4 @@ class StochasticProcess:
 
     def eval_widget(self):
         return self.eval_point(self.get_params_widget())
+
