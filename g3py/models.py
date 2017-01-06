@@ -33,27 +33,25 @@ class TGPDist(pm.Continuous):
         self.mapping = mapping
         self.tgp = tgp
 
-    def logp_cov(self, value):  # es más rápido pero se cae
-        delta = tt_to_num(self.mapping.inv(value)) - self.mu
-        return -np.float32(0.5) * (tt.log(nL.det(self.cov)) + delta.T.dot(sL.solve(self.cov, delta))
-                                   + self.cov.shape[0].astype(th.config.floatX) * tt.log(np.float32(2.0 * np.pi))) \
-               + self.mapping.logdet_dinv(value)
+    @classmethod
+    def logp_cov(cls, value, mu, cov, mapping):  # es más rápido pero se cae
+        delta = tt_to_num(mapping.inv(value)) - mu
+        return -np.float32(0.5) * (tt.log(nL.det(cov)) + delta.T.dot(sL.solve(cov, delta))
+                                   + cov.shape[0].astype(th.config.floatX) * tt.log(np.float32(2.0 * np.pi))) \
+               + mapping.logdet_dinv(value)
 
-    def logp_cho(self, value):
-        self.mu = debug(self.mu, 'MU')
-        value = debug(value, 'value')
-        debug(self.mapping.inv(value), 'inv')
-
-        delta = tt_to_num(self.mapping.inv(value) - self.mu)
-        L = sL.solve_lower_triangular(self.cho, delta)
-        return -np.float32(0.5) * (self.cov.shape[0].astype(th.config.floatX) * tt.log(np.float32(2.0 * np.pi))
-                                   + L.T.dot(L)) - tt.sum(tt.log(nL.diag(self.cho))) + self.mapping.logdet_dinv(value)
+    @classmethod
+    def logp_cho(cls, value, mu, cho, mapping):
+        delta = tt_to_num(mapping.inv(value) - mu)
+        L = sL.solve_lower_triangular(cho, delta)
+        return -np.float32(0.5) * (cho.shape[0].astype(th.config.floatX) * tt.log(np.float32(2.0 * np.pi))
+                                   + L.T.dot(L)) - tt.sum(tt.log(nL.diag(cho))) + mapping.logdet_dinv(value)
 
     def logp(self, value):
         if False:
-            return tt_to_num(debug(self.logp_cov(value), 'logp_cov'), -np.inf, -np.inf)
+            return tt_to_num(debug(self.logp_cov(value, self.mu, self.cov, self.mapping), 'logp_cov'), -np.inf, -np.inf)
         else:
-            return tt_to_num(debug(self.logp_cho(value), 'logp_cho'), -np.inf, -np.inf)
+            return tt_to_num(debug(self.logp_cho(value, self.mu, self.cho, self.mapping), 'logp_cho'), -np.inf, -np.inf)
 
     @property
     def cho(self):
@@ -82,29 +80,31 @@ class STPDist(pm.Continuous):
         self.freedom = freedom
         self.stp = stp
 
-    def logp_cov(self, value):  # es más rápido pero se cae
-        delta = value - self.mu
-        beta = delta.T.dot(sL.solve(self.cov, delta))
-        n = self.cov.shape[0].astype(th.config.floatX)
-        degree = self.freedom()
-        return -np.float32(0.5) * (tt.log(nL.det(self.cov)) + (degree + n) * tt.log1p( beta / (degree-2))
+    @classmethod
+    def logp_cov(cls, value, mu, cov, freedom):  # es más rápido pero se cae
+        delta = value - mu
+        beta = delta.T.dot(sL.solve(cov, delta))
+        n = cov.shape[0].astype(th.config.floatX)
+        degree = freedom()
+        return -np.float32(0.5) * (tt.log(nL.det(cov)) + (degree + n) * tt.log1p( beta / (degree-2))
                                    + n * tt.log(np.float32((degree-2) * np.pi))) \
                - tt.log(tt.gamma(degree / 2)) + tt.log(tt.gamma((degree + n) / 2))
 
-    def logp_cho(self, value):
-        delta = value - self.mu
-        L = sL.solve_lower_triangular(self.cho, delta)
+    @classmethod
+    def logp_cho(cls, value, mu, cho, freedom):
+        delta = value - mu
+        L = sL.solve_lower_triangular(cho, delta)
         beta = L.T.dot(L)
-        n = self.cov.shape[0].astype(th.config.floatX)
-        degree = self.freedom()
-        return -np.float32(0.5) * ( (degree + n) * tt.log1p(beta / (degree-2)) + n * tt.log(np.float32((degree-2) * np.pi))) \
-               - tt.sum(tt.log(nL.diag(self.cho))) - tt.log(tt.gamma(degree / 2)) + tt.log(tt.gamma((degree + n) / 2))
+        n = cho.shape[0].astype(th.config.floatX)
+        degree = freedom()
+        return -np.float32(0.5) * ((degree + n) * tt.log1p(beta / (degree-2)) + n * tt.log(np.float32((degree-2) * np.pi))) \
+               - tt.sum(tt.log(nL.diag(cho))) - tt.log(tt.gamma(degree / 2)) + tt.log(tt.gamma((degree + n) / 2))
 
     def logp(self, value):
         if False:
-            return tt_to_num(debug(self.logp_cov(value), 'logp_cov'), -np.inf, -np.inf)
+            return tt_to_num(debug(self.logp_cov(value, self.mu, self.cov, self.freedom), 'logp_cov'), -np.inf, -np.inf)
         else:
-            return tt_to_num(debug(self.logp_cho(value), 'logp_cho'), -np.inf, -np.inf)
+            return tt_to_num(debug(self.logp_cho(value, self.mu, self.cho, self.freedom), 'logp_cho'), -np.inf, -np.inf)
 
     @property
     def cho(self):

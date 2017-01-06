@@ -12,13 +12,15 @@ class GaussianProcess(StochasticProcess):
                          freedom=None, name=name, inputs=inputs, outputs=outputs, hidden=hidden)
 
     def define_distribution(self):
-        return TGPDist(self.name, mu=self.location(self.inputs), cov=tt_to_cov(self.kernel.cov(self.inputs)),
-                mapping=Identity(), tgp=self, observed=self.outputs, testval=self.outputs, dtype=th.config.floatX)
+        self.distribution = TGPDist(self.name, mu=self.location(self.inputs), cov=tt_to_cov(self.kernel.cov(self.inputs)),
+                            mapping=Identity(), tgp=self, observed=self.outputs, testval=self.outputs, dtype=th.config.floatX)
 
     def define_process(self):
         # Prior
         self.prior_mean = self.location_space
         self.prior_covariance = self.kernel_f_space
+        self.prior_cholesky = cholesky_robust(self.prior_covariance)
+        self.prior_distribution = tt.exp(TGPDist.logp_cho(self.random_th, self.prior_mean, self.prior_cholesky, self.mapping))
         self.prior_variance = tnl.extract_diag(self.prior_covariance)
         self.prior_std = tt.sqrt(self.prior_variance)
         self.prior_noise = tt.sqrt(tnl.extract_diag(self.kernel_space))
@@ -34,6 +36,8 @@ class GaussianProcess(StochasticProcess):
             tsl.solve(self.kernel_inputs, self.mapping_outputs - self.location_inputs))
         self.posterior_covariance = self.kernel_f.cov(self.space_th) - self.kernel_f_space_inputs.dot(
             tsl.solve(self.kernel_inputs, self.kernel_f_space_inputs.T))
+        self.posterior_cholesky = cholesky_robust(self.posterior_covariance)
+        self.posterior_distribution = tt.exp(TGPDist.logp_cho(self.random_th, self.posterior_mean, self.posterior_cholesky, self.mapping))
         self.posterior_variance = tnl.extract_diag(self.posterior_covariance)
         self.posterior_std = tt.sqrt(self.posterior_variance)
         self.posterior_noise = tt.sqrt(tnl.extract_diag(self.kernel.cov(self.space_th) - self.kernel_f_space_inputs.dot(
@@ -45,16 +49,6 @@ class GaussianProcess(StochasticProcess):
         self.posterior_noise_down = self.posterior_mean - 1.96 * self.posterior_noise
         self.posterior_sampler = self.posterior_mean + cholesky_robust(self.posterior_covariance).dot(self.random_th)
 
-        # TODO
-        def marginal(self):
-            value = tt.vector('marginal_gp')
-            value.tag.test_value = zeros(1)
-            delta = value - self.location(self.space)
-            cov = self.kernel.cov(self.space)
-            cho = cholesky_robust(cov)
-            L = tsl.solve_lower_triangular(cho, delta)
-            return value, tt.exp(-np.float32(0.5) * (cov.shape[0].astype(th.config.floatX) * tt.log(np.float32(2.0 * np.pi))
-                                                     + L.T.dot(L)) - tt.sum(tt.log(tnl.extract_diag(cho))))
         # TODO
         def subprocess(self, subkernel, cov=False, noise=False):
             k_ni = subkernel.cov(self.space, self.inputs)
@@ -83,7 +77,7 @@ class TransformedGaussianProcess(StochasticProcess):
         return TGPDist(self.name, mu=self.location(self.inputs), cov=tt_to_cov(self.kernel.cov(self.inputs)),
                 mapping=self.mapping, tgp=self, observed=self.outputs, testval=self.outputs, dtype=th.config.floatX)
 
-    def define_process(self, n=20):
+    def define_process(self, n=10):
         # Gauss-Hermite
         _a, _w = np.polynomial.hermite.hermgauss(n)
         a = th.shared(_a.astype(th.config.floatX), borrow=True).dimshuffle([0, 'x'])
@@ -99,6 +93,12 @@ class TransformedGaussianProcess(StochasticProcess):
         self.latent_posterior_covariance = self.kernel_f.cov(self.space_th) - self.kernel_f_space_inputs.dot(tsl.solve(self.kernel_inputs, self.kernel_f_space_inputs.T))
         self.latent_posterior_std = np.sqrt(tnl.extract_diag(self.latent_posterior_covariance))
         self.latent_posterior_noise = np.sqrt(tnl.extract_diag(self.kernel.cov(self.space_th) - self.kernel_f_space_inputs.dot(tsl.solve(self.kernel_inputs, self.kernel_f_space_inputs.T))))
+
+        self.prior_cholesky = cholesky_robust(self.latent_prior_covariance)
+        self.prior_distribution = tt.exp(TGPDist.logp_cho(self.random_th, self.latent_prior_mean, self.prior_cholesky, self.mapping))
+
+        self.posterior_cholesky = cholesky_robust(self.latent_posterior_covariance)
+        self.posterior_distribution = tt.exp(TGPDist.logp_cho(self.random_th, self.latent_posterior_mean, self.posterior_cholesky, self.mapping))
         print('Latent OK')
 
         # Prior
@@ -132,17 +132,6 @@ class TransformedGaussianProcess(StochasticProcess):
         self.posterior_sampler = self.mapping(self.latent_posterior_mean + cholesky_robust(self.latent_posterior_covariance).dot(self.random_th))
         print('Posterior OK')
 
-
-        # TODO
-        def marginal_tgp(self):
-            value = tt.vector('marginal_tgp')
-            value.tag.test_value = zeros(1)
-            delta = self.mapping.inv(value) - self.mean(self.space)
-            cov = self.kernel.cov(self.space)
-            cho = cholesky_robust(cov)
-            L = tsl.solve_lower_triangular(cho, delta)
-            return value, tt.exp(-np.float32(0.5) * (cov.shape[0].astype(th.config.floatX) * tt.log(np.float32(2.0 * np.pi))
-                                                     + L.T.dot(L)) - tt.sum(tt.log(tnl.extract_diag(cho))) + self.mapping.logdet_dinv(value))
         # TODO
         def subprocess(self, subkernel, cov=False, noise=False):
             k_ni = subkernel.cov(self.space, self.inputs)

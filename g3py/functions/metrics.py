@@ -25,7 +25,7 @@ class Metric(Hypers):
 
 class Delta(Metric):
     def __call__(self, x1, x2):
-        return x1 == x2
+        return tt.eq((x1 - x2), 0).dot(np.ones(self.shape))
 
 
 class Minimum(Metric):
@@ -98,7 +98,7 @@ class ARD_DotBias(ARD):
     def check_hypers(self, parent=''):
         super().check_hypers()
         if self.bias is None:
-            self.bias = Hypers.FlatExp(parent+self.name + '_Bias', shape=1)
+            self.bias = Hypers.FlatExp(parent+self.name + '_Bias')
         self.hypers += [self.bias]
 
     def __call__(self, x1, x2):
@@ -106,5 +106,5 @@ class ARD_DotBias(ARD):
         #return self.bias + tt.dot(tt.dot(x1, self.rate), tt.dot(x2, self.rate))
 
     def default_hypers(self, x=None, y=None):
-        return {self.bias: (np.abs(y).mean(axis=0))/np.abs(x).mean(axis=0),
+        return {self.bias: np.abs(y).mean()/np.abs(x).mean(),
                 self.rate: np.sqrt(np.abs(y)).mean(axis=0) / np.abs(x).mean(axis=0)}

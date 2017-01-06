@@ -15,7 +15,7 @@ class StudentTProcess(StochasticProcess):
         self.posterior_freedom = None
 
     def define_distribution(self):
-        return STPDist(self.name, mu=self.location(self.inputs), cov=tt_to_cov(self.kernel.cov(self.inputs)), mapping = Identity(),
+        self.distribution = STPDist(self.name, mu=self.location(self.inputs), cov=tt_to_cov(self.kernel.cov(self.inputs)), mapping = Identity(),
                        freedom=self.freedom, stp=self, observed=self.outputs, testval=self.outputs, dtype=th.config.floatX)
 
     def define_process(self):

@@ -3,6 +3,7 @@ import pandas as pd
 import theano as th
 import theano.tensor as tt
 import pymc3 as pm
+from g3py.libs import DictObj
 
 
 class LogIdTransform(pm.distributions.transforms.ElemwiseTransform):
@@ -30,7 +31,7 @@ def cvalues(shape, val):
 
 
 def trans_hypers(hypers):
-    trans = {}
+    trans = DictObj()
     for k, v in hypers.items():
         if type(k) is pm.model.TransformedRV:
             trans[k.transformed] = k.transformed.distribution.transform_used.forward(v).eval()
@@ -168,7 +169,7 @@ class Hypers:
 
 
 class NonTransformLog(pm.distributions.transforms.ElemwiseTransform):
-
+    name = "log"
     def backward(self, x):
         return tt.exp(x)
 
@@ -200,7 +201,7 @@ class Freedom(Hypers):
 
 
 def get_hypers_floatX(params):
-    paramsX = {}
+    paramsX = DictObj()
     for k, v in params.items():
         paramsX[k] = np.float32(v)
     return paramsX

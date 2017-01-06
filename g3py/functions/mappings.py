@@ -8,7 +8,7 @@ from g3py.libs.tensors import tt_to_num, debug, inverse_function
 class Mapping(Hypers):
 
     def __call__(self, z):
-        return inverse_function(self.inv(z), z)
+        return inverse_function(self.inv, z)
 
     def inv(self, y):
         pass
@@ -210,7 +210,7 @@ class WarpingTanh(Mapping):
     def default_hypers(self, x=None, y=None):
         return {self.a: 0.1 * ones(self.n)*np.abs(y).max() / self.n,
                 self.b: 0.1 * ones(self.n)/np.abs(y).max(),
-                self.c: zeros(self.n)}
+                self.c: ones(self.n)*np.mean(y)}
 
     def inv(self, y):
         z = y.dimshuffle(0, 'x')

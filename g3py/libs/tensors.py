@@ -42,15 +42,14 @@ def tt_to_cov(c):
     return tt.switch(m > 0, r, r + (1e-6-m)*tt.eye(c.shape[0]) )
 
 
-def infer_shape(node, input_shapes):
-    ashp, bshp = input_shapes
-    return [ashp[:-1] + bshp[-1:]]
+def inverse_function(func, z, tol=1e-3, n_steps=1024):
+    def iter_newton(x):
+        diff = func(x) - z
+        dfunc = tt.grad(tt.sum(diff), x)
+        return x - diff/dfunc, th.scan_module.until(tt.max(tt.abs_(diff))/tt.max(tt.abs_(z)) < tol)
 
-
-@as_op(itypes=[tt.fvector, tt.fvector],
-       otypes=[tt.fvector])
-def inverse_function(f, y):
-    return sp.optimize.minimize(lambda y: f - y, y, method='krylov', options={'maxiter': 100, 'ftol':1e-6}).x.astype(dtype=th.config.floatX)
+    values, _ = th.scan(iter_newton, outputs_info=z/2, n_steps=n_steps)
+    return values[-1]
 
 
 class CholeskyRobust(th.gof.Op):

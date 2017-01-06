@@ -10,7 +10,7 @@ from matplotlib import pyplot as plt
 from theano import tensor as tt
 from theano.tensor import slinalg as sL
 from theano.tensor import nlinalg as nL
-
+from g3py.libs import DictObj
 
 class TGP:
     def __init__(self, space, mean: Mean, kernel: Kernel, mapping: Mapping, noise=True, name=None, hidden=None, description=None):
@@ -42,10 +42,10 @@ class TGP:
         self.distribution = None
         self.inputs_test = None
         self.outputs_test = None
-        self.fixed_params = {}
-        self._widget_params = {}
+        self.fixed_params = DictObj()
+        self._widget_params = DictObj()
         self._widget_trace = None
-        self.compiles = {}
+        self.compiles = DictObj()
         if description is None:
             self.description = {'title': 'title',
                                 'x': 'x',
@@ -500,7 +500,7 @@ class TGP:
     def find_default(self):
         if self.inputs is None:
             return self.model.test_point
-        default = {}
+        default = DictObj()
         for k, v in trans_hypers(self.default_hypers()).items():
             default[k.name] = v
         default.update(self.fixed_params)
