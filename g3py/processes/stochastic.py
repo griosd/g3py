@@ -396,6 +396,24 @@ class StochasticProcess:
         inv_transform = self.compiles['mapping_th'](inv_domain, **params)
         plt.plot(inv_transform, inv_domain)
 
+    def plot_kernel(self, params=None, space=None, inputs=None, indexs=[1/10, 1/2, 9/10]):
+        if params is None:
+            params = self.get_params_current()
+        if space is None:
+            space = self.space_values
+        if inputs is None:
+            inputs = self.inputs_values
+        ksi = self.compiles['kernel_space_inputs'](space, inputs, **params).T
+        for ind in indexs:
+            plt.plot(space, ksi[int(len(ksi)*ind), :])
+
+
+
+    def plot_distribution2D(self):
+        pass
+
+    def plot_kernel2D(self):
+        pass
 
     def set_params(self, params):
         self.params_current = params
