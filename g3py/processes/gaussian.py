@@ -1,8 +1,8 @@
 from .stochastic import *
 from ..functions import Kernel, Mean, Mapping, Identity
 from ..libs import cholesky_robust, debug
-import theano.tensor.slinalg as tsl
-import theano.tensor.nlinalg as tnl
+from pymc3.distributions.distribution import generate_samples
+from scipy.stats._multivariate import multivariate_normal
 
 
 class GaussianProcess(StochasticProcess):
@@ -74,8 +74,8 @@ class TransformedGaussianProcess(StochasticProcess):
         self.latent_posterior_noise = None
 
     def define_distribution(self):
-        return TGPDist(self.name, mu=self.location(self.inputs), cov=tt_to_cov(self.kernel.cov(self.inputs)),
-                mapping=self.mapping, tgp=self, observed=self.outputs, testval=self.outputs, dtype=th.config.floatX)
+        self.distribution = TGPDist(self.name, mu=self.location(self.inputs), cov=tt_to_cov(self.kernel.cov(self.inputs)),
+                                    mapping=self.mapping, tgp=self, observed=self.outputs, testval=self.outputs, dtype=th.config.floatX)
 
     def define_process(self, n=10):
         # Gauss-Hermite
@@ -95,10 +95,10 @@ class TransformedGaussianProcess(StochasticProcess):
         self.latent_posterior_noise = np.sqrt(tnl.extract_diag(self.kernel.cov(self.space_th) - self.kernel_f_space_inputs.dot(tsl.solve(self.kernel_inputs, self.kernel_f_space_inputs.T))))
 
         self.prior_cholesky = cholesky_robust(self.latent_prior_covariance)
-        self.prior_distribution = tt.exp(TGPDist.logp_cho(self.random_th, self.latent_prior_mean, self.prior_cholesky, self.mapping))
+        self.prior_distribution = tt.exp(TGPDist.logp_cho(self.random_th, self.latent_prior_mean, self.prior_cholesky, self.mapping).sum())
 
         self.posterior_cholesky = cholesky_robust(self.latent_posterior_covariance)
-        self.posterior_distribution = tt.exp(TGPDist.logp_cho(self.random_th, self.latent_posterior_mean, self.posterior_cholesky, self.mapping))
+        self.posterior_distribution = tt.exp(TGPDist.logp_cho(self.random_th, self.latent_posterior_mean, self.posterior_cholesky, self.mapping).sum())
         print('Latent OK')
 
         # Prior
@@ -143,3 +143,50 @@ class TransformedGaussianProcess(StochasticProcess):
 def gauss_hermite(f, mu, sigma, a, w):
     grille = mu + sigma * np.sqrt(2).astype(th.config.floatX) * a
     return tt.dot(w, f(grille.flatten()).reshape(grille.shape)) / np.sqrt(np.pi).astype(th.config.floatX)
+
+
+class TGPDist(pm.Continuous):
+    def __init__(self, mu, cov, mapping, tgp, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.mean = self.median = self.mode = self.mu = mu
+        self.cov = cov
+        self.mapping = mapping
+        self.tgp = tgp
+
+    @classmethod
+    def logp_cov(cls, value, mu, cov, mapping):  # es más rápido pero se cae
+        delta = tt_to_num(mapping.inv(value)) - mu
+        return -np.float32(0.5) * (tt.log(nL.det(cov)) + delta.T.dot(sL.solve(cov, delta))
+                                   + cov.shape[0].astype(th.config.floatX) * tt.log(np.float32(2.0 * np.pi))) \
+               + mapping.logdet_dinv(value)
+
+    @classmethod
+    def logp_cho(cls, value, mu, cho, mapping):
+        delta = tt_to_num(mapping.inv(value) - mu)
+        L = sL.solve_lower_triangular(cho, delta)
+        return -np.float32(0.5) * (cho.shape[0].astype(th.config.floatX) * tt.log(np.float32(2.0 * np.pi))
+                                   + L.T.dot(L)) - tt.sum(tt.log(nL.diag(cho))) + mapping.logdet_dinv(value)
+
+    def logp(self, value):
+        if False:
+            return tt_to_num(debug(self.logp_cov(value, self.mu, self.cov, self.mapping), 'logp_cov'), -np.inf, -np.inf)
+        else:
+            return tt_to_num(debug(self.logp_cho(value, self.mu, self.cho, self.mapping), 'logp_cho'), -np.inf, -np.inf)
+
+    @property
+    def cho(self):
+        try:
+            return cholesky_robust(self.cov)
+        except:
+            raise sp.linalg.LinAlgError("not cholesky")
+
+    def random(self, point=None, size=None):
+        point = self.tgp.get_params(self.tgp, point)
+        mu = self.tgp.compiles['mean'](**point)
+        cov = self.tgp.compiles['covariance'](**point)
+
+        def _random(mean, cov, size=None):
+            return self.compiles['trans'](multivariate_normal.rvs(mean, cov, None if size == mean.shape else size), **point)
+        samples = generate_samples(_random, mean=mu, cov=cov, dist_shape=self.shape, broadcast_shape=mu.shape, size=size)
+        return samples
+

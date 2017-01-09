@@ -4,12 +4,28 @@ import pymc3 as pm
 import scipy as sp
 import theano as th
 from g3py.functions import Mean, Kernel, Mapping, KernelSum, WN, tt_to_num, def_space, trans_hypers
-from g3py.libs import tt_to_cov, makefn, plot_text, clone, DictObj
-from g3py.models import TGPDist, STPDist, ConstantStep, RobustSlice
+from g3py.libs import tt_to_cov, makefn, plot_text, clone, DictObj, plot_2d, grid2d
+from g3py.models import ConstantStep, RobustSlice
 from g3py import config
 from ipywidgets import interact
 from matplotlib import pyplot as plt
 from theano import tensor as tt
+import theano.tensor.nlinalg as nL
+import theano.tensor.slinalg as sL
+import theano.tensor.slinalg as tsl
+import theano.tensor.nlinalg as tnl
+
+Model = pm.Model
+
+def load_model(path):
+    # with pm.Model():
+    with open(path, 'rb') as f:
+        #try:
+        r = pickle.load(f)
+        print('Loaded model ' + path)
+        return r
+        #except:
+        #    print('Error loading model '+path)
 
 
 class StochasticProcess:
@@ -377,11 +393,11 @@ class StochasticProcess:
 
     def plot_distribution(self, params=None, space=None, inputs=None, outputs=None, mean=True, var=True, cov=False, median=False, quantiles=False, noise=False, prior=False, sigma=4, neval=100):
         pred = self.predict(params=params, space=space, inputs=inputs, outputs=outputs, mean=mean, var=var, cov=cov, median=median, quantiles=quantiles, noise=noise, distribution=True, prior=prior)
-        dist = np.linspace(pred.mean - sigma * pred.std, pred.mean + sigma * pred.std, neval)
-        dist_plot = np.zeros_like(dist)
-        for i in range(len(dist)):
-            dist_plot[i] = pred.distribution(dist[i:i + 1])
-        plt.plot(dist, dist_plot)
+        domain = np.linspace(pred.mean - sigma * pred.std, pred.mean + sigma * pred.std, neval)
+        dist_plot = np.zeros(len(domain))
+        for i in range(len(domain)):
+            dist_plot[i] = pred.distribution(domain[i:i + 1])
+        plt.plot(domain, dist_plot)
 
     def plot_mapping(self, params=None, space=None, inputs=None, outputs=None, neval=100):
         if params is None:
@@ -396,7 +412,7 @@ class StochasticProcess:
         inv_transform = self.compiles['mapping_th'](inv_domain, **params)
         plt.plot(inv_transform, inv_domain)
 
-    def plot_kernel(self, params=None, space=None, inputs=None, indexs=[1/10, 1/2, 9/10]):
+    def plot_kernel(self, params=None, space=None, inputs=None, centers=[1/10, 1/2, 9/10]):
         if params is None:
             params = self.get_params_current()
         if space is None:
@@ -404,13 +420,19 @@ class StochasticProcess:
         if inputs is None:
             inputs = self.inputs_values
         ksi = self.compiles['kernel_space_inputs'](space, inputs, **params).T
-        for ind in indexs:
+        for ind in centers:
             plt.plot(space, ksi[int(len(ksi)*ind), :])
 
 
-
-    def plot_distribution2D(self):
-        pass
+    def plot_distribution2D(self, params=None, space=None, inputs=None, outputs=None, mean=True, var=True, cov=False, median=False, quantiles=False, noise=False, prior=False, sigma=4, neval=100):
+        pred = self.predict(params=params, space=space, inputs=inputs, outputs=outputs, mean=mean, var=var, cov=cov, median=median, quantiles=quantiles, noise=noise, distribution=True, prior=prior)
+        dist1 = np.linspace(pred.mean[0] - sigma * pred.std[0], pred.mean[0] + sigma * pred.std[0], neval)
+        dist2 = np.linspace(pred.mean[1] - sigma * pred.std[1], pred.mean[1] + sigma * pred.std[1], neval)
+        xy, x2d, y2d = grid2d(dist1, dist2)
+        dist_plot = np.zeros(len(xy))
+        for i in range(len(xy)):
+            dist_plot[i] = pred.distribution(xy[i])
+        plot_2d(dist_plot, x2d, y2d)
 
     def plot_kernel2D(self):
         pass

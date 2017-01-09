@@ -1,7 +1,11 @@
+import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib import cm
+from mpl_toolkits.mplot3d import axes3d
 import seaborn as sb
 import IPython.display as display
 from g3py import config
+
 
 def style_seaborn():
     sb.set(style='darkgrid', color_codes=False)
@@ -69,3 +73,27 @@ def plot_text(title="title", x="xlabel", y="ylabel", ncol=3, loc=8, axis=None):
 
 def plot_save(file='example.pdf'):
     plt.savefig(file, bbox_inches='tight')
+
+
+def grid2d(x, y):
+    xy = np.zeros((len(x) * len(y), 2))
+    for i in range(len(x)):
+        for j in range(len(y)):
+            xy[i * len(y) + j, :] = x[i], y[j]
+    x2d, y2d = np.meshgrid(x, y)
+    x2d = x2d.T
+    y2d = y2d.T
+    return xy, x2d, y2d
+
+
+def plot_2d(xy, x, y, grid=True):
+    fxy2d_hidden = xy.reshape((len(x), len(y)))
+    if grid:
+        x2d, y2d = x, y
+    else:
+        x2d, y2d = np.meshgrid(x, y)
+        x2d, y2d = x2d.T, y2d.T
+    fig = plt.figure(figsize=[20, 10])
+    ax = fig.gca(projection='3d')
+    ax.plot_surface(x2d, y2d, fxy2d_hidden, alpha=0.4, cmap=cm.RdBu_r)
+    cset = ax.contourf(x2d, y2d, fxy2d_hidden, zdir='z', offset=np.min(fxy2d_hidden), cmap=cm.RdBu_r)

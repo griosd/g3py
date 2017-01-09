@@ -98,7 +98,7 @@ class ARD_DotBias(ARD):
     def check_hypers(self, parent=''):
         super().check_hypers()
         if self.bias is None:
-            self.bias = Hypers.FlatExp(parent+self.name + '_Bias')
+            self.bias = Hypers.FlatExp(parent+self.name + '_bias')
         self.hypers += [self.bias]
 
     def __call__(self, x1, x2):

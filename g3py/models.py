@@ -4,114 +4,11 @@ import pymc3 as pm
 import scipy as sp
 import theano as th
 import theano.tensor as tt
-import theano.tensor.nlinalg as nL
-import theano.tensor.slinalg as sL
+
 from pymc3.distributions.distribution import generate_samples
 from scipy.stats._multivariate import multivariate_normal
 
 from .libs.tensors import cholesky_robust, tt_to_num, debug
-
-Model = pm.Model
-
-
-def load_model(path):
-    # with pm.Model():
-    with open(path, 'rb') as f:
-        try:
-            r = pickle.load(f)
-            print('Loaded model ' + path)
-            return r
-        except:
-            print('Error loading model '+path)
-
-
-class TGPDist(pm.Continuous):
-    def __init__(self, mu, cov, mapping, tgp, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.mean = self.median = self.mode = self.mu = mu
-        self.cov = cov
-        self.mapping = mapping
-        self.tgp = tgp
-
-    @classmethod
-    def logp_cov(cls, value, mu, cov, mapping):  # es más rápido pero se cae
-        delta = tt_to_num(mapping.inv(value)) - mu
-        return -np.float32(0.5) * (tt.log(nL.det(cov)) + delta.T.dot(sL.solve(cov, delta))
-                                   + cov.shape[0].astype(th.config.floatX) * tt.log(np.float32(2.0 * np.pi))) \
-               + mapping.logdet_dinv(value)
-
-    @classmethod
-    def logp_cho(cls, value, mu, cho, mapping):
-        delta = tt_to_num(mapping.inv(value) - mu)
-        L = sL.solve_lower_triangular(cho, delta)
-        return -np.float32(0.5) * (cho.shape[0].astype(th.config.floatX) * tt.log(np.float32(2.0 * np.pi))
-                                   + L.T.dot(L)) - tt.sum(tt.log(nL.diag(cho))) + mapping.logdet_dinv(value)
-
-    def logp(self, value):
-        if False:
-            return tt_to_num(debug(self.logp_cov(value, self.mu, self.cov, self.mapping), 'logp_cov'), -np.inf, -np.inf)
-        else:
-            return tt_to_num(debug(self.logp_cho(value, self.mu, self.cho, self.mapping), 'logp_cho'), -np.inf, -np.inf)
-
-    @property
-    def cho(self):
-        try:
-            return cholesky_robust(self.cov)
-        except:
-            raise sp.linalg.LinAlgError("not cholesky")
-
-    def random(self, point=None, size=None):
-        point = self.tgp.get_params(self.tgp, point)
-        mu = self.tgp.compiles['mean'](**point)
-        cov = self.tgp.compiles['covariance'](**point)
-
-        def _random(mean, cov, size=None):
-            return self.compiles['trans'](multivariate_normal.rvs(mean, cov, None if size == mean.shape else size), **point)
-        samples = generate_samples(_random, mean=mu, cov=cov, dist_shape=self.shape, broadcast_shape=mu.shape, size=size)
-        return samples
-
-
-class STPDist(pm.Continuous):
-    def __init__(self, mu, cov, mapping, freedom, stp, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.mean = self.median = self.mode = self.mu = mu
-        self.cov = cov
-        self.mapping = mapping
-        self.freedom = freedom
-        self.stp = stp
-
-    @classmethod
-    def logp_cov(cls, value, mu, cov, freedom):  # es más rápido pero se cae
-        delta = value - mu
-        beta = delta.T.dot(sL.solve(cov, delta))
-        n = cov.shape[0].astype(th.config.floatX)
-        degree = freedom()
-        return -np.float32(0.5) * (tt.log(nL.det(cov)) + (degree + n) * tt.log1p( beta / (degree-2))
-                                   + n * tt.log(np.float32((degree-2) * np.pi))) \
-               - tt.log(tt.gamma(degree / 2)) + tt.log(tt.gamma((degree + n) / 2))
-
-    @classmethod
-    def logp_cho(cls, value, mu, cho, freedom):
-        delta = value - mu
-        L = sL.solve_lower_triangular(cho, delta)
-        beta = L.T.dot(L)
-        n = cho.shape[0].astype(th.config.floatX)
-        degree = freedom()
-        return -np.float32(0.5) * ((degree + n) * tt.log1p(beta / (degree-2)) + n * tt.log(np.float32((degree-2) * np.pi))) \
-               - tt.sum(tt.log(nL.diag(cho))) - tt.log(tt.gamma(degree / 2)) + tt.log(tt.gamma((degree + n) / 2))
-
-    def logp(self, value):
-        if False:
-            return tt_to_num(debug(self.logp_cov(value, self.mu, self.cov, self.freedom), 'logp_cov'), -np.inf, -np.inf)
-        else:
-            return tt_to_num(debug(self.logp_cho(value, self.mu, self.cho, self.freedom), 'logp_cho'), -np.inf, -np.inf)
-
-    @property
-    def cho(self):
-        try:
-            return cholesky_robust(self.cov)
-        except:
-            raise sp.linalg.LinAlgError("not cholesky")
 
 
 

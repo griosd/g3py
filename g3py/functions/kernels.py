@@ -17,10 +17,10 @@ class Kernel(Hypers):
 
     def check_hypers(self, parent=''):
         if self.var is None:
-            self.var = Hypers.FlatExp(parent + self.name + '_Var')
+            self.var = Hypers.FlatExp(parent + self.name + '_var')
         if isinstance(self.var, tt.TensorVariable):
             self.hypers += [self.var]
-        self.metric.check_hypers(parent+self.name+'_')
+        self.metric.check_hypers(parent + self.name+'_')
 
     def check_dims(self, x=None):
         super().check_dims(x)
@@ -250,7 +250,7 @@ class NN(KernelDot):
     def cov(self, x1, x2=None):
         if x2 is None:
             xx = self.metric.gram(x1, x1)
-            debug(tt.arcsin(2*xx/((1 + 2*xx)**2)),'xx')
+            debug(tt.arcsin(2*xx/((1 + 2*xx)**2)), 'xx')
             return self.var * tt.arcsin(2*xx/((1 + 2*xx)**2))
         else:
             return self.var * tt.arcsin(2*self.metric.gram(x1, x2)/((1 + 2*self.metric.gram(x1, x1))*(1 + 2*self.metric.gram(x2, x2))))
@@ -279,7 +279,7 @@ class RQ(KernelStationary):
     def check_hypers(self, parent=''):
         super().check_hypers(parent=parent)
         if self.alpha is None:
-            self.alpha = Hypers.FlatExp(parent+self.name+'_ALPHA')
+            self.alpha = Hypers.FlatExp(parent+self.name+'_alpha')
         self.hypers += [self.alpha]
 
     def default_hypers(self, x=None, y=None):
@@ -331,10 +331,13 @@ class KernelPeriodic(KernelStationary):
     def check_hypers(self, parent=''):
         super().check_hypers(parent=parent)
         if self.periods is None:
-            self.periods = Hypers.FlatExp(parent + self.name + '_PER', shape=self.shape)
+            self.periods = Hypers.FlatExp(parent + self.name + '_per', shape=self.shape)
         if self.rate is None:
-            self.rate = Hypers.FlatExp(parent + self.name + '_RATE', shape=self.shape)
-        self.hypers += [self.periods, self.rate]
+            self.rate = Hypers.FlatExp(parent + self.name + '_rate', shape=self.shape)
+        if isinstance(self.rate, tt.TensorVariable):
+            self.hypers += [self.rate]
+        if isinstance(self.periods, tt.TensorVariable):
+            self.hypers += [self.periods]
 
     def default_hypers(self, x=None, y=None):
         return {self.periods: (x.max(axis=0)-x.min(axis=0)),

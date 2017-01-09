@@ -63,3 +63,47 @@ class TransformedStudentTProcess(StochasticProcess):
         super().__init__(space=space, location=location, kernel=kernel, mapping=mapping, noise=noise,
                          freedom=freedom, name=name, inputs=inputs, outputs=outputs, hidden=hidden)
 
+
+
+class STPDist(pm.Continuous):
+    def __init__(self, mu, cov, mapping, freedom, stp, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.mean = self.median = self.mode = self.mu = mu
+        self.cov = cov
+        self.mapping = mapping
+        self.freedom = freedom
+        self.stp = stp
+
+    @classmethod
+    def logp_cov(cls, value, mu, cov, freedom):  # es más rápido pero se cae
+        delta = value - mu
+        beta = delta.T.dot(sL.solve(cov, delta))
+        n = cov.shape[0].astype(th.config.floatX)
+        degree = freedom()
+        return -np.float32(0.5) * (tt.log(nL.det(cov)) + (degree + n) * tt.log1p( beta / (degree-2))
+                                   + n * tt.log(np.float32((degree-2) * np.pi))) \
+               - tt.log(tt.gamma(degree / 2)) + tt.log(tt.gamma((degree + n) / 2))
+
+    @classmethod
+    def logp_cho(cls, value, mu, cho, freedom):
+        delta = value - mu
+        L = sL.solve_lower_triangular(cho, delta)
+        beta = L.T.dot(L)
+        n = cho.shape[0].astype(th.config.floatX)
+        degree = freedom()
+        return -np.float32(0.5) * ((degree + n) * tt.log1p(beta / (degree-2)) + n * tt.log(np.float32((degree-2) * np.pi))) \
+               - tt.sum(tt.log(nL.diag(cho))) - tt.log(tt.gamma(degree / 2)) + tt.log(tt.gamma((degree + n) / 2))
+
+    def logp(self, value):
+        if False:
+            return tt_to_num(debug(self.logp_cov(value, self.mu, self.cov, self.freedom), 'logp_cov'), -np.inf, -np.inf)
+        else:
+            return tt_to_num(debug(self.logp_cho(value, self.mu, self.cho, self.freedom), 'logp_cho'), -np.inf, -np.inf)
+
+    @property
+    def cho(self):
+        try:
+            return cholesky_robust(self.cov)
+        except:
+            raise sp.linalg.LinAlgError("not cholesky")
+
