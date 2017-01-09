@@ -397,7 +397,11 @@ class StochasticProcess:
         dist_plot = np.zeros(len(domain))
         for i in range(len(domain)):
             dist_plot[i] = pred.distribution(domain[i:i + 1])
-        plt.plot(domain, dist_plot)
+        if prior:
+            plt.plot(domain, dist_plot, label='prior')
+        else:
+            plt.plot(domain, dist_plot, label='posterior')
+        plot_text('Marginal Distribution '+str(space[0]), 'Domain y', 'p(y)')
 
     def plot_mapping(self, params=None, space=None, inputs=None, outputs=None, neval=100):
         if params is None:
@@ -406,11 +410,12 @@ class StochasticProcess:
             outputs = self.outputs_values
         domain = np.linspace(outputs.min() - outputs.std(), outputs.max() + outputs.std(), neval)
         transform = self.compiles['mapping_inv_th'](domain, **params)
-        plt.plot(domain, transform)
+        plt.plot(domain, transform, label='mapping_inv_th')
 
         inv_domain = np.linspace(transform.min() - transform.std(), transform.max() + transform.std(), neval)
         inv_transform = self.compiles['mapping_th'](inv_domain, **params)
-        plt.plot(inv_transform, inv_domain)
+        plt.plot(inv_transform, inv_domain, label='mapping_th')
+        plot_text('Mapping', 'Domain y', 'Domain T(y)')
 
     def plot_kernel(self, params=None, space=None, inputs=None, centers=[1/10, 1/2, 9/10]):
         if params is None:
@@ -421,10 +426,26 @@ class StochasticProcess:
             inputs = self.inputs_values
         ksi = self.compiles['kernel_space_inputs'](space, inputs, **params).T
         for ind in centers:
-            plt.plot(space, ksi[int(len(ksi)*ind), :])
+            plt.plot(space, ksi[int(len(ksi)*ind), :], label='k(x,'+str(inputs[int(len(ksi)*ind), :])+')')
+        plot_text('Kernel', 'Space x', 'Kernel value k(x,v)')
 
+    def plot_concentration(self, params=None, space=None):
+        if params is None:
+            params = self.get_params_current()
+        if space is None:
+            space = self.space_values
+        plt.matshow(self.compiles['kernel_space'](space, **params))
+        plot_text('Concentration', 'Space x', 'Space x')
 
-    def plot_distribution2D(self, params=None, space=None, inputs=None, outputs=None, mean=True, var=True, cov=False, median=False, quantiles=False, noise=False, prior=False, sigma=4, neval=100):
+    def plot_location(self, params=None, space=None):
+        if params is None:
+            params = self.get_params_current()
+        if space is None:
+            space = self.space_values
+        plt.plot(space, self.compiles['location_space'](space, **params), label='location')
+        plot_text('Location', 'Space x', 'Location value m(x)')
+
+    def plot_distribution2D(self, params=None, space=None, inputs=None, outputs=None, mean=True, var=True, cov=False, median=False, quantiles=False, noise=False, prior=False, sigma=2, neval=33):
         pred = self.predict(params=params, space=space, inputs=inputs, outputs=outputs, mean=mean, var=var, cov=cov, median=median, quantiles=quantiles, noise=noise, distribution=True, prior=prior)
         dist1 = np.linspace(pred.mean[0] - sigma * pred.std[0], pred.mean[0] + sigma * pred.std[0], neval)
         dist2 = np.linspace(pred.mean[1] - sigma * pred.std[1], pred.mean[1] + sigma * pred.std[1], neval)
@@ -433,6 +454,29 @@ class StochasticProcess:
         for i in range(len(xy)):
             dist_plot[i] = pred.distribution(xy[i])
         plot_2d(dist_plot, x2d, y2d)
+        plot_text('Distribution2D', 'Domain y '+str(space[0]), 'Domain y '+str(space[1]))
+
+
+    def plot_model(self, points=np.array([[0], [1]])):
+        #plt.subplot(321)
+        #self.plot_location()
+        #plt.subplot(322)
+        #self.plot_concentration()
+        plt.subplot(321)
+        self.plot_kernel()
+        plt.subplot(322)
+        self.plot_mapping()
+        plt.subplot(323)
+        self.plot_distribution(space=points[0] * np.ones((1, 1)), prior=True)
+        self.plot_distribution(space=points[0] * np.ones((1, 1)))
+        plt.subplot(324)
+        self.plot_distribution(space=points[1] * np.ones((1, 1)), prior=True)
+        self.plot_distribution(space=points[1] * np.ones((1, 1)))
+
+        self.plot_distribution2D(space=points)
+
+
+
 
     def plot_kernel2D(self):
         pass
@@ -542,6 +586,7 @@ class StochasticProcess:
             plt.show()
         with self.model:
             for i in range(points):
+                try:
                     name, logp, start = points_list[i // 2]
                     if i % 2 == 0:
                         name += '_bfgs'
@@ -558,6 +603,8 @@ class StochasticProcess:
                         plt.figure(i+1)
                         self.plot(params=new, title=name)
                         plt.show()
+                except:
+                    pass
 
         optimal = points_list[0]
         for test in points_list:
@@ -631,8 +678,6 @@ class StochasticProcess:
             plt.plot(self.observed_index, self.outputs_values, '.k', ms=20, label='Observations')
 
     # TODO:
-    def plot_concentration(self):
-        return plt.matshow(self.cov_inputs)
 
 
     def subprocess(self, subkernel, mean=True, cov=False, var=True, median=False, quantiles=False, noise=False):

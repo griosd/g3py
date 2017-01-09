@@ -42,13 +42,13 @@ def tt_to_cov(c):
     return tt.switch(m > 0, r, r + (1e-6-m)*tt.eye(c.shape[0]) )
 
 
-def inverse_function(func, z, tol=1e-3, n_steps=1024):
+def inverse_function(func, z, tol=1e-3, n_steps=1024, alpha=1.0):
     def iter_newton(x):
         diff = func(x) - z
         dfunc = tt.grad(tt.sum(diff), x)
-        return x - diff/dfunc, th.scan_module.until(tt.max(tt.abs_(diff))/tt.max(tt.abs_(z)) < tol)
-
-    values, _ = th.scan(iter_newton, outputs_info=z/2, n_steps=n_steps)
+        return x - alpha*diff/dfunc, th.scan_module.until(tt.max(tt.abs_(diff))/tt.max(tt.abs_(z)) < tol)
+    init = tt.switch(tt.abs_(func(z/2) - z) < tt.abs_(func(0) - z), z/2, 0)
+    values, _ = th.scan(iter_newton, outputs_info=init, n_steps=n_steps)
     return values[-1]
 
 
