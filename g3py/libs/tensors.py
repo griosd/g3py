@@ -42,14 +42,43 @@ def tt_to_cov(c):
     return tt.switch(m > 0, r, r + (1e-6-m)*tt.eye(c.shape[0]) )
 
 
-def inverse_function(func, z, tol=1e-3, n_steps=1024, alpha=1.0):
+def inverse_function(func, z, tol=1e-3, n_steps=1024, alpha=0.1):
     def iter_newton(x):
-        diff = func(x) - z
+        diff = (func(x) - z)
         dfunc = tt.grad(tt.sum(diff), x)
-        return x - alpha*diff/dfunc, th.scan_module.until(tt.max(tt.abs_(diff))/tt.max(tt.abs_(z)) < tol)
-    init = tt.switch(tt.abs_(func(z/2) - z) < tt.abs_(func(0) - z), z/2, 0)
+        dfunc = tt.switch(tt.abs_(dfunc) < 1.0, tt.sgn(dfunc), dfunc)
+        return x - alpha*diff/dfunc, th.scan_module.until(tt.max(tt.abs_(diff)) < tol)
+    init = 0*z
     values, _ = th.scan(iter_newton, outputs_info=init, n_steps=n_steps)
     return values[-1]
+
+
+class InverseFunction(th.gof.Op):
+    def __init__(self, func):
+        self.func = func
+
+    def infer_shape(self, node, shapes):
+        return [shapes[0]]
+
+    def make_node(self, x):
+        x = tt.as_tensor_variable(x)
+        return th.gof.Apply(self, [x], [x.type()])
+
+    def perform(self, node, inputs, outputs):
+        x = inputs[0]
+        z = outputs[0]
+        try:
+            z[0] = sp.optimize.root(lambda _x: self.func(_x) - x, x).astype(x.dtype)
+        except:
+            raise
+
+    def grad(self, inputs, gradients):
+        pass
+        x = inputs[0]
+        dz = gradients[0]
+        inv_x = self(x)
+
+
 
 
 class CholeskyRobust(th.gof.Op):

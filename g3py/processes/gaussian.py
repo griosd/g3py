@@ -20,7 +20,8 @@ class GaussianProcess(StochasticProcess):
         self.prior_mean = self.location_space
         self.prior_covariance = self.kernel_f_space
         self.prior_cholesky = cholesky_robust(self.prior_covariance)
-        self.prior_distribution = tt.exp(TGPDist.logp_cho(self.random_th, self.prior_mean, self.prior_cholesky, self.mapping))
+        self.prior_logp = TGPDist.logp_cho(self.random_th, self.prior_mean, self.prior_cholesky, self.mapping)
+        self.prior_distribution = tt.exp(self.prior_logp.sum())
         self.prior_variance = tnl.extract_diag(self.prior_covariance)
         self.prior_std = tt.sqrt(self.prior_variance)
         self.prior_noise = tt.sqrt(tnl.extract_diag(self.kernel_space))
@@ -37,7 +38,8 @@ class GaussianProcess(StochasticProcess):
         self.posterior_covariance = self.kernel_f.cov(self.space_th) - self.kernel_f_space_inputs.dot(
             tsl.solve(self.kernel_inputs, self.kernel_f_space_inputs.T))
         self.posterior_cholesky = cholesky_robust(self.posterior_covariance)
-        self.posterior_distribution = tt.exp(TGPDist.logp_cho(self.random_th, self.posterior_mean, self.posterior_cholesky, self.mapping))
+        self.posterior_logp = TGPDist.logp_cho(self.random_th, self.posterior_mean, self.posterior_cholesky, self.mapping)
+        self.posterior_distribution = tt.exp(self.posterior_logp.sum())
         self.posterior_variance = tnl.extract_diag(self.posterior_covariance)
         self.posterior_std = tt.sqrt(self.posterior_variance)
         self.posterior_noise = tt.sqrt(tnl.extract_diag(self.kernel.cov(self.space_th) - self.kernel_f_space_inputs.dot(
@@ -95,10 +97,12 @@ class TransformedGaussianProcess(StochasticProcess):
         self.latent_posterior_noise = np.sqrt(tnl.extract_diag(self.kernel.cov(self.space_th) - self.kernel_f_space_inputs.dot(tsl.solve(self.kernel_inputs, self.kernel_f_space_inputs.T))))
 
         self.prior_cholesky = cholesky_robust(self.latent_prior_covariance)
-        self.prior_distribution = tt.exp(TGPDist.logp_cho(self.random_th, self.latent_prior_mean, self.prior_cholesky, self.mapping).sum())
+        self.prior_logp = TGPDist.logp_cho(self.random_th, self.latent_prior_mean, self.prior_cholesky, self.mapping)
+        self.prior_distribution = tt.exp(self.prior_logp.sum())
 
         self.posterior_cholesky = cholesky_robust(self.latent_posterior_covariance)
-        self.posterior_distribution = tt.exp(TGPDist.logp_cho(self.random_th, self.latent_posterior_mean, self.posterior_cholesky, self.mapping).sum())
+        self.posterior_logp = TGPDist.logp_cho(self.random_th, self.latent_posterior_mean, self.posterior_cholesky, self.mapping)
+        self.posterior_distribution = tt.exp(self.posterior_logp.sum())
         print('Latent OK')
 
         # Prior

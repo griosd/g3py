@@ -61,12 +61,13 @@ def show(*args, **kwargs):
     plt.show(*args, **kwargs)
 
 
-def plot_text(title="title", x="xlabel", y="ylabel", ncol=3, loc=8, axis=None):
+def plot_text(title="title", x="xlabel", y="ylabel", ncol=3, loc=8, axis=None, legend=True):
     plt.axis('tight')
     plt.title(title)
     plt.xlabel(x)
     plt.ylabel(y)
-    plt.legend(ncol=ncol, loc=loc)
+    if legend:
+        plt.legend(ncol=ncol, loc=loc)
     if axis is not None:
         plt.axis(axis)
 
@@ -95,5 +96,5 @@ def plot_2d(xy, x, y, grid=True):
         x2d, y2d = x2d.T, y2d.T
     fig = plt.figure(figsize=[20, 10])
     ax = fig.gca(projection='3d')
-    ax.plot_surface(x2d, y2d, fxy2d_hidden, alpha=0.4, cmap=cm.RdBu_r)
-    cset = ax.contourf(x2d, y2d, fxy2d_hidden, zdir='z', offset=np.min(fxy2d_hidden), cmap=cm.RdBu_r)
+    cset = ax.contour(x2d, y2d, fxy2d_hidden, zdir='z', offset=np.min(fxy2d_hidden), cmap=cm.RdBu_r)
+    ax.plot_surface(x2d, y2d, fxy2d_hidden, alpha=0.4, cmap=cm.RdBu_r, rstride=1, cstride=1)

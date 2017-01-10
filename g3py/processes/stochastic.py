@@ -124,6 +124,7 @@ class StochasticProcess:
         self.prior_mean = None
         self.prior_covariance = None
         self.prior_cholesky = None
+        self.prior_logp = None
         self.prior_distribution = None
         self.prior_variance = None
         self.prior_std = None
@@ -139,6 +140,7 @@ class StochasticProcess:
         self.posterior_mean = None
         self.posterior_covariance = None
         self.posterior_cholesky = None
+        self.posterior_logp = None
         self.posterior_distribution = None
         self.posterior_variance = None
         self.posterior_std = None
@@ -165,7 +167,6 @@ class StochasticProcess:
     def get_model(self):
         try:
             model = pm.Model.get_context()
-            return model
         except:
             model = pm.Model()
 
@@ -218,6 +219,7 @@ class StochasticProcess:
         self.compiles['prior_quantile_down'] = makefn(params, self.prior_quantile_down)
         self.compiles['prior_noise_up'] = makefn(params, self.prior_noise_up)
         self.compiles['prior_noise_down'] = makefn(params, self.prior_noise_down)
+        self.compiles['prior_logp'] = makefn([self.random_th] + params, self.prior_logp)
         self.compiles['prior_distribution'] = makefn([self.random_th] + params, self.prior_distribution)
         try:
             self.compiles['prior_sampler'] = makefn([self.random_th] + params, self.prior_sampler)
@@ -236,6 +238,7 @@ class StochasticProcess:
         self.compiles['posterior_quantile_down'] = makefn(params, self.posterior_quantile_down)
         self.compiles['posterior_noise_up'] = makefn(params, self.posterior_noise_up)
         self.compiles['posterior_noise_down'] = makefn(params, self.posterior_noise_down)
+        self.compiles['posterior_logp'] = makefn([self.random_th] + params, self.posterior_logp)
         self.compiles['posterior_distribution'] = makefn([self.random_th] + params, self.posterior_distribution)
         try:
             self.compiles['posterior_sampler'] = makefn([self.random_th] + params, self.posterior_sampler)
@@ -305,6 +308,7 @@ class StochasticProcess:
                 S[:, i] = self.compiles['prior_sampler'](rand[:, i], space, **params)
                 values['samples'] = S
         if distribution:
+            values['logp'] = lambda x: self.compiles['prior_logp'](x, space, **params)
             values['distribution'] = lambda x: self.compiles['prior_distribution'](x, space, **params)
         return values
 
@@ -342,6 +346,7 @@ class StochasticProcess:
                 S[:, i] = self.compiles['posterior_sampler'](rand[:, i], space, inputs, outputs, **params)
             values['samples'] = S
         if distribution:
+            values['logp'] = lambda x: self.compiles['posterior_logp'](x, space, inputs, outputs, **params)
             values['distribution'] = lambda x: self.compiles['posterior_distribution'](x, space, inputs, outputs, **params)
         return values
 
@@ -362,6 +367,24 @@ class StochasticProcess:
             return self.prior(params=params, space=space, mean=mean, var=var, cov=cov, median=median, quantiles=quantiles, noise=noise, samples=samples, distribution=distribution)
         else:
             return self.posterior(params=params, space=space, inputs=inputs, outputs=outputs, mean=mean, var=var, cov=cov, median=median, quantiles=quantiles, noise=noise, samples=samples, distribution=distribution)
+
+    def scores(self, params=None, space=None, hidden=None, inputs=None, outputs=None, L1=True, L2=True, LL=True, MSE=True):
+        if hidden is None:
+            hidden = self.hidden
+        pred = self.predict(params=params, space=space, inputs=inputs, outputs=outputs, noise=True, distribution=True)
+        scores = DictObj()
+        if L1:
+            scores['BiasL1'] = np.mean(np.abs(pred.mean - hidden))
+        if L2:
+            scores['BiasL2'] = np.sqrt(np.mean(np.abs(pred.mean - hidden)**2))
+        if LL:
+            scores['NLL'] = - pred.logp(hidden) / len(hidden)
+            scores['NLPD'] = - sp.stats.multivariate_normal.logpdf(x=hidden, mean=pred.mean, cov=pred.noise)/len(hidden)
+        if MSE:
+            scores['MSE'] = np.mean((pred.mean - hidden) ** 2 + pred.variance)
+            scores['RMSE'] = np.sqrt(scores['MSE'])
+        return scores
+
 
     def plot(self, params=None, space=None, inputs=None, outputs=None, mean=True, var=True, cov=False, median=True, quantiles=True, noise=True, samples=0, prior=False,
              data=True, big=None, scores=False, title=None, loc=1):
@@ -454,7 +477,7 @@ class StochasticProcess:
         for i in range(len(xy)):
             dist_plot[i] = pred.distribution(xy[i])
         plot_2d(dist_plot, x2d, y2d)
-        plot_text('Distribution2D', 'Domain y '+str(space[0]), 'Domain y '+str(space[1]))
+        plot_text('Distribution2D', 'Domain y '+str(space[0]), 'Domain y '+str(space[1]), legend=False)
 
 
     def plot_model(self, points=np.array([[0], [1]])):
@@ -540,6 +563,16 @@ class StochasticProcess:
                 intervals[k] = [-5.00, 5.00]
         interact(self.widget_plot_params, __manual=True, **intervals)
 
+    def get_params_random(self, mean=None, sigma=0.1, fixed=True):
+        if mean is None:
+            mean = self.get_params_default()
+        for k, v in mean.items():
+            mean[k] = v * (1 + sigma * np.random.randn(v.size).reshape(v.shape)).astype(th.config.floatX)
+        if fixed:
+            mean.update(self.params_fixed)
+        return mean
+
+
     def get_params_test(self, fixed=False):
         test = clone(self.model.test_point)
         if fixed:
@@ -574,12 +607,18 @@ class StochasticProcess:
         points_list = list()
         if start is None:
             start = self.get_params_current()
+        if type(start) is list:
+            i = 0
+            for s in start:
+                i += 1
+                points_list.append(('start'+str(i), self.model.logp(s), s))
+        else:
+            points_list.append(('start', self.model.logp(start), start))
         if self.outputs.get_value() is None:
             print('For find_MAP it is necessary to have observations')
             return start
-        points_list.append(('start', self.model.logp(start), start))
         if display:
-            print('Starting function value (-logp): ' + str(-self.model.logp(start)))
+            print('Starting function value (-logp): ' + str(-self.model.logp(points_list[0][2])))
         if plot:
             plt.figure(0)
             self.plot(params=start, title='start')
@@ -628,12 +667,13 @@ class StochasticProcess:
         with self.model:
             if len(self.fixed_vars) > 0:
                 step = [ConstantStep(vars=self.fixed_vars)]  # Fue eliminado por error en pymc3
-                if method == 'HMC':
-                    step += [pm.HamiltonianMC(vars=self.sampling_vars, scaling=self.get_params_default(), is_cov=True)]
-                else:
-                    step += [RobustSlice(vars=self.sampling_vars)]  # Slice original se cuelga si parte del óptimo
-                #step += [pm.Metropolis(vars=self.sampling_vars, tune=False)] # OK
-                #step += [pm.NUTS(vars=self.sampling_vars, scaling=advi_sm, is_cov=True)] #BUG float32
+                if len(self.sampling_vars) > 0:
+                    if method == 'HMC':
+                        step += [pm.HamiltonianMC(vars=self.sampling_vars, scaling=self.get_params_default(), path_length=5., is_cov=False)]
+                    else:
+                        step += [RobustSlice(vars=self.sampling_vars)]  # Slice original se cuelga si parte del óptimo
+                    #step += [pm.Metropolis(vars=self.sampling_vars, tune=False)] # OK
+                    #step += [pm.NUTS(vars=self.sampling_vars, scaling=advi_sm, is_cov=True)] #BUG float32
             else:
                 step = RobustSlice()
             trace = pm.sample(samples, step=step, start=start, njobs=chains, trace=trace)
@@ -650,12 +690,22 @@ class StochasticProcess:
         except:
             print('Error saving model '+path)
 
-    def plot_space(self, space=None):
+    def plot_space(self, space=None, independ=False ,observed=False):
         if space is not None:
             self.set_space(space)
-        plt.plot(self.space_index, self.space_values)
-        if self.observed_index is not None:
-            plt.plot(self.observed_index, self.inputs_values, '.k')
+        if independ:
+            for i in range(self.space_values.shape[1]):
+                plt.figure(i)
+                plt.plot(self.space_index, self.space_values[:, i])
+        else:
+            plt.plot(self.space_index, self.space_values)
+        if self.observed_index is not None and observed:
+            if independ:
+                for i in range(self.space_values.shape[1]):
+                    plt.figure(i)
+                    plt.plot(self.observed_index, self.inputs_values[:, i], '.k')
+            else:
+                plt.plot(self.observed_index, self.inputs_values, '.k')
 
     def plot_data(self, big=None):
         if big is None:

@@ -5,6 +5,8 @@ import pandas as pd
 import pymc3 as pm
 import seaborn as sb
 import matplotlib.pyplot as plt
+from matplotlib import cm
+from sklearn import cluster, mixture
 
 
 def marginal(datatrace, items=None, like=None, regex=None, samples=None):
@@ -76,20 +78,20 @@ def add_likelihood_to_dataframe(model, datatrace, trace):
         niter[i] = i
         ll[i] = flogp(trace[i])
         adll[i] = np.sum(np.abs(dflogp((trace[i]))))
-    datatrace['niter'] = niter
-    datatrace['ll'] = ll
-    datatrace['adll'] = adll
+    datatrace['_niter'] = niter
+    datatrace['_ll'] = ll
+    datatrace['_adll'] = adll
 
 
 def find_candidates(datatrace, ll=1, adll=1, rand=1):
     # modes
     candidates = list()
-    if 'll' in datatrace:
-        for index, row in datatrace.nlargest(ll, 'll').iterrows():
+    if '_ll' in datatrace:
+        for index, row in datatrace.nlargest(ll, '_ll').iterrows():
             row.name = "ll[" + str(row.name) + "]"
             candidates.append(row)
-    if 'adll' in datatrace:
-        for index, row in datatrace.nsmallest(adll, 'adll').iterrows():
+    if '_adll' in datatrace:
+        for index, row in datatrace.nsmallest(adll, '_adll').iterrows():
             row.name = "adll[" + str(row.name) + "]"
             candidates.append(row)
     mean = datatrace.mean()
@@ -160,3 +162,22 @@ def scatter_trace(datatrace, items=None, like=None, regex=None, samples=2000, bi
     pd.scatter_matrix(marginal(datatrace, items=items, like=like, regex=regex, samples=min(samples, len(datatrace))),
                       grid=True, hist_kwds={'bins': bins}, figsize=figsize)
 
+# TODO: cluster_datatrace
+def cluster_datatrace(datatraces, n_components=10, quantile=0.2):
+    dpgmm = mixture.BayesianGaussianMixture(n_components=n_components, covariance_type='full', max_iter=1000).fit(datatraces)
+    bandwidth = cluster.estimate_bandwidth(datatraces.values, quantile=quantile, n_samples=len(datatraces))
+    meanshift = cluster.MeanShift(bandwidth=bandwidth, bin_seeding=True, min_bin_freq=10, cluster_all=False).fit(
+        datatraces)
+
+    cluster_gm = dpgmm.predict(datatraces)
+    cluster_ms = meanshift.predict(datatraces)
+    datatraces['_cluster_gm'] = cluster_gm
+    datatraces['_cluster_ms'] = cluster_ms
+
+    mdf = marginal(datatraces, items=['_niter', '_ll', '_cluster_gm'], like=None, regex=None)
+    _ = pd.scatter_matrix(mdf, grid=True, c=datatraces['_cluster_gm'].values,
+                          cmap=cm.rainbow)
+
+    mdf = marginal(datatraces, items=['_niter', '_ll', '_cluster_ms'], like=None, regex=None)
+    _ = pd.scatter_matrix(mdf, grid=True, c=datatraces['_cluster_ms'].values,
+                          cmap=cm.rainbow)
