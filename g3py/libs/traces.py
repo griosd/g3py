@@ -149,35 +149,22 @@ def traceplot(trace, plot_transformed=True):
     pm.traceplot(trace, plot_transformed=plot_transformed)
 
 
-def plot_datatrace(df, items=None, size=6, n_levels=20, cmap="Blues_d"):
+def cluster_datatrace(datatrace, n_components=10, n_init=1, excludes='_'):
+    datatraces_filter = datatrace.filter(regex='^(?!' + excludes + ')')
+    dpgmm = mixture.BayesianGaussianMixture(n_components=n_components, covariance_type='full', max_iter=1000, n_init=n_init).fit(datatraces_filter)
+    cluster_gm = dpgmm.predict(datatraces_filter)
+    datatrace['_cluster'] = cluster_gm
+
+
+def scatter_trace(datatrace, items=None, like=None, regex=None, samples=None, bins=200, figsize=(15, 10), c=None, cmap=cm.rainbow):
+    df = marginal(datatrace, items=items, like=like, regex=regex, samples=samples)
+    pd.scatter_matrix(df, grid=True, hist_kwds={'normed': True, 'bins': bins}, figsize=figsize, c=c[df.index], cmap=cmap)
+
+
+def kde_trace(df, items=None, size=6, n_levels=20, cmap="Blues_d"):
     df = marginal(df, items)
     g = sb.PairGrid(df, size=size)
     g.map_diag(sb.distplot, bins=200)
     g.map_offdiag(plt.scatter)
     g.map_offdiag(sb.kdeplot, n_levels=n_levels, cmap=cmap)
     return g
-
-
-def scatter_trace(datatrace, items=None, like=None, regex=None, samples=2000, bins=200, figsize=(15, 10)):
-    pd.scatter_matrix(marginal(datatrace, items=items, like=like, regex=regex, samples=min(samples, len(datatrace))),
-                      grid=True, hist_kwds={'bins': bins}, figsize=figsize)
-
-# TODO: cluster_datatrace
-def cluster_datatrace(datatraces, n_components=10, quantile=0.2):
-    dpgmm = mixture.BayesianGaussianMixture(n_components=n_components, covariance_type='full', max_iter=1000).fit(datatraces)
-    bandwidth = cluster.estimate_bandwidth(datatraces.values, quantile=quantile, n_samples=len(datatraces))
-    meanshift = cluster.MeanShift(bandwidth=bandwidth, bin_seeding=True, min_bin_freq=10, cluster_all=False).fit(
-        datatraces)
-
-    cluster_gm = dpgmm.predict(datatraces)
-    cluster_ms = meanshift.predict(datatraces)
-    datatraces['_cluster_gm'] = cluster_gm
-    datatraces['_cluster_ms'] = cluster_ms
-
-    mdf = marginal(datatraces, items=['_niter', '_ll', '_cluster_gm'], like=None, regex=None)
-    _ = pd.scatter_matrix(mdf, grid=True, c=datatraces['_cluster_gm'].values,
-                          cmap=cm.rainbow)
-
-    mdf = marginal(datatraces, items=['_niter', '_ll', '_cluster_ms'], like=None, regex=None)
-    _ = pd.scatter_matrix(mdf, grid=True, c=datatraces['_cluster_ms'].values,
-                          cmap=cm.rainbow)
