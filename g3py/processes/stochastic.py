@@ -4,7 +4,7 @@ import pymc3 as pm
 import scipy as sp
 import theano as th
 from g3py.functions import Mean, Kernel, Mapping, KernelSum, WN, tt_to_num, def_space, trans_hypers
-from g3py.libs import tt_to_cov, makefn, plot_text, clone, DictObj, plot_2d, grid2d
+from g3py.libs import tt_to_cov, makefn, plot_text, clone, DictObj, plot_2d, grid2d, show
 from g3py.models import ConstantStep, RobustSlice
 from g3py import config
 from ipywidgets import interact
@@ -125,6 +125,7 @@ class StochasticProcess:
         self.prior_covariance = None
         self.prior_cholesky = None
         self.prior_logp = None
+        self.prior_logpred = None
         self.prior_distribution = None
         self.prior_variance = None
         self.prior_std = None
@@ -141,6 +142,7 @@ class StochasticProcess:
         self.posterior_covariance = None
         self.posterior_cholesky = None
         self.posterior_logp = None
+        self.posterior_logpred = None
         self.posterior_distribution = None
         self.posterior_variance = None
         self.posterior_std = None
@@ -220,6 +222,7 @@ class StochasticProcess:
         self.compiles['prior_noise_up'] = makefn(params, self.prior_noise_up)
         self.compiles['prior_noise_down'] = makefn(params, self.prior_noise_down)
         self.compiles['prior_logp'] = makefn([self.random_th] + params, self.prior_logp)
+        self.compiles['prior_logpred'] = makefn([self.random_th] + params, self.prior_logpred)
         self.compiles['prior_distribution'] = makefn([self.random_th] + params, self.prior_distribution)
         try:
             self.compiles['prior_sampler'] = makefn([self.random_th] + params, self.prior_sampler)
@@ -239,6 +242,7 @@ class StochasticProcess:
         self.compiles['posterior_noise_up'] = makefn(params, self.posterior_noise_up)
         self.compiles['posterior_noise_down'] = makefn(params, self.posterior_noise_down)
         self.compiles['posterior_logp'] = makefn([self.random_th] + params, self.posterior_logp)
+        self.compiles['posterior_logpred'] = makefn([self.random_th] + params, self.posterior_logpred)
         self.compiles['posterior_distribution'] = makefn([self.random_th] + params, self.posterior_distribution)
         try:
             self.compiles['posterior_sampler'] = makefn([self.random_th] + params, self.posterior_sampler)
@@ -260,8 +264,9 @@ class StochasticProcess:
         if title is not None:
             self.description['text'] = text
 
-    def set_space(self, space):
+    def set_space(self, space, hidden=None):
         __, self.space_values, self.space_index = def_space(space)
+        self.hidden = hidden
 
     def observed(self, inputs=None, outputs=None):
         if inputs is None or outputs is None or len(inputs) == 0 or len(inputs) == 0:
@@ -309,6 +314,7 @@ class StochasticProcess:
                 values['samples'] = S
         if distribution:
             values['logp'] = lambda x: self.compiles['prior_logp'](x, space, **params)
+            values['logpred'] = lambda x: self.compiles['prior_logpred'](x, space, **params)
             values['distribution'] = lambda x: self.compiles['prior_distribution'](x, space, **params)
         return values
 
@@ -347,6 +353,7 @@ class StochasticProcess:
             values['samples'] = S
         if distribution:
             values['logp'] = lambda x: self.compiles['posterior_logp'](x, space, inputs, outputs, **params)
+            values['logpred'] = lambda x: self.compiles['posterior_logpred'](x, space, inputs, outputs, **params)
             values['distribution'] = lambda x: self.compiles['posterior_distribution'](x, space, inputs, outputs, **params)
         return values
 
@@ -368,19 +375,18 @@ class StochasticProcess:
         else:
             return self.posterior(params=params, space=space, inputs=inputs, outputs=outputs, mean=mean, var=var, cov=cov, median=median, quantiles=quantiles, noise=noise, samples=samples, distribution=distribution)
 
-    def scores(self, params=None, space=None, hidden=None, inputs=None, outputs=None, L1=True, L2=True, LL=True, MSE=True):
+    def scores(self, params=None, space=None, hidden=None, inputs=None, outputs=None, logp=True, bias=True, variance=False):
         if hidden is None:
             hidden = self.hidden
-        pred = self.predict(params=params, space=space, inputs=inputs, outputs=outputs, noise=True, distribution=True)
+        pred = self.predict(params=params, space=space, inputs=inputs, outputs=outputs, var=variance, distribution=logp)
         scores = DictObj()
-        if L1:
-            scores['BiasL1'] = np.mean(np.abs(pred.mean - hidden))
-        if L2:
-            scores['BiasL2'] = np.sqrt(np.mean(np.abs(pred.mean - hidden)**2))
-        if LL:
+        if logp:
             scores['NLL'] = - pred.logp(hidden) / len(hidden)
-            scores['NLPD'] = - sp.stats.multivariate_normal.logpdf(x=hidden, mean=pred.mean, cov=pred.noise)/len(hidden)
-        if MSE:
+            scores['NLPD'] = - pred.logpred(hidden) / len(hidden)
+        if bias:
+            scores['BiasL1'] = np.mean(np.abs(pred.mean - hidden))
+            scores['BiasL2'] = np.sqrt(np.mean(np.abs(pred.mean - hidden)**2))
+        if variance:
             scores['MSE'] = np.mean((pred.mean - hidden) ** 2 + pred.variance)
             scores['RMSE'] = np.sqrt(scores['MSE'])
         return scores
@@ -414,7 +420,7 @@ class StochasticProcess:
             pass
         plot_text(title, self.description['x'], self.description['y'], loc=loc)
 
-    def plot_distribution(self, params=None, space=None, inputs=None, outputs=None, mean=True, var=True, cov=False, median=False, quantiles=False, noise=False, prior=False, sigma=4, neval=100):
+    def plot_distribution(self, index=0, params=None, space=None, inputs=None, outputs=None, mean=True, var=True, cov=False, median=False, quantiles=False, noise=False, prior=False, sigma=4, neval=100):
         pred = self.predict(params=params, space=space, inputs=inputs, outputs=outputs, mean=mean, var=var, cov=cov, median=median, quantiles=quantiles, noise=noise, distribution=True, prior=prior)
         domain = np.linspace(pred.mean - sigma * pred.std, pred.mean + sigma * pred.std, neval)
         dist_plot = np.zeros(len(domain))
@@ -424,7 +430,7 @@ class StochasticProcess:
             plt.plot(domain, dist_plot, label='prior')
         else:
             plt.plot(domain, dist_plot, label='posterior')
-        plot_text('Marginal Distribution '+str(space[0]), 'Domain y', 'p(y)')
+        plot_text('Marginal Distribution y_'+str(self.space_index[index]), 'Domain y', 'p(y)')
 
     def plot_mapping(self, params=None, space=None, inputs=None, outputs=None, neval=100):
         if params is None:
@@ -435,9 +441,9 @@ class StochasticProcess:
         transform = self.compiles['mapping_inv_th'](domain, **params)
         plt.plot(domain, transform, label='mapping_inv_th')
 
-        inv_domain = np.linspace(transform.min() - transform.std(), transform.max() + transform.std(), neval)
-        inv_transform = self.compiles['mapping_th'](inv_domain, **params)
-        plt.plot(inv_transform, inv_domain, label='mapping_th')
+        #inv_domain = np.linspace(transform.min() - transform.std(), transform.max() + transform.std(), neval)
+        #inv_transform = self.compiles['mapping_th'](inv_domain, **params)
+        #plt.plot(inv_transform, inv_domain, label='mapping_th')
         plot_text('Mapping', 'Domain y', 'Domain T(y)')
 
     def plot_kernel(self, params=None, space=None, inputs=None, centers=[1/10, 1/2, 9/10]):
@@ -449,7 +455,7 @@ class StochasticProcess:
             inputs = self.inputs_values
         ksi = self.compiles['kernel_space_inputs'](space, inputs, **params).T
         for ind in centers:
-            plt.plot(space, ksi[int(len(ksi)*ind), :], label='k(x,'+str(inputs[int(len(ksi)*ind), :])+')')
+            plt.plot(self.space_index, ksi[int(len(ksi)*ind), :], label='k(x_'+str(int(len(ksi)*ind))+')')
         plot_text('Kernel', 'Space x', 'Kernel value k(x,v)')
 
     def plot_concentration(self, params=None, space=None):
@@ -465,10 +471,10 @@ class StochasticProcess:
             params = self.get_params_current()
         if space is None:
             space = self.space_values
-        plt.plot(space, self.compiles['location_space'](space, **params), label='location')
+        plt.plot(self.space_index, self.compiles['location_space'](space, **params), label='location')
         plot_text('Location', 'Space x', 'Location value m(x)')
 
-    def plot_distribution2D(self, params=None, space=None, inputs=None, outputs=None, mean=True, var=True, cov=False, median=False, quantiles=False, noise=False, prior=False, sigma=2, neval=33):
+    def plot_distribution2D(self, indexs=[0,1], params=None, space=None, inputs=None, outputs=None, mean=True, var=True, cov=False, median=False, quantiles=False, noise=False, prior=False, sigma=2, neval=33):
         pred = self.predict(params=params, space=space, inputs=inputs, outputs=outputs, mean=mean, var=var, cov=cov, median=median, quantiles=quantiles, noise=noise, distribution=True, prior=prior)
         dist1 = np.linspace(pred.mean[0] - sigma * pred.std[0], pred.mean[0] + sigma * pred.std[0], neval)
         dist2 = np.linspace(pred.mean[1] - sigma * pred.std[1], pred.mean[1] + sigma * pred.std[1], neval)
@@ -477,27 +483,27 @@ class StochasticProcess:
         for i in range(len(xy)):
             dist_plot[i] = pred.distribution(xy[i])
         plot_2d(dist_plot, x2d, y2d)
-        plot_text('Distribution2D', 'Domain y '+str(space[0]), 'Domain y '+str(space[1]), legend=False)
+        plot_text('Distribution2D', 'Domain y_'+str(self.space_index[indexs[0]]), 'Domain y_'+str(self.space_index[indexs[1]]), legend=False)
 
 
-    def plot_model(self, points=np.array([[0], [1]])):
+    def plot_model(self, params=None, indexs=[0, 1]):
         #plt.subplot(321)
         #self.plot_location()
         #plt.subplot(322)
         #self.plot_concentration()
         plt.subplot(321)
-        self.plot_kernel()
+        self.plot_kernel(params=params)
         plt.subplot(322)
-        self.plot_mapping()
+        self.plot_mapping(params=params)
         plt.subplot(323)
-        self.plot_distribution(space=points[0] * np.ones((1, 1)), prior=True)
-        self.plot_distribution(space=points[0] * np.ones((1, 1)))
+        self.plot_distribution(index=indexs[0], params=params, space=self.space_values[indexs[0]:indexs[0]+1, :], prior=True)
+        self.plot_distribution(index=indexs[0], params=params, space=self.space_values[indexs[0]:indexs[0]+1, :])
         plt.subplot(324)
-        self.plot_distribution(space=points[1] * np.ones((1, 1)), prior=True)
-        self.plot_distribution(space=points[1] * np.ones((1, 1)))
-
-        self.plot_distribution2D(space=points)
-
+        self.plot_distribution(index=indexs[1], params=params, space=self.space_values[indexs[1]:indexs[1]+1, :], prior=True)
+        self.plot_distribution(index=indexs[1], params=params, space=self.space_values[indexs[1]:indexs[1]+1, :])
+        show()
+        self.plot_distribution2D(indexs=indexs, params=params, space=self.space_values[indexs, :])
+        show()
 
 
 
@@ -603,7 +609,7 @@ class StochasticProcess:
             self.params_widget.update(self.params_fixed)
         return clone(self.params_widget)
 
-    def find_MAP(self, start=None, points=1, plot=False, return_points=False, display=True):
+    def find_MAP(self, start=None, points=1, plot=False, return_points=False, display=True, powell=True):
         points_list = list()
         if start is None:
             start = self.get_params_current()
@@ -626,13 +632,22 @@ class StochasticProcess:
         with self.model:
             for i in range(points):
                 try:
-                    name, logp, start = points_list[i // 2]
-                    if i % 2 == 0:
+                    if powell:
+                        name, logp, start = points_list[i // 2]
+                    else:
+                        name, logp, start = points_list[i]
+                    if i % 2 == 0 or not powell:#
+                        if name.endswith('_bfgs'):
+                            points += 1
+                            continue
                         name += '_bfgs'
                         if display:
                             print('\n' + name)
                         new = pm.find_MAP(fmin=sp.optimize.fmin_bfgs, vars=self.sampling_vars, start=start, disp=display)
                     else:
+                        if name.endswith('_powell'):
+                            points += 1
+                            continue
                         name += '_powell'
                         if display:
                             print('\n' + name)

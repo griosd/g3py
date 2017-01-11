@@ -7,29 +7,7 @@ import seaborn as sb
 import matplotlib.pyplot as plt
 from matplotlib import cm
 from sklearn import cluster, mixture
-
-
-def marginal(datatrace, items=None, like=None, regex=None, samples=None):
-    if items is None and like is None and regex is None:
-        df = datatrace
-    else:
-        df = datatrace.filter(items=items, like=like, regex=regex)
-    if samples is None or samples > len(datatrace):
-        return df
-    else:
-        return df.sample(samples)
-
-
-def conditional(datatrace, lambda_df):
-    conditional_traces = datatrace.loc[lambda_df, :]
-    print('#'+str(len(conditional_traces)) + " (" + str(100 * len(conditional_traces) / len(datatrace)) + " %)")
-    return conditional_traces
-
-
-def datatrace(model, trace):
-    dt = trace_to_dataframe(trace, hide_transformed_vars=False)
-    add_likelihood_to_dataframe(model, dt, trace)
-    return dt
+from pymc3 import traceplot
 
 
 def save_trace(trace, path='trace.pkl'):
@@ -42,32 +20,47 @@ def load_trace(path='trace.pkl'):
         return pickle.load(f)
 
 
-def save_datatrace(datatrace, path='datatrace.pkl'):
-    datatrace.to_pickle(path)
+def load_traces_dir(dir_traces, last_samples=None):
+    traces = []
+    for subdir in [os.path.join(dir_traces, o) for o in os.listdir(dir_traces) if
+                   os.path.isdir(os.path.join(dir_traces, o))]:
+        try:
+            if last_samples is None:
+                traces.append(pm.backends.text.load(subdir))
+            else:
+                traces.append(pm.backends.text.load(subdir)[-int(last_samples):])
+        except:
+            pass
+    return append_traces(traces)
 
 
-def load_datatrace(path='datatrace.pkl'):
-    return pd.read_pickle(path)
+def append_traces(mtraces):
+    """Joins many MultiTrace objects into one.
+
+    Args:
+        mtraces (list): MultiTrace objects to join
+
+    Returns:
+        pm.backends.base.MultiTrace: MultiTrace object containing all the others joined
+
+    """
+    base_mtrace = mtraces[0]
+    i = base_mtrace.nchains
+    for new_mtrace in mtraces[1:]:
+        for new_chain, strace in new_mtrace._straces.items():
+            base_mtrace._straces[i] = strace
+            base_mtrace._straces[i].chain = i
+            i += 1
+    return base_mtrace
 
 
-def trace_to_dataframe(trace, chains=None, flat_names=None, hide_transformed_vars=True):
-    # TODO: mientras pymc3 se arregla
-    var_shapes = trace._straces[0].var_shapes
-    if flat_names is None:
-        flat_names = {v: pm.backends.tracetab.create_flat_names(v, shape)
-                      for v, shape in var_shapes.items()
-                      if not (hide_transformed_vars and v.endswith('_'))}
-
-    var_dfs = []
-    for varname, shape in var_shapes.items():
-        if not hide_transformed_vars or not varname.endswith('_'):
-            vals = trace.get_values(varname, combine=True, chains=chains)
-            flat_vals = vals.reshape(vals.shape[0], -1)
-            var_dfs.append(pd.DataFrame(flat_vals, columns=flat_names[varname]))
-    return pd.concat(var_dfs, axis=1)
+def trace_to_datatrace(model, trace):
+    dt = pm.trace_to_dataframe(trace, hide_transformed_vars=False)
+    likelihood_datatrace(model, dt, trace)
+    return dt
 
 
-def add_likelihood_to_dataframe(model, datatrace, trace):
+def likelihood_datatrace(model, datatrace, trace):
     ll = pd.Series(index=datatrace.index)
     adll = pd.Series(index=datatrace.index)
     niter = pd.Series(index=datatrace.index)
@@ -83,87 +76,66 @@ def add_likelihood_to_dataframe(model, datatrace, trace):
     datatrace['_adll'] = adll
 
 
-def find_candidates(datatrace, ll=1, adll=1, rand=1):
+def cluster_datatrace(dt, n_components=10, n_init=1, excludes='_'):
+    datatrace_filter = dt.filter(regex='^(?!' + excludes + ')')
+    gm = mixture.BayesianGaussianMixture(n_components=n_components, covariance_type='full', max_iter=1000, n_init=n_init).fit(datatrace_filter)
+    cluster_gm = gm.predict(datatrace_filter)
+    dt['_cluster'] = cluster_gm
+
+
+def save_datatrace(dt, path='datatrace.pkl'):
+    dt.to_pickle(path)
+
+
+def load_datatrace(path='datatrace.pkl'):
+    return pd.read_pickle(path)
+
+
+def marginal(dt, items=None, like=None, regex=None, samples=None):
+    if items is None and like is None and regex is None:
+        df = dt
+    else:
+        df = dt.filter(items=items, like=like, regex=regex)
+    if samples is None or samples > len(dt):
+        return df
+    else:
+        return df.sample(samples)
+
+
+def conditional(dt, lambda_df):
+    conditional_traces = dt.loc[lambda_df, :]
+    print('#' + str(len(conditional_traces)) + " (" + str(100 * len(conditional_traces) / len(dt)) + " %)")
+    return conditional_traces
+
+
+def find_candidates(dt, ll=1, adll=1, rand=1):
     # modes
     candidates = list()
-    if '_ll' in datatrace:
-        for index, row in datatrace.nlargest(ll, '_ll').iterrows():
+    if '_ll' in dt:
+        for index, row in dt.nlargest(ll, '_ll').iterrows():
             row.name = "ll[" + str(row.name) + "]"
             candidates.append(row)
-    if '_adll' in datatrace:
-        for index, row in datatrace.nsmallest(adll, '_adll').iterrows():
+    if '_adll' in dt:
+        for index, row in dt.nsmallest(adll, '_adll').iterrows():
             row.name = "adll[" + str(row.name) + "]"
             candidates.append(row)
-    mean = datatrace.mean()
+    mean = dt.mean()
     mean.name = 'mean'
     candidates.append(mean)
-    median = datatrace.median()
+    median = dt.median()
     median.name = 'median'
     candidates.append(median)
-    return pd.DataFrame(candidates).append(datatrace.sample(rand))
+    return pd.DataFrame(candidates).append(dt.sample(rand))
 
 
-def dump_trace(name, trace, chains=None):
-    # TODO: mientras pymc3 se arregla
-    if not os.path.exists(name):
-        os.mkdir(name)
-    if chains is None:
-        chains = trace.chains
-
-    var_shapes = trace._straces[chains[0]].var_shapes
-    flat_names = {v: pm.backends.tracetab.create_flat_names(v, shape)
-                  for v, shape in var_shapes.items()}
-
-    for chain in chains:
-        filename = os.path.join(name, 'chain-{}.csv'.format(chain))
-        df = trace_to_dataframe(trace, chains=chain, flat_names=flat_names, hide_transformed_vars=False)
-        df.to_csv(filename, index=False)
+def scatter_datatrace(dt, items=None, like=None, regex=None, samples=None, bins=200, figsize=(15, 10), cluster=None, cmap=cm.rainbow):
+    df = marginal(dt, items=items, like=like, regex=regex, samples=samples)
+    pd.scatter_matrix(df, grid=True, hist_kwds={'normed': True, 'bins': bins}, figsize=figsize, c=cluster[df.index], cmap=cmap)
 
 
-def load_traces(dir_traces, last_samples=None):
-    traces = []
-    for subdir in [os.path.join(dir_traces, o) for o in os.listdir(dir_traces) if
-                   os.path.isdir(os.path.join(dir_traces, o))]:
-        try:
-            if last_samples is None:
-                traces.append(pm.backends.text.load(subdir))
-            else:
-                traces.append(pm.backends.text.load(subdir)[-int(last_samples):])
-        except:
-            pass
-    return append_traces(traces)
-
-
-def append_traces(mtraces):
-    base_mtrace = mtraces[0]
-    i = base_mtrace.nchains
-    for new_mtrace in mtraces[1:]:
-        for new_chain, strace in new_mtrace._straces.items():
-            base_mtrace._straces[i] = strace
-            base_mtrace._straces[i].chain = i
-            i += 1
-    return base_mtrace
-
-
-def traceplot(trace, plot_transformed=True):
-    pm.traceplot(trace, plot_transformed=plot_transformed)
-
-
-def cluster_datatrace(datatrace, n_components=10, n_init=1, excludes='_'):
-    datatraces_filter = datatrace.filter(regex='^(?!' + excludes + ')')
-    dpgmm = mixture.BayesianGaussianMixture(n_components=n_components, covariance_type='full', max_iter=1000, n_init=n_init).fit(datatraces_filter)
-    cluster_gm = dpgmm.predict(datatraces_filter)
-    datatrace['_cluster'] = cluster_gm
-
-
-def scatter_trace(datatrace, items=None, like=None, regex=None, samples=None, bins=200, figsize=(15, 10), c=None, cmap=cm.rainbow):
-    df = marginal(datatrace, items=items, like=like, regex=regex, samples=samples)
-    pd.scatter_matrix(df, grid=True, hist_kwds={'normed': True, 'bins': bins}, figsize=figsize, c=c[df.index], cmap=cmap)
-
-
-def kde_trace(df, items=None, size=6, n_levels=20, cmap="Blues_d"):
-    df = marginal(df, items)
-    g = sb.PairGrid(df, size=size)
+def kde_datatrace(dt, items=None, size=6, n_levels=20, cmap="Blues_d"):
+    dt = marginal(dt, items)
+    g = sb.PairGrid(dt, size=size)
     g.map_diag(sb.distplot, bins=200)
     g.map_offdiag(plt.scatter)
     g.map_offdiag(sb.kdeplot, n_levels=n_levels, cmap=cmap)

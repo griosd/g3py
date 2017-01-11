@@ -14,7 +14,8 @@ class Mapping(Hypers):
         pass
 
     def logdet_dinv(self, y):
-        return debug(tt.log(sT.det(debug(tt.jacobian(self.inv(y), y), 'jacobian_inv'))), 'automatic_logdet_dinv')
+        # return debug(tt.log(sT.det(debug(tt.jacobian(self.inv(y), y), 'jacobian_inv'))), 'automatic_logdet_dinv')
+        return tt.sum(debug(tt.log(tt.diag(debug(tt.jacobian(self.inv(y), y), 'jacobian_inv'))), 'automatic_logdet_dinv'))
 
     def __mul__(self, other):
         if issubclass(type(other), Mapping):

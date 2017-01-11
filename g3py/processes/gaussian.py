@@ -25,6 +25,9 @@ class GaussianProcess(StochasticProcess):
         self.prior_variance = tnl.extract_diag(self.prior_covariance)
         self.prior_std = tt.sqrt(self.prior_variance)
         self.prior_noise = tt.sqrt(tnl.extract_diag(self.kernel_space))
+        self.prior_logpred = TGPDist.logp_cho(self.random_th, self.prior_mean, nL.alloc_diag(self.prior_noise),
+                                              self.mapping)
+
         self.prior_median = self.prior_mean
         self.prior_quantile_up = self.prior_mean + 1.96 * self.prior_std
         self.prior_quantile_down = self.prior_mean - 1.96 * self.prior_std
@@ -44,6 +47,7 @@ class GaussianProcess(StochasticProcess):
         self.posterior_std = tt.sqrt(self.posterior_variance)
         self.posterior_noise = tt.sqrt(tnl.extract_diag(self.kernel.cov(self.space_th) - self.kernel_f_space_inputs.dot(
             tsl.solve(self.kernel_inputs, self.kernel_f_space_inputs.T))))
+        self.posterior_logpred = TGPDist.logp_cho(self.random_th, self.posterior_mean, nL.alloc_diag(self.posterior_noise), self.mapping)
         self.posterior_median = self.posterior_mean
         self.posterior_quantile_up = self.posterior_mean + 1.96 * self.posterior_std
         self.posterior_quantile_down = self.posterior_mean - 1.96 * self.posterior_std
@@ -98,10 +102,12 @@ class TransformedGaussianProcess(StochasticProcess):
 
         self.prior_cholesky = cholesky_robust(self.latent_prior_covariance)
         self.prior_logp = TGPDist.logp_cho(self.random_th, self.latent_prior_mean, self.prior_cholesky, self.mapping)
+        self.prior_logpred = TGPDist.logp_cho(self.random_th, self.latent_prior_mean, nL.alloc_diag(self.latent_prior_noise), self.mapping)
         self.prior_distribution = tt.exp(self.prior_logp.sum())
 
         self.posterior_cholesky = cholesky_robust(self.latent_posterior_covariance)
         self.posterior_logp = TGPDist.logp_cho(self.random_th, self.latent_posterior_mean, self.posterior_cholesky, self.mapping)
+        self.posterior_logpred = TGPDist.logp_cho(self.random_th, self.latent_posterior_mean, nL.alloc_diag(self.latent_posterior_noise), self.mapping)
         self.posterior_distribution = tt.exp(self.posterior_logp.sum())
         print('Latent OK')
 
@@ -111,7 +117,8 @@ class TransformedGaussianProcess(StochasticProcess):
                                             self.latent_prior_std, a, w) - self.prior_mean ** 2
         self.prior_std = tt.sqrt(self.prior_variance)
         self.prior_covariance = None
-        self.prior_noise = None
+        self.prior_noise = tt.sqrt(gauss_hermite(lambda v: self.mapping(v) ** 2, self.latent_prior_mean,
+                                                self.latent_prior_noise, a, w) - self.prior_mean ** 2)
         self.prior_median = self.mapping(self.latent_prior_mean)
         self.prior_quantile_up = self.mapping(self.latent_prior_mean + 1.96 * self.latent_prior_std)
         self.prior_quantile_down = self.mapping(self.latent_prior_mean - 1.96 * self.latent_prior_std)
@@ -127,7 +134,8 @@ class TransformedGaussianProcess(StochasticProcess):
                                                 self.latent_posterior_std, a, w) - self.posterior_mean ** 2
         self.posterior_std = tt.sqrt(self.posterior_variance)
         self.posterior_covariance = None
-        self.posterior_noise = None
+        self.posterior_noise = tt.sqrt(gauss_hermite(lambda v: self.mapping(v) ** 2, self.latent_posterior_mean,
+                                                self.latent_posterior_noise, a, w) - self.posterior_mean ** 2)
         self.posterior_median = self.mapping(self.latent_posterior_mean)
         self.posterior_quantile_up = self.mapping(self.latent_posterior_mean + 1.96 * self.latent_posterior_std)
         self.posterior_quantile_down = self.mapping(self.latent_posterior_mean - 1.96 * self.latent_posterior_std)
