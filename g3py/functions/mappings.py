@@ -138,7 +138,7 @@ class BoxCoxShifted(Mapping):
         self.hypers += [self.shift, self.power]
 
     def default_hypers(self, x=None, y=None):
-        return {self.shift: np.array(y.min() - np.abs(y[1:]-y[:-1]).min()),
+        return {self.shift: np.float32(1.0),#np.array(y.min() - np.abs(y[1:]-y[:-1]).min()),
                 self.power: np.float32(1.0)}
 
     def __call__(self, x):

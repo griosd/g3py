@@ -33,7 +33,7 @@ class GaussianProcess(StochasticProcess):
         self.prior_quantile_down = self.prior_mean - 1.96 * self.prior_std
         self.prior_noise_up = self.prior_mean + 1.96 * self.prior_noise
         self.prior_noise_down = self.prior_mean - 1.96 * self.prior_noise
-        self.prior_sampler = self.prior_mean + cholesky_robust(self.prior_covariance).dot(self.random_th)
+        self.prior_sampler = self.prior_mean + self.prior_cholesky.dot(self.random_th)
 
         # Posterior
         self.posterior_mean = self.location_space + self.kernel_f_space_inputs.dot(
@@ -53,7 +53,7 @@ class GaussianProcess(StochasticProcess):
         self.posterior_quantile_down = self.posterior_mean - 1.96 * self.posterior_std
         self.posterior_noise_up = self.posterior_mean + 1.96 * self.posterior_noise
         self.posterior_noise_down = self.posterior_mean - 1.96 * self.posterior_noise
-        self.posterior_sampler = self.posterior_mean + cholesky_robust(self.posterior_covariance).dot(self.random_th)
+        self.posterior_sampler = self.posterior_mean + self.posterior_cholesky.dot(self.random_th)
 
         # TODO
         def subprocess(self, subkernel, cov=False, noise=False):

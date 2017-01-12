@@ -381,14 +381,14 @@ class StochasticProcess:
         pred = self.predict(params=params, space=space, inputs=inputs, outputs=outputs, var=variance, distribution=logp)
         scores = DictObj()
         if logp:
-            scores['NLL'] = - pred.logp(hidden) / len(hidden)
-            scores['NLPD'] = - pred.logpred(hidden) / len(hidden)
+            scores['_NLL'] = - pred.logp(hidden) / len(hidden)
+            scores['_NLPD'] = - pred.logpred(hidden) / len(hidden)
         if bias:
-            scores['BiasL1'] = np.mean(np.abs(pred.mean - hidden))
-            scores['BiasL2'] = np.sqrt(np.mean(np.abs(pred.mean - hidden)**2))
+            scores['_BiasL1'] = np.mean(np.abs(pred.mean - hidden))
+            scores['_BiasL2'] = np.sqrt(np.mean(np.abs(pred.mean - hidden)**2))
         if variance:
-            scores['MSE'] = np.mean((pred.mean - hidden) ** 2 + pred.variance)
-            scores['RMSE'] = np.sqrt(scores['MSE'])
+            scores['_MSE'] = np.mean((pred.mean - hidden) ** 2 + pred.variance)
+            scores['_RMSE'] = np.sqrt(scores['MSE'])
         return scores
 
 
