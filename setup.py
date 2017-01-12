@@ -1,7 +1,7 @@
 from setuptools import setup
 
 setup(name='g3py',
-      version='0.2.4.4',
+      version='0.2.4.5',
       description='Generalized Graphical Gaussian Processes',
       url='https://github.com/griosd/g3py',
       author='Gonzalo Rios',
@@ -9,7 +9,7 @@ setup(name='g3py',
       license='MIT',
       packages=['g3py'],
       install_requires=[
-          'numpy', 'scipy', 'pandas', 'matplotlib', 'seaborn', 'theano', 'pymc3'
+          'numpy', 'scipy', 'pandas', 'matplotlib', 'seaborn', 'theano', 'pymc3', 'scikit-learn', 'statsmodels'
       ],
       tests_require=[
             'pytest', 'pytest-mpl'
