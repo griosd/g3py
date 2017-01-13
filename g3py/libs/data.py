@@ -19,8 +19,12 @@ def load_co2():
     return x, y
 
 
-def load_csv(file):
-    return pd.read_csv(file)
+def save_csv(df, file, index_col=0):
+    return df.to_csv(file, index_col=index_col)
+
+
+def load_csv(file, index_col=0):
+    return pd.read_csv(file, index_col=index_col)
 
 
 def random_obs(x, y, p=0.2, s=1.0):

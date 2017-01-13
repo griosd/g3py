@@ -3,10 +3,10 @@ import numpy as np
 import pymc3 as pm
 import scipy as sp
 import theano as th
-from g3py.functions import Mean, Kernel, Mapping, KernelSum, WN, tt_to_num, def_space, trans_hypers
-from g3py.libs import tt_to_cov, makefn, plot_text, clone, DictObj, plot_2d, grid2d, show
-from g3py.models import ConstantStep, RobustSlice
-from g3py import config
+from ..functions import Mean, Kernel, Mapping, KernelSum, WN, tt_to_num, def_space, trans_hypers
+from ..libs import tt_to_cov, makefn, plot_text, clone, DictObj, plot_2d, grid2d, show
+from ..models import ConstantStep, RobustSlice
+from ..config import *
 from ipywidgets import interact
 from matplotlib import pyplot as plt
 from theano import tensor as tt
@@ -385,7 +385,7 @@ class StochasticProcess:
             scores['_NLPD'] = - pred.logpred(hidden) / len(hidden)
         if bias:
             scores['_BiasL1'] = np.mean(np.abs(pred.mean - hidden))
-            scores['_BiasL2'] = np.sqrt(np.mean(np.abs(pred.mean - hidden)**2))
+            scores['_BiasL2'] = np.sqrt(np.mean((pred.mean - hidden)**2))
         if variance:
             scores['_MSE'] = np.mean((pred.mean - hidden) ** 2 + pred.variance)
             scores['_RMSE'] = np.sqrt(scores['MSE'])
@@ -724,7 +724,7 @@ class StochasticProcess:
 
     def plot_data(self, big=None):
         if big is None:
-            big = config.plot_big
+            big = plot_big
         if big:
             self.plot_data_big()
         else:

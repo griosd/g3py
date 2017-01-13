@@ -10,13 +10,13 @@ from sklearn import cluster, mixture
 from pymc3 import traceplot
 
 
-def save_trace(trace, path='trace.pkl'):
+def save_pkl(trace, path='file.pkl'):
     with open(path, 'wb') as f:
         pickle.dump(trace, f, protocol=-1)
 
 
-def load_trace(path='trace.pkl'):
-    with open(path, 'r') as f:
+def load_pkl(path='file.pkl'):
+    with open(path, 'rb') as f:
         return pickle.load(f)
 
 
