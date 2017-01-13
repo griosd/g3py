@@ -385,7 +385,7 @@ class StochasticProcess:
             scores['_NLPD'] = - pred.logpred(hidden) / len(hidden)
         if bias:
             scores['_BiasL1'] = np.mean(np.abs(pred.mean - hidden))
-            scores['_BiasL2'] = np.sqrt(np.mean((pred.mean - hidden)**2))
+            scores['_BiasL2'] = np.mean((pred.mean - hidden)**2)
         if variance:
             scores['_MSE'] = np.mean((pred.mean - hidden) ** 2 + pred.variance)
             scores['_RMSE'] = np.sqrt(scores['MSE'])
