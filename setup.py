@@ -1,4 +1,4 @@
-from setuptools import setup
+from setuptools import setup, find_packages
 
 setup(name='g3py',
       version='0.2.4.7',
@@ -7,7 +7,7 @@ setup(name='g3py',
       author='Gonzalo Rios',
       author_email='grios@dim.uchile.cl',
       license='MIT',
-      packages=['g3py'],
+      packages=find_packages(),
       install_requires=[
           'numpy', 'scipy', 'pandas', 'matplotlib', 'seaborn', 'theano', 'pymc3', 'scikit-learn', 'statsmodels'
       ],
