@@ -2,7 +2,7 @@ import numpy as np
 import theano as th
 import theano.tensor as tt
 from g3py.functions.hypers import Hypers
-from g3py.functions.metrics import Delta, Minimum, Difference, L1, ARD_Dot, ARD_DotBias, ARD_L1, ARD_L2
+from g3py.functions.metrics import Delta, Minimum, Difference, One, ARD_Dot, ARD_DotBias, ARD_L1, ARD_L2, DeltaEq, DeltaEq2
 from g3py.libs.tensors import debug
 
 
@@ -184,10 +184,9 @@ class KernelShift(KernelOperation):
 class KernelProd(KernelComposition):
     def __init__(self, _k1: Kernel, _k2: Kernel):
         super().__init__(_k1, _k2)
-        if self.k1.var is None:
-            self.k1.var = 1.0
-        elif self.k2.var is None:
-            self.k2.var = 1.0
+        if hasattr(self.k1, 'var') and hasattr(self.k2, 'var'):
+            if self.k1.var is None and self.k2.var is None:
+                self.k2.var = 1.0
         self.op = '*'
 
     def __call__(self, x1, x2):
@@ -215,9 +214,66 @@ class KernelSum(KernelComposition):
         return str(self.k1) + " + " + str(self.k2)
 
 
+class KernelMax(KernelComposition):
+    def __init__(self, _k1: Kernel, _k2: Kernel):
+        super().__init__(_k1, _k2)
+        self.op = 'max'
+
+    def __call__(self, x1, x2):
+        return tt.maximum(self.k1(x1, x2), self.k2(x1, x2))
+
+    def cov(self, x1, x2=None):
+        return tt.maximum(self.k1.cov(x1, x2), self.k2.cov(x1, x2))
+
+    def __str__(self):
+        return "max("+str(self.k1)+" , "+str(self.k2)+")"
+
+
+class KernelEquals(Kernel):
+    def __init__(self, x=None, name=None, metric=DeltaEq, eq=0):
+        super().__init__(x, name, metric, 1)
+        self.eq = eq
+
+    def __call__(self, x1, x2):
+        return self.metric(x1, x2, self.eq)
+
+    def cov(self, x1, x2=None):
+        if x2 is None:
+            return self.metric.gram(x1, x1, self.eq)
+        else:
+            return self.metric.gram(x1, x2, self.eq)
+
+
+class KernelEquals2(Kernel):
+    def __init__(self, x=None, name=None, metric=DeltaEq2, eq1=0, eq2=0):
+        super().__init__(x, name, metric, 1)
+        self.eq1 = eq1
+        self.eq2 = eq2
+
+    def __call__(self, x1, x2):
+        return self.metric(x1, x2, self.eq1, self.eq2)
+
+    def cov(self, x1, x2=None):
+        if x2 is None:
+            return self.metric.gram(x1, x1, self.eq1, self.eq2)
+        else:
+            return self.metric.gram(x1, x2, self.eq1, self.eq2)
+
+
 class BW(KernelDot):
     def __init__(self, x=None, name=None, metric=Minimum, var=None):
         super().__init__(x, name, metric, var)
+
+
+class VAR(KernelDot):
+    def __init__(self, x=None, name=None, metric=One, var=1):
+        super().__init__(x, name, metric, var)
+
+    def __call__(self, x1, x2):
+        return self.var
+
+    def cov(self, x1, x2=None):
+        return self.var
 
 
 class LIN(KernelDot):

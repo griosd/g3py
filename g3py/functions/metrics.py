@@ -23,9 +23,33 @@ class Metric(Hypers):
     __repr__ = __str__
 
 
+class One(Metric):
+    def __call__(self, x1, x2):
+        return 1
+
+
 class Delta(Metric):
     def __call__(self, x1, x2):
         return tt.eq((x1 - x2), 0).dot(np.ones(self.shape))
+
+    def gram(self, x1, x2):
+        return tt_to_num(self(x1[:, self.dims].dimshuffle([0, 'x', 1]), x2[:, self.dims].dimshuffle(['x', 0, 1])))
+
+
+class DeltaEq(Metric):
+    def __call__(self, x1, x2, eq=0):
+        return (tt.eq(x1, eq)*tt.eq(x2, eq)).dot(np.ones(self.shape))
+
+    def gram(self, x1, x2, eq=0):
+        return tt_to_num(self(x1[:, self.dims].dimshuffle([0, 'x', 1]), x2[:, self.dims].dimshuffle(['x', 0, 1]), eq))
+
+
+class DeltaEq2(Metric):
+    def __call__(self, x1, x2, eq1=0, eq2=0):
+        return (tt.eq(x1, eq1)*tt.eq(x2, eq2) + tt.eq(x1, eq2)*tt.eq(x2, eq1)).dot(np.ones(self.shape))
+
+    def gram(self, x1, x2, eq1=0, eq2=0):
+        return tt_to_num(self(x1[:, self.dims].dimshuffle([0, 'x', 1]), x2[:, self.dims].dimshuffle(['x', 0, 1]), eq1, eq2))
 
 
 class Minimum(Metric):
@@ -96,7 +120,7 @@ class ARD_DotBias(ARD):
         self.bias = bias
 
     def check_hypers(self, parent=''):
-        super().check_hypers()
+        super().check_hypers(parent=parent)
         if self.bias is None:
             self.bias = Hypers.FlatExp(parent+self.name + '_bias')
         self.hypers += [self.bias]
@@ -108,3 +132,39 @@ class ARD_DotBias(ARD):
     def default_hypers(self, x=None, y=None):
         return {self.bias: np.abs(y).mean()/np.abs(x).mean(),
                 self.rate: np.sqrt(np.abs(y)).mean(axis=0) / np.abs(x).mean(axis=0)}
+
+
+class PSD(Metric):
+    def __init__(self, x, p=1, name=None, rate=None, directions=None):
+        super().__init__(x, name)
+        self.rate = rate
+        self.directions = directions
+        self.p = p
+
+    def check_hypers(self, parent=''):
+        super().check_hypers(parent=parent)
+        if self.rate is None:
+            self.rate = Hypers.FlatExp(parent + self.name + '_rate', shape=self.shape)
+        if self.directions is None:
+            self.directions = Hypers.FlatExp(parent + self.name + '_directions', shape=(self.p, self.shape))
+        self.hypers += [self.rate, self.directions]
+
+
+class PSD_Dot(PSD):
+    def __call__(self, x1, x2):
+        return tt.dot(tt.dot(x1.T, tt.dot(self.directions.T, self.directions) + tt.diag(self.rate**2)), x2)
+
+    def default_hypers(self, x=None, y=None):
+        return {self.rate: 1 / ((np.sqrt(np.abs(x)).mean(axis=0)) / np.abs(y).mean(axis=0)),
+                self.directions: np.zeros(self.directions.shape)}
+
+class PSD_L2(PSD):
+    def __call__(self, x1, x2):
+        d = (x1 - x2)
+        M = tt.dot(self.directions.T, self.directions) + tt.diag(self.rate**2)
+        d * M
+        return tt.dot(M, d)
+
+    def default_hypers(self, x=None, y=None):
+        return {self.rate: 1 / ((np.sqrt(np.abs(x)).mean(axis=0)) / np.abs(y).mean(axis=0)),
+                self.directions: np.zeros(self.directions.shape)}

@@ -130,7 +130,11 @@ def find_candidates(dt, ll=1, adll=1, rand=1):
 
 def scatter_datatrace(dt, items=None, like=None, regex=None, samples=None, bins=200, figsize=(15, 10), cluster=None, cmap=cm.rainbow):
     df = marginal(dt, items=items, like=like, regex=regex, samples=samples)
-    pd.scatter_matrix(df, grid=True, hist_kwds={'normed': True, 'bins': bins}, figsize=figsize, c=cluster[df.index], cmap=cmap)
+    if cluster is None:
+        pd.scatter_matrix(df, grid=True, hist_kwds={'normed': True, 'bins': bins}, figsize=figsize)
+    else:
+        pd.scatter_matrix(df, grid=True, hist_kwds={'normed': True, 'bins': bins}, figsize=figsize, c=cluster[df.index],
+                          cmap=cmap)
 
 
 def kde_datatrace(dt, items=None, size=6, n_levels=20, cmap="Blues_d"):

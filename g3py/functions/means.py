@@ -151,7 +151,7 @@ class Linear(Mean):
 
     def default_hypers(self, x=None, y=None):
         return {self.constant: y.mean().astype(th.config.floatX),
-                self.coeff: y.mean()/x.mean()}
+                self.coeff: y.mean()/x.mean(axis=0)}
 
     def eval(self, x):
         return self.constant + tt.dot(x, self.coeff) #TODO: check dims
