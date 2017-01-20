@@ -391,7 +391,6 @@ class StochasticProcess:
             scores['_RMSE'] = np.sqrt(scores['MSE'])
         return scores
 
-
     def plot(self, params=None, space=None, inputs=None, outputs=None, mean=True, var=True, cov=False, median=True, quantiles=True, noise=True, samples=0, prior=False,
              data=True, big=None, scores=False, title=None, loc=1):
         values = self.predict(params=params, space=space, inputs=inputs, outputs=outputs, mean=mean, var=var, cov=cov, median=median, quantiles=quantiles, noise=noise, samples=samples, prior=prior)
@@ -505,8 +504,6 @@ class StochasticProcess:
         self.plot_distribution2D(indexs=indexs, params=params, space=self.space_values[indexs, :])
         show()
 
-
-
     def plot_kernel2D(self):
         pass
 
@@ -569,6 +566,20 @@ class StochasticProcess:
                 intervals[k] = [-5.00, 5.00]
         interact(self.widget_plot_params, __manual=True, **intervals)
 
+    def get_params_process(self, process=None, params=None, current=None, fixed=False):
+        if process is None:
+            process = self
+        if params is None:
+            params = process.get_params_current()
+        if current is None:
+            current = self.get_params_current()
+        params_transform = {k.replace(process.name, self.name, 1): v for k, v in params.items()}
+        params_return = DictObj({k: v for k, v in params_transform.items() if k in current.keys()})
+        params_return.update({k: v for k, v in current.items() if k not in params_transform.keys()})
+        if fixed:
+            params_return.update(self.params_fixed)
+        return params_return
+
     def get_params_random(self, mean=None, sigma=0.1, fixed=True):
         if mean is None:
             mean = self.get_params_default()
@@ -577,7 +588,6 @@ class StochasticProcess:
         if fixed:
             mean.update(self.params_fixed)
         return mean
-
 
     def get_params_test(self, fixed=False):
         test = clone(self.model.test_point)

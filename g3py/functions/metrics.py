@@ -80,7 +80,7 @@ class ARD(Metric):
     def check_hypers(self, parent=''):
         super().check_hypers(parent=parent)
         if self.rate is None:
-            self.rate = Hypers.FlatExp(parent + self.name + '_rate', shape=self.shape)
+            self.rate = Hypers.FlatExp(parent + 'rate', shape=self.shape)
         self.hypers += [self.rate]
 
     def input_sensitivity(self):
@@ -122,7 +122,7 @@ class ARD_DotBias(ARD):
     def check_hypers(self, parent=''):
         super().check_hypers(parent=parent)
         if self.bias is None:
-            self.bias = Hypers.FlatExp(parent+self.name + '_bias')
+            self.bias = Hypers.FlatExp(parent + 'bias')
         self.hypers += [self.bias]
 
     def __call__(self, x1, x2):
@@ -144,9 +144,9 @@ class PSD(Metric):
     def check_hypers(self, parent=''):
         super().check_hypers(parent=parent)
         if self.rate is None:
-            self.rate = Hypers.FlatExp(parent + self.name + '_rate', shape=self.shape)
+            self.rate = Hypers.FlatExp(parent + 'rate', shape=self.shape)
         if self.directions is None:
-            self.directions = Hypers.FlatExp(parent + self.name + '_directions', shape=(self.p, self.shape))
+            self.directions = Hypers.FlatExp(parent + 'directions', shape=(self.p, self.shape))
         self.hypers += [self.rate, self.directions]
 
 
