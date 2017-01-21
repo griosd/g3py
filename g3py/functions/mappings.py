@@ -147,11 +147,11 @@ class BoxCoxShifted(Mapping):
         return transformed-self.shift
 
     def inv(self, y):
-        shifted = y+self.shift
+        shifted = tt.maximum(-self.shift, y+self.shift)
         return ((tt.sgn(shifted) * tt.abs_(shifted) ** self.power)-1.0)/self.power
 
     def logdet_dinv(self, y):
-        return (self.power - 1.0)*tt.sum(tt.log(tt.abs_(y+self.shift)))
+        return (self.power - 1.0)*tt.sum(tt.log(tt.abs_(tt.maximum(-self.shift, y+self.shift))))
 
 
 class Logistic(Mapping):

@@ -490,14 +490,15 @@ class StochasticProcess:
         #self.plot_location()
         #plt.subplot(322)
         #self.plot_concentration()
-        plt.subplot(321)
+        plt.subplot(121)
         self.plot_kernel(params=params)
-        plt.subplot(322)
+        plt.subplot(122)
         self.plot_mapping(params=params)
-        plt.subplot(323)
+        show()
+        plt.subplot(121)
         self.plot_distribution(index=indexs[0], params=params, space=self.space_values[indexs[0]:indexs[0]+1, :], prior=True)
         self.plot_distribution(index=indexs[0], params=params, space=self.space_values[indexs[0]:indexs[0]+1, :])
-        plt.subplot(324)
+        plt.subplot(122)
         self.plot_distribution(index=indexs[1], params=params, space=self.space_values[indexs[1]:indexs[1]+1, :], prior=True)
         self.plot_distribution(index=indexs[1], params=params, space=self.space_values[indexs[1]:indexs[1]+1, :])
         show()
@@ -757,39 +758,6 @@ class StochasticProcess:
 
     def subprocess(self, subkernel, mean=True, cov=False, var=True, median=False, quantiles=False, noise=False):
         pass
-
-    def scores_params(self, params=None):
-        try:
-            logp_train = np.nanmean(self.model.logp(params))
-        except:
-            logp_train = np.float32(0)
-
-        mean = self.compiles['m1'](**params)
-        var = mean**2 - self.compiles['m2'](**params)
-        #print(mean.shape)
-        #print(self.outputs.get_value().shape)
-
-        mse_train = 0#np.nanmean((mean - self.outputs.get_value()) ** 2 + var)
-        bias_train = 0#np.nanmean(np.abs(mean - self.outputs.get_value()))
-
-        self.swap_test_obs()
-        try:
-            logp_test = np.nanmean(self.model.logp(params))
-        except:
-            logp_test = np.float32(0)
-        mean = self.compiles['m1'](**params)
-        var = mean**2 - self.compiles['m2'](**params)
-        mse_test = 0#np.nanmean((mean - self.outputs.get_value()) ** 2 + var)
-        bias_test = 0#np.nanmean(np.abs(mean - self.outputs.get_value()))
-        self.swap_test_obs()
-
-        d = {'logp_train': logp_train,
-             'mse_train': mse_train,
-             'mab_train': bias_train,
-             'logp_test': logp_test,
-             'mse_test': mse_test,
-             'mab_test': bias_test}
-        return d
 
     def get_point(self, point):
         return {v.name: point[v.name] for v in self.model.vars}
