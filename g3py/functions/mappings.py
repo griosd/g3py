@@ -112,16 +112,16 @@ class LogShifted(Mapping):
         self.hypers += [self.shift]
 
     def default_hypers(self, x=None, y=None):
-        return {self.shift: y.min() - np.abs(y[1:]-y[:-1]).min()}
+        return {self.shift: np.array(y.min() - np.abs(y[1:]-y[:-1]).min())}
 
     def __call__(self, x):
-        return tt.exp(x) + self.hypers
+        return tt.exp(x) + self.shift
 
     def inv(self, y):
-        return tt.log(y - self.hypers)
+        return tt.log(y - self.shift)
 
     def logdet_dinv(self, y):
-        return -tt.sum(tt.log(y - self.hypers))
+        return -tt.sum(tt.log(y - self.shift))
 
 
 class BoxCoxShifted(Mapping):
