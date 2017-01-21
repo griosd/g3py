@@ -33,7 +33,7 @@ def random_obs(x, y, p=0.2, s=1.0, include_min=False):
     if include_min:
         id_min = y.argmin()
         if id_min not in obs_j:
-            obs_j[np.random.choice(range(n), 1)] = id_min
+            obs_j[np.random.choice(range(int(n*p)), 1)] = id_min
             obs_j = np.sort(obs_j)
     test_j = np.array([v for v in np.arange(len(x)) if v not in obs_j])
     x_obs = x[obs_j]
