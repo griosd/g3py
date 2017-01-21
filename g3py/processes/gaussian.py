@@ -188,7 +188,7 @@ class TGPDist(pm.Continuous):
     @property
     def cho(self):
         try:
-            return cholesky_robust(self.cov)
+            return tt_to_num(cholesky_robust(self.cov))
         except:
             raise sp.linalg.LinAlgError("not cholesky")
 

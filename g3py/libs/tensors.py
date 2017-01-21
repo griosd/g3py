@@ -11,8 +11,8 @@ from theano.compile.ops import as_op
 th.config.on_unused_input = 'ignore'
 
 
-def debug(x, name=''):
-    if th.config.mode in ['NanGuardMode', 'DebugMode']:
+def debug(x, name='', force=False):
+    if th.config.mode in ['NanGuardMode', 'DebugMode'] or force:
         return th.printing.Print(name)(x)
     else:
         return x

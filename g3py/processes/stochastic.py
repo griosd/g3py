@@ -388,7 +388,7 @@ class StochasticProcess:
             scores['_BiasL2'] = np.mean((pred.mean - hidden)**2)
         if variance:
             scores['_MSE'] = np.mean((pred.mean - hidden) ** 2 + pred.variance)
-            scores['_RMSE'] = np.sqrt(scores['MSE'])
+            scores['_RMSE'] = np.sqrt(scores['_MSE'])
         return scores
 
     def plot(self, params=None, space=None, inputs=None, outputs=None, mean=True, var=True, cov=False, median=True, quantiles=True, noise=True, samples=0, prior=False,
@@ -415,11 +415,11 @@ class StochasticProcess:
             plt.plot(self.space_index, values['samples'], alpha=0.4)
         if title is None:
             title = self.description['title']
-        if scores:
-            pass
+        if self.outputs_values is not None:
+            plt.plot(self.observed_index, self.outputs_values, '.r', ms=15, label='Observations')
         plot_text(title, self.description['x'], self.description['y'], loc=loc)
 
-    def plot_distribution(self, index=0, params=None, space=None, inputs=None, outputs=None, mean=True, var=True, cov=False, median=False, quantiles=False, noise=False, prior=False, sigma=4, neval=100):
+    def plot_distribution(self, index=0, params=None, space=None, inputs=None, outputs=None, mean=True, var=True, cov=False, median=False, quantiles=False, noise=False, prior=False, sigma=4, neval=100, title=None):
         pred = self.predict(params=params, space=space, inputs=inputs, outputs=outputs, mean=mean, var=var, cov=cov, median=median, quantiles=quantiles, noise=noise, distribution=True, prior=prior)
         domain = np.linspace(pred.mean - sigma * pred.std, pred.mean + sigma * pred.std, neval)
         dist_plot = np.zeros(len(domain))
@@ -429,21 +429,25 @@ class StochasticProcess:
             plt.plot(domain, dist_plot, label='prior')
         else:
             plt.plot(domain, dist_plot, label='posterior')
-        plot_text('Marginal Distribution y_'+str(self.space_index[index]), 'Domain y', 'p(y)')
+        if title is None:
+            title = 'Marginal Distribution'
+        plot_text(title+' y_'+str(self.space_index[index]), 'Domain y', '')
 
-    def plot_mapping(self, params=None, space=None, inputs=None, outputs=None, neval=100):
+    def plot_mapping(self, params=None, space=None, inputs=None, outputs=None, neval=100,title=None):
         if params is None:
             params = self.get_params_current()
         if outputs is None:
             outputs = self.outputs_values
         domain = np.linspace(outputs.min() - outputs.std(), outputs.max() + outputs.std(), neval)
         transform = self.compiles['mapping_inv_th'](domain, **params)
-        plt.plot(domain, transform, label='mapping_inv_th')
+        plt.plot(domain, transform, label='mapping')
 
         #inv_domain = np.linspace(transform.min() - transform.std(), transform.max() + transform.std(), neval)
         #inv_transform = self.compiles['mapping_th'](inv_domain, **params)
         #plt.plot(inv_transform, inv_domain, label='mapping_th')
-        plot_text('Mapping', 'Domain y', 'Domain T(y)')
+        if title is None:
+            title = 'Mapping'
+        plot_text(title, 'Domain y', 'Domain T(y)')
 
     def plot_kernel(self, params=None, space=None, inputs=None, centers=[1/10, 1/2, 9/10]):
         if params is None:
@@ -473,16 +477,18 @@ class StochasticProcess:
         plt.plot(self.space_index, self.compiles['location_space'](space, **params), label='location')
         plot_text('Location', 'Space x', 'Location value m(x)')
 
-    def plot_distribution2D(self, indexs=[0,1], params=None, space=None, inputs=None, outputs=None, mean=True, var=True, cov=False, median=False, quantiles=False, noise=False, prior=False, sigma=2, neval=33):
+    def plot_distribution2D(self, indexs=[0,1], params=None, space=None, inputs=None, outputs=None, mean=True, var=True, cov=False, median=False, quantiles=False, noise=False, prior=False, sigma_1=2, sigma_2=2, neval=33, title=None):
         pred = self.predict(params=params, space=space, inputs=inputs, outputs=outputs, mean=mean, var=var, cov=cov, median=median, quantiles=quantiles, noise=noise, distribution=True, prior=prior)
-        dist1 = np.linspace(pred.mean[0] - sigma * pred.std[0], pred.mean[0] + sigma * pred.std[0], neval)
-        dist2 = np.linspace(pred.mean[1] - sigma * pred.std[1], pred.mean[1] + sigma * pred.std[1], neval)
+        dist1 = np.linspace(pred.mean[0] - sigma_1 * pred.std[0], pred.mean[0] + sigma_1 * pred.std[0], neval)
+        dist2 = np.linspace(pred.mean[1] - sigma_2 * pred.std[1], pred.mean[1] + sigma_2 * pred.std[1], neval)
         xy, x2d, y2d = grid2d(dist1, dist2)
         dist_plot = np.zeros(len(xy))
         for i in range(len(xy)):
             dist_plot[i] = pred.distribution(xy[i])
         plot_2d(dist_plot, x2d, y2d)
-        plot_text('Distribution2D', 'Domain y_'+str(self.space_index[indexs[0]]), 'Domain y_'+str(self.space_index[indexs[1]]), legend=False)
+        if title is None:
+            title = 'Distribution2D'
+        plot_text(title, 'Domain y_'+str(self.space_index[indexs[0]]), 'Domain y_'+str(self.space_index[indexs[1]]), legend=False)
 
 
     def plot_model(self, params=None, indexs=[0, 1]):
@@ -743,9 +749,9 @@ class StochasticProcess:
 
     def plot_data_normal(self):
         if self.hidden is not None:
-            plt.plot(self.space_index, self.hidden[0:len(self.space_index)], label='Hidden Processes')
+            plt.plot(self.space_index, self.hidden[0:len(self.space_index)],  label='Hidden Processes')
         if self.outputs_values is not None:
-            plt.plot(self.observed_index, self.outputs_values, '.k', label='Observations')
+            plt.plot(self.observed_index, self.outputs_values, '.r', label='Observations')
 
     def plot_data_big(self):
         if self.hidden is not None:

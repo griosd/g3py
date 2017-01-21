@@ -138,7 +138,7 @@ class BoxCoxShifted(Mapping):
         self.hypers += [self.shift, self.power]
 
     def default_hypers(self, x=None, y=None):
-        return {self.shift: np.float32(1.0),#np.array(y.min() - np.abs(y[1:]-y[:-1]).min()),
+        return {self.shift: np.array(y.min() - np.abs(y[1:]-y[:-1]).min()),#np.float32(1.0),#
                 self.power: np.float32(1.0)}
 
     def __call__(self, x):
@@ -147,11 +147,11 @@ class BoxCoxShifted(Mapping):
         return transformed-self.shift
 
     def inv(self, y):
-        shifted = tt.maximum(-self.shift, y+self.shift)
+        shifted = y+self.shift
         return ((tt.sgn(shifted) * tt.abs_(shifted) ** self.power)-1.0)/self.power
 
     def logdet_dinv(self, y):
-        return (self.power - 1.0)*tt.sum(tt.log(tt.abs_(tt.maximum(-self.shift, y+self.shift))))
+        return (self.power - 1.0)*tt.sum(tt.log(tt.abs_(y+self.shift)))
 
 
 class Logistic(Mapping):
