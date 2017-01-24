@@ -375,10 +375,10 @@ class StochasticProcess:
         else:
             return self.posterior(params=params, space=space, inputs=inputs, outputs=outputs, mean=mean, var=var, cov=cov, median=median, quantiles=quantiles, noise=noise, samples=samples, distribution=distribution)
 
-    def scores(self, params=None, space=None, hidden=None, inputs=None, outputs=None, logp=True, bias=True, variance=False):
+    def scores(self, params=None, space=None, hidden=None, inputs=None, outputs=None, logp=True, bias=True, variance=False, median=False):
         if hidden is None:
             hidden = self.hidden
-        pred = self.predict(params=params, space=space, inputs=inputs, outputs=outputs, var=variance, distribution=logp)
+        pred = self.predict(params=params, space=space, inputs=inputs, outputs=outputs, var=variance, median=median, distribution=logp)
         scores = DictObj()
         if logp:
             scores['_NLL'] = - pred.logp(hidden) / len(hidden)
@@ -389,6 +389,9 @@ class StochasticProcess:
         if variance:
             scores['_MSE'] = np.mean((pred.mean - hidden) ** 2 + pred.variance)
             scores['_RMSE'] = np.sqrt(scores['_MSE'])
+        if median:
+            scores['_MedianL1'] = np.mean(np.abs(pred.median - hidden))
+            scores['_MedianL2'] = np.mean((pred.median - hidden)**2)
         return scores
 
     def plot(self, params=None, space=None, inputs=None, outputs=None, mean=True, var=True, cov=False, median=True, quantiles=True, noise=True, samples=0, prior=False,
@@ -626,6 +629,11 @@ class StochasticProcess:
             self.params_widget.update(self.params_fixed)
         return clone(self.params_widget)
 
+    def get_params_sampling(self, params=None):
+        if params is None:
+            params = self.get_params_current()
+        return {k:v for k,v in params.items() if k not in self.params_fixed.keys()}
+
     def find_MAP(self, start=None, points=1, plot=False, return_points=False, display=True, powell=True):
         points_list = list()
         if start is None:
@@ -644,7 +652,7 @@ class StochasticProcess:
             print('Starting function value (-logp): ' + str(-self.model.logp(points_list[0][2])))
         if plot:
             plt.figure(0)
-            self.plot(params=start, title='start')
+            self.plot(params=points_list[0][2], title='start')
             plt.show()
         with self.model:
             for i in range(points):
@@ -707,7 +715,10 @@ class StochasticProcess:
                     #step += [pm.Metropolis(vars=self.sampling_vars, tune=False)] # OK
                     #step += [pm.NUTS(vars=self.sampling_vars, scaling=advi_sm, is_cov=True)] #BUG float32
             else:
-                step = RobustSlice()
+                if method == 'HMC':
+                    step = pm.HamiltonianMC(scaling=self.get_params_default(), path_length=5., is_cov=False)
+                else:
+                    step = RobustSlice()
             trace = pm.sample(samples, step=step, start=start, njobs=chains, trace=trace)
         return trace
 
