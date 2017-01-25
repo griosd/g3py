@@ -103,7 +103,10 @@ class ARD_L2(ARD):
         return tt.dot((x1 - x2) ** 2, (0.5 * self.rate ** 2))
 
     def default_hypers(self, x=None, y=None):
-        return {self.rate: 1 / np.abs(x[1:] - x[:-1]).mean(axis=0)}
+        try:
+            return {self.rate: 1 / np.abs(x[1:] - x[:-1]).mean(axis=0)}
+        except:
+            return {}
 
 
 class ARD_Dot(ARD):

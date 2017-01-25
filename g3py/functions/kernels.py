@@ -11,7 +11,10 @@ pi = np.float32(np.pi)
 
 class Kernel(Hypers):
     def __init__(self, x=None, name=None, metric=Delta, var=None):
-        self.metric = metric(x)
+        if type(metric) is type:
+            self.metric = metric(x)
+        else:
+            self.metric = metric
         super().__init__(x, name)
         self.var = var
 
@@ -266,7 +269,7 @@ class BW(KernelDot):
 
 
 class VAR(KernelDot):
-    def __init__(self, x=None, name=None, metric=One, var=1):
+    def __init__(self, x=None, name=None, metric=One, var=None):
         super().__init__(x, name, metric, var)
 
     def __call__(self, x1, x2):

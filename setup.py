@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 setup(name='g3py',
-      version='0.2.4.7',
+      version='0.2.4.9',
       description='Generalized Graphical Gaussian Processes',
       url='https://github.com/griosd/g3py',
       author='Gonzalo Rios',

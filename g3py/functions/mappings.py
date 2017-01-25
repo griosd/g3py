@@ -141,7 +141,7 @@ class BoxCoxShifted(Mapping):
         self.hypers += [self.shift, self.scale, self.power]
 
     def default_hypers(self, x=None, y=None):
-        return {self.shift: np.array(y.min() - np.abs(y[1:]-y[:-1]).min()),#np.float32(1.0),#
+        return {self.shift: np.float32(1.0),#np.array(y.min() - np.abs(y[1:]-y[:-1]).min()),
                 self.scale: np.float32(1.0),
                 self.power: np.float32(1.0)}
 
@@ -173,16 +173,16 @@ class SinhMapping(Mapping):
 
     def default_hypers(self, x=None, y=None):
         return {self.shift: np.float(0.0),#np.float32(1.0),#
-                self.scale: np.float32(1.0)}
+                self.scale: np.abs(y).max()}
 
     def __call__(self, x):
-        return tt.sinh(x)/self.scale - self.shift
+        return tt.sinh(self.scale*x)/self.scale - self.shift
 
     def inv(self, y):
-        return tt.arcsinh(self.scale*(y+self.shift))
+        return tt.arcsinh(self.scale*(y+self.shift))/self.scale
 
     def logdet_dinv(self, y):
-        return tt.sum(tt.log(self.scale) - 0.5*tt.log1p( (self.scale*(y+self.shift))**2 ))
+        return -0.5*tt.sum(tt.log1p((self.scale*(y+self.shift))**2 ))
 
 
 
