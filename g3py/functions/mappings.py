@@ -125,33 +125,65 @@ class LogShifted(Mapping):
 
 
 class BoxCoxShifted(Mapping):
-    def __init__(self, y=None, name=None, shift=None, power=None):
+    def __init__(self, y=None, name=None, shift=None, scale=None, power=None):
         super().__init__(y, name)
         self.shift = shift
+        self.scale = scale
         self.power = power
 
     def check_hypers(self, parent=''):
         if self.shift is None:
             self.shift = Hypers.Flat(parent+self.name+'_shift')
+        if self.scale is None:
+            self.scale = Hypers.FlatExp(parent+self.name+'_scale')
         if self.power is None:
             self.power = Hypers.FlatExp(parent+self.name+'_power')
-        self.hypers += [self.shift, self.power]
+        self.hypers += [self.shift, self.scale, self.power]
 
     def default_hypers(self, x=None, y=None):
         return {self.shift: np.array(y.min() - np.abs(y[1:]-y[:-1]).min()),#np.float32(1.0),#
+                self.scale: np.float32(1.0),
                 self.power: np.float32(1.0)}
 
     def __call__(self, x):
         scaled = self.power*x+1.0
         transformed = tt.sgn(scaled) * tt.abs_(scaled) ** (1.0 / self.power)
-        return transformed-self.shift
+        return transformed/self.scale-self.shift
 
     def inv(self, y):
-        shifted = y+self.shift
+        shifted = self.scale*(y+self.shift)
         return ((tt.sgn(shifted) * tt.abs_(shifted) ** self.power)-1.0)/self.power
 
     def logdet_dinv(self, y):
-        return (self.power - 1.0)*tt.sum(tt.log(tt.abs_(y+self.shift)))
+        return (self.power - 1.0)*tt.sum(tt.log(tt.abs_(self.scale*(y+self.shift)))) + y.shape[0]*tt.log(self.scale)
+
+
+class SinhMapping(Mapping):
+    def __init__(self, y=None, name=None, shift=None, scale=None):
+        super().__init__(y, name)
+        self.shift = shift
+        self.scale = scale
+
+    def check_hypers(self, parent=''):
+        if self.shift is None:
+            self.shift = Hypers.Flat(parent+self.name+'_shift')
+        if self.scale is None:
+            self.scale = Hypers.FlatExp(parent+self.name+'_scale')
+        self.hypers += [self.shift, self.scale]
+
+    def default_hypers(self, x=None, y=None):
+        return {self.shift: np.float(0.0),#np.float32(1.0),#
+                self.scale: np.float32(1.0)}
+
+    def __call__(self, x):
+        return tt.sinh(x)/self.scale - self.shift
+
+    def inv(self, y):
+        return tt.arcsinh(self.scale*(y+self.shift))
+
+    def logdet_dinv(self, y):
+        return tt.sum(tt.log(self.scale) - 0.5*tt.log1p( (self.scale*(y+self.shift))**2 ))
+
 
 
 class Logistic(Mapping):
@@ -216,3 +248,31 @@ class WarpingTanh(Mapping):
     def inv(self, y):
         z = y.dimshuffle(0, 'x')
         return y + tt.dot(tt.tanh(self.b*(z + self.c)), self.a).reshape(y.shape)
+
+
+class WarpingBoxCox(Mapping):
+    def __init__(self, y=None, n=1, name=None, shift=None, power=None, w=None):
+        super().__init__(y, name)
+        self.n = n
+        self.shift = shift
+        self.power = power
+        self.w = w
+
+    def check_hypers(self, parent=''):
+        if self.shift is None:
+            self.shift = Hypers.FlatExp(parent+self.name+'_shift', shape=self.n)
+        if self.power is None:
+            self.power = Hypers.FlatExp(parent+self.name+'_power', shape=self.n)
+        if self.w is None:
+            self.w = Hypers.FlatExp(parent+self.name+'_w', shape=self.n)
+        self.hypers += [self.shift, self.power]
+
+    def default_hypers(self, x=None, y=None):
+        return {self.w: 0.1 * ones(self.n)*np.abs(y).max()/self.n,
+                self.shift: ones(self.n)*np.array(y.min() - np.abs(y[1:]-y[:-1]).min()/self.n),#np.float32(1.0),#
+                self.power: ones(self.n)*np.float32(1.0)}
+
+    def inv(self, y):
+        z = y.dimshuffle(0, 'x')
+        shifted = z+self.shift
+        return tt.dot(((tt.sgn(shifted) * tt.abs_(shifted) ** self.power)-1.0)/self.power, self.w).reshape(y.shape)
