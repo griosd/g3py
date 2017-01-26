@@ -38,7 +38,7 @@ class Delta(Metric):
 
 class DeltaEq(Metric):
     def __call__(self, x1, x2, eq=0):
-        return (tt.eq(x1, eq)*tt.eq(x2, eq)).dot(np.ones(self.shape))
+        return (tt.eq(x1, eq)*tt.eq(x2, eq)).sum(axis=2)
 
     def gram(self, x1, x2, eq=0):
         return tt_to_num(self(x1[:, self.dims].dimshuffle([0, 'x', 1]), x2[:, self.dims].dimshuffle(['x', 0, 1]), eq))
@@ -46,7 +46,7 @@ class DeltaEq(Metric):
 
 class DeltaEq2(Metric):
     def __call__(self, x1, x2, eq1=0, eq2=0):
-        return (tt.eq(x1, eq1)*tt.eq(x2, eq2) + tt.eq(x1, eq2)*tt.eq(x2, eq1)).dot(np.ones(self.shape))
+        return (tt.eq(x1, eq1)*tt.eq(x2, eq2) + tt.eq(x1, eq2)*tt.eq(x2, eq1)).sum(axis=2)
 
     def gram(self, x1, x2, eq1=0, eq2=0):
         return tt_to_num(self(x1[:, self.dims].dimshuffle([0, 'x', 1]), x2[:, self.dims].dimshuffle(['x', 0, 1]), eq1, eq2))
