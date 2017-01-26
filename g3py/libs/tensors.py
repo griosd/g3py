@@ -18,7 +18,7 @@ def debug(x, name='', force=False):
         return x
 
 
-@memoize
+#@memoize
 def makefn(th_vars, fn):
     return th.function(th_vars, fn, allow_input_downcast=True, on_unused_input='ignore')
 

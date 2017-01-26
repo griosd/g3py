@@ -108,7 +108,7 @@ class LogShifted(Mapping):
 
     def check_hypers(self, parent=''):
         if self.shift is None:
-            self.shift = Hypers.Flat(parent+self.name+'_shift', shape=self.shape)
+            self.shift = Hypers.Flat(parent+self.name+'_shift')
         self.hypers += [self.shift]
 
     def default_hypers(self, x=None, y=None):

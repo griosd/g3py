@@ -441,7 +441,7 @@ class StochasticProcess:
             params = self.get_params_current()
         if outputs is None:
             outputs = self.outputs_values
-        domain = np.linspace(outputs.min() , outputs.max() , neval)
+        domain = np.linspace(outputs.min() - outputs.std(), outputs.max() + outputs.std(), neval)
         transform = self.compiles['mapping_inv_th'](domain, **params)
         plt.plot(domain, transform, label='mapping')
 

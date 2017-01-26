@@ -20,18 +20,19 @@ def load_pkl(path='file.pkl'):
         return pickle.load(f)
 
 
-def load_traces_dir(dir_traces, last_samples=None):
-    traces = []
-    for subdir in [os.path.join(dir_traces, o) for o in os.listdir(dir_traces) if
-                   os.path.isdir(os.path.join(dir_traces, o))]:
-        try:
-            if last_samples is None:
-                traces.append(pm.backends.text.load(subdir))
-            else:
-                traces.append(pm.backends.text.load(subdir)[-int(last_samples):])
-        except:
-            pass
-    return append_traces(traces)
+def load_traces_dir(sp, dir_traces, last_samples=None):
+    with sp.model:
+        traces = []
+        for subdir in [os.path.join(dir_traces, o) for o in os.listdir(dir_traces) if
+                       os.path.isdir(os.path.join(dir_traces, o))]:
+            try:
+                if last_samples is None:
+                    traces.append(pm.backends.text.load(subdir))
+                else:
+                    traces.append(pm.backends.text.load(subdir)[-int(last_samples):])
+            except:
+                pass
+        return append_traces(traces)
 
 
 def append_traces(mtraces):
