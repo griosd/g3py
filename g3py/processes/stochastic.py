@@ -1,4 +1,5 @@
 import _pickle as pickle
+import os
 import numpy as np
 import pymc3 as pm
 import scipy as sp
@@ -35,8 +36,8 @@ class StochasticProcess:
         model (pm.Model): Reference to the context pm.Model
     """
     def __init__(self, space=1, location: Mean=None, kernel: Kernel=None, mapping: Mapping=None, noise=True, freedom=None,
-                 name=None, inputs=None, outputs=None, hidden=None, description=None, file=None, precompile=False):
-        if file is not None:
+                 name=None, inputs=None, outputs=None, hidden=None, description=None, file=None, recompile=False, precompile=False):
+        if file is not None and not recompile:
             try:
                 load = load_model(file)
                 self.__dict__.update(load.__dict__)
@@ -57,7 +58,9 @@ class StochasticProcess:
             self.description = description
         self.model = self.get_model()
 
-            # Space, Hidden, Observed
+        # Space, Hidden, Observed
+        if type(space) is int:
+            space = np.random.rand(2, space).astype(dtype=th.config.floatX)
         __, self.space_values, self.space_index = def_space(space)
         self.inputs, self.inputs_values, self.observed_index = def_space(space, self.name + '_inputs')
         self.outputs, self.outputs_values, __ = def_space(np.zeros(len(space)), self.name + '_outputs', squeeze=True)
@@ -103,7 +106,7 @@ class StochasticProcess:
                 self.freedom.check_dims(None)
                 self.freedom.check_hypers(self.name + '_')
 
-        print('Space Dimensions: ', self.space_values.shape)
+        print('Space Dimension: ', self.space_values.shape[1])
 
         # Hyper-parameters values
         self._widget_traces = None
@@ -396,9 +399,6 @@ class StochasticProcess:
             hidden = self.hidden
         pred = self.predict(params=params, space=space, inputs=inputs, outputs=outputs, var=variance, median=median, distribution=logp)
         scores = DictObj()
-        if logp:
-            scores['_NLL'] = - pred.logp(hidden) / len(hidden)
-            scores['_NLPD'] = - pred.logpred(hidden) / len(hidden)
         if bias:
             scores['_BiasL1'] = np.mean(np.abs(pred.mean - hidden))
             scores['_BiasL2'] = np.mean((pred.mean - hidden)**2)
@@ -408,10 +408,13 @@ class StochasticProcess:
         if median:
             scores['_MedianL1'] = np.mean(np.abs(pred.median - hidden))
             scores['_MedianL2'] = np.mean((pred.median - hidden)**2)
+        if logp:
+            scores['_NLL'] = - pred.logp(hidden) / len(hidden)
+            scores['_NLPD'] = - pred.logpred(hidden) / len(hidden)
         return scores
 
     def plot(self, params=None, space=None, inputs=None, outputs=None, mean=True, var=False, cov=False, median=False, quantiles=True, noise=True, samples=0, prior=False,
-             data=True, big=None, scores=False, title=None, loc=1):
+             data=True, big=None, plot_space=False, title=None, loc=1):
         values = self.predict(params=params, space=space, inputs=inputs, outputs=outputs, mean=mean, var=var, cov=cov, median=median, quantiles=quantiles, noise=noise, samples=samples, prior=prior)
         if space is not None:
             self.set_space(space)
@@ -437,6 +440,10 @@ class StochasticProcess:
         if data:
             self.plot_observations(big)
         plot_text(title, self.description['x'], self.description['y'], loc=loc)
+        show()
+        if plot_space:
+            self.plot_space()
+            plot_text('Space X', 'Index', 'Value', legend=False)
 
     def plot_distribution(self, index=0, params=None, space=None, inputs=None, outputs=None, mean=True, var=True, cov=False, median=False, quantiles=False, noise=False, prior=False, sigma=4, neval=100, title=None):
         pred = self.predict(params=params, space=space, inputs=inputs, outputs=outputs, mean=mean, var=var, cov=cov, median=median, quantiles=quantiles, noise=noise, distribution=True, prior=prior)
@@ -626,7 +633,8 @@ class StochasticProcess:
             return self.get_params_test(fixed)
         default = DictObj()
         for k, v in trans_hypers(self.default_hypers()).items():
-            default[k.name] = v
+            if k in self.model.vars:
+                default[k.name] = v
         if fixed:
             default.update(self.params_fixed)
         return default
@@ -681,7 +689,8 @@ class StochasticProcess:
                         name, logp, start = points_list[i]
                     if i % 2 == 0 or not powell:#
                         if name.endswith('_bfgs'):
-                            points += 1
+                            if i > 0:
+                                points += 1
                             continue
                         name += '_bfgs'
                         if display:
@@ -689,7 +698,8 @@ class StochasticProcess:
                         new = pm.find_MAP(fmin=sp.optimize.fmin_bfgs, vars=self.sampling_vars, start=start, disp=display)
                     else:
                         if name.endswith('_powell'):
-                            points += 1
+                            if i > 1:
+                                points += 1
                             continue
                         name += '_powell'
                         if display:
@@ -745,6 +755,8 @@ class StochasticProcess:
         if params is not None:
             self.set_params(params)
         try:
+            if os.path.isfile(path):
+                os.remove(path)
             with self.model:
                 with open(path, 'wb') as f:
                     pickle.dump(self, f, protocol=-1)

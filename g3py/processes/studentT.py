@@ -7,7 +7,7 @@ import theano.tensor.nlinalg as tnl
 
 class StudentTProcess(StochasticProcess):
     def __init__(self, space=1, location: Mean=None, kernel: Kernel=None, noise=True,
-                 name=None, inputs=None, outputs=None, hidden=None, file=None, precompile=False):
+                 name=None, inputs=None, outputs=None, hidden=None, file=None, precompile=False, *args, **kwargs):
         super().__init__(space=space, location=location, kernel=kernel, mapping=Identity(), noise=noise,
                          freedom=Freedom(bound=2), name=name, inputs=inputs, outputs=outputs, hidden=hidden, file=file, precompile=precompile)
 
@@ -59,7 +59,7 @@ class StudentTProcess(StochasticProcess):
 
 class TransformedStudentTProcess(StochasticProcess):
     def __init__(self, space=1, location: Mean=None, kernel: Kernel=None, mapping: Mapping=None, noise=True,
-                 freedom=None, name=None, inputs=None, outputs=None, hidden=None, file=None, precompile=False):
+                 freedom=None, name=None, inputs=None, outputs=None, hidden=None, file=None, precompile=False, *args, **kwargs):
         super().__init__(space=space, location=location, kernel=kernel, mapping=mapping, noise=noise,
                          freedom=freedom, name=name, inputs=inputs, outputs=outputs, hidden=hidden, file=file, precompile=precompile)
 

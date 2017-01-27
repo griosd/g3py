@@ -131,7 +131,7 @@ class CholeskyRobust(th.gof.Op):
             #raise sp.linalg.LinAlgError("not positive-definite: negative diagonal element")
         for num_tries in range(self.maxtries):
             try:
-                return sp.linalg.cholesky(K + dK, lower=True)
+                return np.nan_to_num(sp.linalg.cholesky(K + dK, lower=True))
             except:
                 dK *= 10
         raise sp.linalg.LinAlgError("not approximate positive-definite")

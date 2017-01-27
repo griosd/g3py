@@ -30,7 +30,7 @@ class One(Metric):
 
 class Delta(Metric):
     def __call__(self, x1, x2):
-        return tt.eq((x1 - x2), 0).dot(np.ones(self.shape))
+        return tt.eq((x1 - x2), 0).sum(axis=2)
 
     def gram(self, x1, x2):
         return tt_to_num(self(x1[:, self.dims].dimshuffle([0, 'x', 1]), x2[:, self.dims].dimshuffle(['x', 0, 1])))

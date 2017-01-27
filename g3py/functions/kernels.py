@@ -326,8 +326,8 @@ class WN(KernelStationary):
         if x2 is None:
             return self.var * tt.eye(x1.shape[0])
         else:
-            return self.var * self.metric.gram(x1, x2)
-            #return tt.zeros((x1.shape[0], x2.shape[0]))
+            #return self.var * self.metric.gram(x1, x2)
+            return tt.zeros((x1.shape[0], x2.shape[0]))
 
 
 class RQ(KernelStationary):
@@ -406,15 +406,13 @@ class KernelPeriodic(KernelStationary):
 
 class COS(KernelPeriodic):
     def __init__(self, x=None, name=None, metric=Difference, var=None, periods=None):
-        super().__init__(x, name, metric, var)
-        self.periods = periods
-        self.rate = None
+        super().__init__(x, name, metric, var, periods, rate=1)
 
     def k(self, d):
         return tt.prod(tt.cos(2 * pi * d/self.periods), axis=2)
 
 
-class PER(KernelPeriodic):
+class SIN(KernelPeriodic):
     def k(self, d):
         return tt.exp(2 * tt.dot(tt.sin(pi * d/self.periods) ** 2, self.rate))
 
