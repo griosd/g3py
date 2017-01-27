@@ -18,9 +18,23 @@ def debug(x, name='', force=False):
         return x
 
 
+class makefn:
+    def __init__(self, th_vars, fn, precompile=False):
+        self.th_vars = th_vars
+        self.fn = fn
+        if precompile:
+            self.compiled = th.function(self.th_vars, self.fn, allow_input_downcast=True, on_unused_input='ignore')
+        else:
+            self.compiled = None
+
+    def __call__(self, *args, **kwargs):
+        if self.compiled is None:
+            self.compiled = th.function(self.th_vars, self.fn, allow_input_downcast=True, on_unused_input='ignore')
+        return self.compiled(*args, **kwargs)
+
 #@memoize
-def makefn(th_vars, fn):
-    return th.function(th_vars, fn, allow_input_downcast=True, on_unused_input='ignore')
+#def makefn(th_vars, fn):
+#    return th.function(th_vars, fn, allow_input_downcast=True, on_unused_input='ignore')
 
 
 def show_graph(f, name='temp.png'):
@@ -117,7 +131,7 @@ class CholeskyRobust(th.gof.Op):
             #raise sp.linalg.LinAlgError("not positive-definite: negative diagonal element")
         for num_tries in range(self.maxtries):
             try:
-                return np.nan_to_num(sp.linalg.cholesky(K + dK, lower=True))
+                return sp.linalg.cholesky(K + dK, lower=True)
             except:
                 dK *= 10
         raise sp.linalg.LinAlgError("not approximate positive-definite")

@@ -77,19 +77,15 @@ class RobustSlice(pm.step_methods.arraystep.ArrayStep):
         q_left = q0 - np.random.uniform(0, self.w)
         q_right = q_left + self.w
 
-
-        #print('q0, log(q0), y=logp(q0)-N(0,1)',q0, logp(q0), y)
-        #print('w, q_left, q_right',self.w, q_left, q_right)
-        #print('y, log(q_left), log(q_right)',y, logp(q_left), logp(q_right))
-
         iter = 0
-        while (y < logp(q_left)).all() and iter<self.max_iter:
+        while (y < logp(q_left)).all() and iter < self.max_iter:
             q_left -= self.w
-            iter+=1
+            iter += 1
 
-        while (y < logp(q_right)).all() and iter<self.max_iter:
+        while (y < logp(q_right)).all() and iter < self.max_iter:
             q_right += self.w
             iter += 1
+
         if iter >= self.max_iter:
             return q0
 

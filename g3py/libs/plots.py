@@ -4,7 +4,7 @@ from matplotlib import cm
 from mpl_toolkits.mplot3d import axes3d
 import seaborn as sb
 import IPython.display as display
-from g3py import config
+from .. import config
 
 
 def style_seaborn():

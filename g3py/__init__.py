@@ -13,5 +13,5 @@ from .libs import *
 
 from .models import *
 #from .sandbox.tgp import *
-from .config import *
+from . import config
 

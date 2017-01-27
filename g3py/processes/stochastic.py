@@ -1,4 +1,4 @@
-import pickle
+import _pickle as pickle
 import numpy as np
 import pymc3 as pm
 import scipy as sp
@@ -6,7 +6,7 @@ import theano as th
 from ..functions import Mean, Kernel, Mapping, KernelSum, WN, tt_to_num, def_space, trans_hypers
 from ..libs import tt_to_cov, makefn, plot_text, clone, DictObj, plot_2d, grid2d, show
 from ..models import ConstantStep, RobustSlice
-from ..config import *
+from .. import config
 from ipywidgets import interact
 from matplotlib import pyplot as plt
 from theano import tensor as tt
@@ -35,7 +35,14 @@ class StochasticProcess:
         model (pm.Model): Reference to the context pm.Model
     """
     def __init__(self, space=1, location: Mean=None, kernel: Kernel=None, mapping: Mapping=None, noise=True, freedom=None,
-                 name=None, inputs=None, outputs=None, hidden=None, description=None):
+                 name=None, inputs=None, outputs=None, hidden=None, description=None, file=None, precompile=False):
+        if file is not None:
+            try:
+                load = load_model(file)
+                self.__dict__.update(load.__dict__)
+                return
+            except:
+                print('Not found model in '+str(file))
         # Name, Description, Factor Graph, Space, Hidden
         if name is None:
             self.name = self.__class__.__name__
@@ -161,10 +168,17 @@ class StochasticProcess:
         self.define_process()
         print('Definition OK')
 
-        self.compile()
+        self.compile(precompile)
         print('Compilation OK')
 
         self.observed(inputs, outputs)
+        if file is not None:
+            self.file = file
+            try:
+                self.save_model()
+            except:
+                print('Error in file '+str(file))
+
 
     def get_model(self):
         try:
@@ -192,67 +206,65 @@ class StochasticProcess:
     def define_process(self):
         pass
 
-    def compile(self):
-
+    def compile(self, precompile=False):
         params = [self.space_th] + self.model.vars
-        self.compiles['location_space'] = makefn(params, self.location_space)
-        self.compiles['kernel_space'] = makefn(params, self.kernel_space)
-        self.compiles['kernel_f_space'] = makefn(params, self.kernel_f_space)
+        self.compiles['location_space'] = makefn(params, self.location_space, precompile)
+        self.compiles['kernel_space'] = makefn(params, self.kernel_space, precompile)
+        self.compiles['kernel_f_space'] = makefn(params, self.kernel_f_space, precompile)
 
         params = [self.inputs_th] + self.model.vars
-        self.compiles['location_inputs'] = makefn(params, self.location_inputs)
-        self.compiles['kernel_inputs'] = makefn(params, self.kernel_inputs)
-        self.compiles['kernel_f_inputs'] = makefn(params, self.kernel_f_inputs)
+        self.compiles['location_inputs'] = makefn(params, self.location_inputs, precompile)
+        self.compiles['kernel_inputs'] = makefn(params, self.kernel_inputs, precompile)
+        self.compiles['kernel_f_inputs'] = makefn(params, self.kernel_f_inputs, precompile)
 
         params = [self.space_th, self.inputs_th] + self.model.vars
-        self.compiles['kernel_space_inputs'] = makefn(params, self.kernel_space_inputs)
-        self.compiles['kernel_f_space_inputs'] = makefn(params, self.kernel_f_space_inputs)
-
+        self.compiles['kernel_space_inputs'] = makefn(params, self.kernel_space_inputs, precompile)
+        self.compiles['kernel_f_space_inputs'] = makefn(params, self.kernel_f_space_inputs, precompile)
 
         params = [self.space_th] + self.model.vars
-        self.compiles['prior_mean'] = makefn(params, self.prior_mean)
-        self.compiles['prior_covariance'] = makefn(params, self.prior_covariance)
-        self.compiles['prior_cholesky'] = makefn(params, self.prior_cholesky)
-        self.compiles['prior_variance'] = makefn(params, self.prior_variance)
-        self.compiles['prior_std'] = makefn(params, self.prior_std)
-        self.compiles['prior_noise'] = makefn(params, self.prior_noise)
-        self.compiles['prior_median'] = makefn(params, self.prior_median)
-        self.compiles['prior_quantile_up'] = makefn(params, self.prior_quantile_up)
-        self.compiles['prior_quantile_down'] = makefn(params, self.prior_quantile_down)
-        self.compiles['prior_noise_up'] = makefn(params, self.prior_noise_up)
-        self.compiles['prior_noise_down'] = makefn(params, self.prior_noise_down)
-        self.compiles['prior_logp'] = makefn([self.random_th] + params, self.prior_logp)
-        self.compiles['prior_logpred'] = makefn([self.random_th] + params, self.prior_logpred)
-        self.compiles['prior_distribution'] = makefn([self.random_th] + params, self.prior_distribution)
+        self.compiles['prior_mean'] = makefn(params, self.prior_mean, precompile)
+        self.compiles['prior_covariance'] = makefn(params, self.prior_covariance, precompile)
+        self.compiles['prior_cholesky'] = makefn(params, self.prior_cholesky, precompile)
+        self.compiles['prior_variance'] = makefn(params, self.prior_variance, precompile)
+        self.compiles['prior_std'] = makefn(params, self.prior_std, precompile)
+        self.compiles['prior_noise'] = makefn(params, self.prior_noise, precompile)
+        self.compiles['prior_median'] = makefn(params, self.prior_median, precompile)
+        self.compiles['prior_quantile_up'] = makefn(params, self.prior_quantile_up, precompile)
+        self.compiles['prior_quantile_down'] = makefn(params, self.prior_quantile_down, precompile)
+        self.compiles['prior_noise_up'] = makefn(params, self.prior_noise_up, precompile)
+        self.compiles['prior_noise_down'] = makefn(params, self.prior_noise_down, precompile)
+        self.compiles['prior_logp'] = makefn([self.random_th] + params, self.prior_logp, precompile)
+        self.compiles['prior_logpred'] = makefn([self.random_th] + params, self.prior_logpred, precompile)
+        self.compiles['prior_distribution'] = makefn([self.random_th] + params, self.prior_distribution, precompile)
         try:
-            self.compiles['prior_sampler'] = makefn([self.random_th] + params, self.prior_sampler)
+            self.compiles['prior_sampler'] = makefn([self.random_th] + params, self.prior_sampler, precompile)
         except:
-            self.compiles['prior_sampler'] = makefn([self.random_scalar, self.random_th] + params, self.prior_sampler)
+            self.compiles['prior_sampler'] = makefn([self.random_scalar, self.random_th] + params, self.prior_sampler, precompile)
 
         params = [self.space_th, self.inputs_th, self.outputs_th] + self.model.vars
-        self.compiles['posterior_mean'] = makefn(params, self.posterior_mean)
-        self.compiles['posterior_covariance'] = makefn(params, self.posterior_covariance)
-        self.compiles['posterior_cholesky'] = makefn(params, self.posterior_cholesky)
-        self.compiles['posterior_variance'] = makefn(params, self.posterior_variance)
-        self.compiles['posterior_std'] = makefn(params, self.posterior_std)
-        self.compiles['posterior_noise'] = makefn(params, self.posterior_noise)
-        self.compiles['posterior_median'] = makefn(params, self.posterior_median)
-        self.compiles['posterior_quantile_up'] = makefn(params, self.posterior_quantile_up)
-        self.compiles['posterior_quantile_down'] = makefn(params, self.posterior_quantile_down)
-        self.compiles['posterior_noise_up'] = makefn(params, self.posterior_noise_up)
-        self.compiles['posterior_noise_down'] = makefn(params, self.posterior_noise_down)
-        self.compiles['posterior_logp'] = makefn([self.random_th] + params, self.posterior_logp)
-        self.compiles['posterior_logpred'] = makefn([self.random_th] + params, self.posterior_logpred)
-        self.compiles['posterior_distribution'] = makefn([self.random_th] + params, self.posterior_distribution)
+        self.compiles['posterior_mean'] = makefn(params, self.posterior_mean, precompile)
+        self.compiles['posterior_covariance'] = makefn(params, self.posterior_covariance, precompile)
+        self.compiles['posterior_cholesky'] = makefn(params, self.posterior_cholesky, precompile)
+        self.compiles['posterior_variance'] = makefn(params, self.posterior_variance, precompile)
+        self.compiles['posterior_std'] = makefn(params, self.posterior_std, precompile)
+        self.compiles['posterior_noise'] = makefn(params, self.posterior_noise, precompile)
+        self.compiles['posterior_median'] = makefn(params, self.posterior_median, precompile)
+        self.compiles['posterior_quantile_up'] = makefn(params, self.posterior_quantile_up, precompile)
+        self.compiles['posterior_quantile_down'] = makefn(params, self.posterior_quantile_down, precompile)
+        self.compiles['posterior_noise_up'] = makefn(params, self.posterior_noise_up, precompile)
+        self.compiles['posterior_noise_down'] = makefn(params, self.posterior_noise_down, precompile)
+        self.compiles['posterior_logp'] = makefn([self.random_th] + params, self.posterior_logp, precompile)
+        self.compiles['posterior_logpred'] = makefn([self.random_th] + params, self.posterior_logpred, precompile)
+        self.compiles['posterior_distribution'] = makefn([self.random_th] + params, self.posterior_distribution, precompile)
         try:
-            self.compiles['posterior_sampler'] = makefn([self.random_th] + params, self.posterior_sampler)
+            self.compiles['posterior_sampler'] = makefn([self.random_th] + params, self.posterior_sampler, precompile)
         except:
-            self.compiles['posterior_sampler'] = makefn([self.random_scalar, self.random_th] + params, self.posterior_sampler)
+            self.compiles['posterior_sampler'] = makefn([self.random_scalar, self.random_th] + params, self.posterior_sampler, precompile)
 
         params = self.model.vars
-        self.compiles['mapping_outputs'] = makefn(params, self.mapping_outputs)
-        self.compiles['mapping_th'] = makefn([self.random_th] + params, self.mapping_th)
-        self.compiles['mapping_inv_th'] = makefn([self.random_th] + params, self.mapping_inv_th)
+        self.compiles['mapping_outputs'] = makefn(params, self.mapping_outputs, precompile)
+        self.compiles['mapping_th'] = makefn([self.random_th] + params, self.mapping_th, precompile)
+        self.compiles['mapping_inv_th'] = makefn([self.random_th] + params, self.mapping_inv_th, precompile)
 
     def describe(self, title=None, x=None, y=None, text=None):
         if title is not None:
@@ -264,21 +276,25 @@ class StochasticProcess:
         if title is not None:
             self.description['text'] = text
 
-    def set_space(self, space, hidden=None):
+    def set_space(self, space, hidden=None, index=None):
         __, self.space_values, self.space_index = def_space(space)
         self.hidden = hidden
+        if index is not None:
+            self.space_index = index
 
-    def observed(self, inputs=None, outputs=None):
+    def observed(self, inputs=None, outputs=None, index=None):
         if inputs is None or outputs is None or len(inputs) == 0 or len(inputs) == 0:
-            self.inputs_values, self.outputs_values, self.observed_index = None, None, None
-            self.inputs.set_value(self.inputs_values)
-            self.outputs.set_value(self.outputs_values)
+            self.inputs_values, self.outputs_values, self.observed_index = None, None, index
+            self.inputs.set_value(self.inputs_values, borrow=True)
+            self.outputs.set_value(self.outputs_values, borrow=True)
             return
 
         __, self.inputs_values, self.observed_index = def_space(inputs)
+        if index is not None:
+            self.observed_index = index
         __, self.outputs_values, __ = def_space(outputs, squeeze=True)
-        self.inputs.set_value(self.inputs_values)
-        self.outputs.set_value(self.outputs_values)
+        self.inputs.set_value(self.inputs_values, borrow=True)
+        self.outputs.set_value(self.outputs_values, borrow=True)
         if self.distribution is None:
             with self.model:
                 self.define_distribution()
@@ -394,13 +410,13 @@ class StochasticProcess:
             scores['_MedianL2'] = np.mean((pred.median - hidden)**2)
         return scores
 
-    def plot(self, params=None, space=None, inputs=None, outputs=None, mean=True, var=True, cov=False, median=True, quantiles=True, noise=True, samples=0, prior=False,
+    def plot(self, params=None, space=None, inputs=None, outputs=None, mean=True, var=False, cov=False, median=False, quantiles=True, noise=True, samples=0, prior=False,
              data=True, big=None, scores=False, title=None, loc=1):
         values = self.predict(params=params, space=space, inputs=inputs, outputs=outputs, mean=mean, var=var, cov=cov, median=median, quantiles=quantiles, noise=noise, samples=samples, prior=prior)
         if space is not None:
             self.set_space(space)
         if data:
-            self.plot_data(big)
+            self.plot_hidden(big)
         if mean:
             plt.plot(self.space_index, values['mean'], label='Mean')
         if var:
@@ -418,8 +434,8 @@ class StochasticProcess:
             plt.plot(self.space_index, values['samples'], alpha=0.4)
         if title is None:
             title = self.description['title']
-        if self.outputs_values is not None:
-            plt.plot(self.observed_index, self.outputs_values, '.r', ms=15, label='Observations')
+        if data:
+            self.plot_observations(big)
         plot_text(title, self.description['x'], self.description['y'], loc=loc)
 
     def plot_distribution(self, index=0, params=None, space=None, inputs=None, outputs=None, mean=True, var=True, cov=False, median=False, quantiles=False, noise=False, prior=False, sigma=4, neval=100, title=None):
@@ -655,7 +671,9 @@ class StochasticProcess:
             self.plot(params=points_list[0][2], title='start')
             plt.show()
         with self.model:
-            for i in range(points):
+            i = -1
+            while i < points:
+                i += 1
                 try:
                     if powell:
                         name, logp, start = points_list[i // 2]
@@ -685,6 +703,7 @@ class StochasticProcess:
                 except:
                     pass
 
+
         optimal = points_list[0]
         for test in points_list:
             if test[1] > optimal[1]:
@@ -712,8 +731,6 @@ class StochasticProcess:
                         step += [pm.HamiltonianMC(vars=self.sampling_vars, scaling=self.get_params_default(), path_length=5., is_cov=False)]
                     else:
                         step += [RobustSlice(vars=self.sampling_vars)]  # Slice original se cuelga si parte del óptimo
-                    #step += [pm.Metropolis(vars=self.sampling_vars, tune=False)] # OK
-                    #step += [pm.NUTS(vars=self.sampling_vars, scaling=advi_sm, is_cov=True)] #BUG float32
             else:
                 if method == 'HMC':
                     step = pm.HamiltonianMC(scaling=self.get_params_default(), path_length=5., is_cov=False)
@@ -722,7 +739,9 @@ class StochasticProcess:
             trace = pm.sample(samples, step=step, start=start, njobs=chains, trace=trace)
         return trace
 
-    def save_model(self, path, params=None):
+    def save_model(self, path=None, params=None):
+        if path is None:
+            path = self.file
         if params is not None:
             self.set_params(params)
         try:
@@ -750,28 +769,39 @@ class StochasticProcess:
             else:
                 plt.plot(self.observed_index, self.inputs_values, '.k')
 
-    def plot_data(self, big=None):
+    def plot_hidden(self, big=None):
         if big is None:
-            big = plot_big
+            big = config.plot_big
         if big:
-            self.plot_data_big()
+            self.plot_hidden_big()
         else:
-            self.plot_data_normal()
+            self.plot_hidden_normal()
 
-    def plot_data_normal(self):
+    def plot_hidden_normal(self):
         if self.hidden is not None:
             plt.plot(self.space_index, self.hidden[0:len(self.space_index)],  label='Hidden Processes')
-        if self.outputs_values is not None:
-            plt.plot(self.observed_index, self.outputs_values, '.r', label='Observations')
 
-    def plot_data_big(self):
+    def plot_hidden_big(self):
         if self.hidden is not None:
             plt.plot(self.space_index, self.hidden[0:len(self.space_index)], linewidth=4, label='Hidden Processes')
+
+    def plot_observations(self, big=None):
+        if big is None:
+            big = config.plot_big
+        if big:
+            self.plot_observations_big()
+        else:
+            self.plot_observations_normal()
+
+    def plot_observations_normal(self):
         if self.outputs_values is not None:
-            plt.plot(self.observed_index, self.outputs_values, '.k', ms=20, label='Observations')
+            plt.plot(self.observed_index, self.outputs_values, '.k', ms=10)
+            plt.plot(self.observed_index, self.outputs_values, '.r', ms=6, label='Observations')
 
-    # TODO:
-
+    def plot_observations_big(self):
+        if self.outputs_values is not None:
+            plt.plot(self.observed_index, self.outputs_values, '.k', ms=20)
+            plt.plot(self.observed_index, self.outputs_values, '.r', ms=15, label='Observations')
 
     def subprocess(self, subkernel, mean=True, cov=False, var=True, median=False, quantiles=False, noise=False):
         pass

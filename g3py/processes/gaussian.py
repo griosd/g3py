@@ -7,9 +7,9 @@ from scipy.stats._multivariate import multivariate_normal
 
 class GaussianProcess(StochasticProcess):
     def __init__(self, space=1, location: Mean=None, kernel: Kernel=None, noise=True,
-                 name='GP', inputs=None, outputs=None, hidden=None):
+                 name='GP', inputs=None, outputs=None, hidden=None, file=None, precompile=False):
         super().__init__(space=space, location=location, kernel=kernel, mapping=Identity(), noise=noise,
-                         freedom=None, name=name, inputs=inputs, outputs=outputs, hidden=hidden)
+                         freedom=None, name=name, inputs=inputs, outputs=outputs, hidden=hidden, file=file, precompile=precompile)
 
     def define_distribution(self):
         self.distribution = TGPDist(self.name, mu=self.location(self.inputs), cov=tt_to_cov(self.kernel.cov(self.inputs)),
@@ -65,9 +65,9 @@ class GaussianProcess(StochasticProcess):
 
 class TransformedGaussianProcess(StochasticProcess):
     def __init__(self, space=1, location: Mean=None, kernel: Kernel=None, mapping: Mapping=None, noise=True,
-                 name='TGP', inputs=None, outputs=None, hidden=None):
+                 name='TGP', inputs=None, outputs=None, hidden=None, file=None, precompile=False):
         super().__init__(space=space, location=location, kernel=kernel, mapping=mapping, noise=noise,
-                         freedom=None, name=name, inputs=inputs, outputs=outputs, hidden=hidden)
+                         freedom=None, name=name, inputs=inputs, outputs=outputs, hidden=hidden,  file=file, precompile=precompile)
 
         self.latent_prior_mean = None
         self.latent_prior_covariance = None

@@ -55,19 +55,19 @@ def append_traces(mtraces):
     return base_mtrace
 
 
-def trace_to_datatrace(model, trace):
+def trace_to_datatrace(sp, trace):
     dt = pm.trace_to_dataframe(trace, hide_transformed_vars=False)
-    likelihood_datatrace(model, dt, trace)
+    likelihood_datatrace(sp, dt, trace)
     return dt
 
 
-def likelihood_datatrace(model, datatrace, trace):
+def likelihood_datatrace(sp, datatrace, trace):
     ll = pd.Series(index=datatrace.index)
     adll = pd.Series(index=datatrace.index)
     niter = pd.Series(index=datatrace.index)
 
-    flogp = model.logp
-    dflogp = model.dlogp()
+    flogp = sp.model.logp
+    dflogp = sp.model.dlogp()
     for i in range(len(trace)):
         niter[i] = i
         ll[i] = flogp(trace[i])
