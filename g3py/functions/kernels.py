@@ -382,43 +382,43 @@ class SE(KernelStationaryExponential):
 
 
 class KernelPeriodic(KernelStationary):
-    def __init__(self, x=None, name=None, metric=Difference, var=None, periods=None, rate=None):
+    def __init__(self, x=None, name=None, metric=Difference, var=None, freq=None, rate=None):
         super().__init__(x, name, metric, var)
-        self.periods = periods
+        self.freq = freq
         self.rate = rate
 
     def check_hypers(self, parent=''):
         super().check_hypers(parent=parent)
-        if self.periods is None:
-            self.periods = Hypers.FlatExp(parent + self.name + '_per', shape=self.shape)
+        if self.freq is None:
+            self.freq = Hypers.FlatExp(parent + self.name + '_freq', shape=self.shape)
         if self.rate is None:
             self.rate = Hypers.FlatExp(parent + self.name + '_rate', shape=self.shape)
         if isinstance(self.rate, tt.TensorVariable):
             self.hypers += [self.rate]
-        if isinstance(self.periods, tt.TensorVariable):
-            self.hypers += [self.periods]
+        if isinstance(self.freq, tt.TensorVariable):
+            self.hypers += [self.freq]
 
     def default_hypers(self, x=None, y=None):
-        return {self.periods: (x.max(axis=0)-x.min(axis=0)),
+        return {self.freq: 1/(x.max(axis=0)-x.min(axis=0)),
                 self.rate: 1 / np.abs(x[1:] - x[:-1]).mean(axis=0),
                 **super().default_hypers(x, y)}
 
 
 class COS(KernelPeriodic):
-    def __init__(self, x=None, name=None, metric=Difference, var=None, periods=None):
-        super().__init__(x, name, metric, var, periods, rate=1)
+    def __init__(self, x=None, name=None, metric=Difference, var=None, freq=None):
+        super().__init__(x, name, metric, var, freq, rate=1)
 
     def k(self, d):
-        return tt.prod(tt.cos(2 * pi * d/self.periods), axis=2)
+        return tt.prod(tt.cos(2 * pi * d * self.freq), axis=2)
 
 
 class SIN(KernelPeriodic):
     def k(self, d):
-        return tt.exp(2 * tt.dot(tt.sin(pi * d/self.periods) ** 2, self.rate))
+        return tt.exp(2 * tt.dot(tt.sin(pi * d * self.freq) ** 2, self.rate))
 
 
 class SM(KernelPeriodic):
     def k(self, d):
-        return tt.exp(-2 * pi ** 2 * tt.dot(d ** 2, self.rate ** 2)) * tt.prod(tt.cos(2 * pi * d / self.periods), axis=2)
+        return tt.exp(-2 * pi ** 2 * tt.dot(d ** 2, self.rate ** 2)) * tt.prod(tt.cos(2 * pi * d * self.freq), axis=2)
 
 

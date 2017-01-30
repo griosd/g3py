@@ -8,17 +8,36 @@ import matplotlib.pyplot as plt
 from matplotlib import cm
 from sklearn import cluster, mixture
 from pymc3 import traceplot
+from copy import copy
 
 
-def save_pkl(trace, path='file.pkl'):
+def save_pkl(to_pkl, path='file.pkl'):
+    os.makedirs(path[:path.rfind('/')], exist_ok=True)
     with open(path, 'wb') as f:
-        pickle.dump(trace, f, protocol=-1)
+        pickle.dump(to_pkl, f, protocol=-1)
 
 
 def load_pkl(path='file.pkl'):
     with open(path, 'rb') as f:
         return pickle.load(f)
 
+
+def save_datatrace(dt, path='datatrace.pkl'):
+    os.makedirs(path[:path.rfind('/')], exist_ok=True)
+    dt.to_pickle(path)
+
+def load_datatrace(path='datatrace.pkl'):
+    return pd.read_pickle(path)
+
+
+def save_traces(sp, traces, path):
+    os.makedirs(path[:path.rfind('/')], exist_ok=True)
+    with sp.model:
+        pm.backends.text.dump(path, traces)
+
+def load_traces(sp, path):
+    with sp.model:
+        return pm.backends.text.load(path)
 
 def load_traces_dir(sp, dir_traces, last_samples=None):
     with sp.model:
@@ -45,7 +64,7 @@ def append_traces(mtraces):
         pm.backends.base.MultiTrace: MultiTrace object containing all the others joined
 
     """
-    base_mtrace = mtraces[0]
+    base_mtrace = copy(mtraces[0])
     i = base_mtrace.nchains
     for new_mtrace in mtraces[1:]:
         for new_chain, strace in new_mtrace._straces.items():
@@ -68,10 +87,13 @@ def likelihood_datatrace(sp, datatrace, trace):
 
     flogp = sp.model.logp
     dflogp = sp.model.dlogp()
-    for i in range(len(trace)):
-        niter[i] = i
-        ll[i] = flogp(trace[i])
-        adll[i] = np.sum(np.abs(dflogp((trace[i]))))
+    n_traces = len(trace._straces)
+    for s in range(n_traces):
+        lenght_trace = len(trace._straces[s])
+        for i in range(lenght_trace):
+            niter[s*lenght_trace + i] = i
+            ll[s*lenght_trace + i] = flogp(trace._straces[s][i])
+            adll[s*lenght_trace + i] = np.sum(np.abs(dflogp((trace._straces[s][i]))))
     datatrace['_niter'] = niter
     datatrace['_ll'] = ll
     datatrace['_adll'] = adll
@@ -83,13 +105,6 @@ def cluster_datatrace(dt, n_components=10, n_init=1, excludes='_'):
     cluster_gm = gm.predict(datatrace_filter)
     dt['_cluster'] = cluster_gm
 
-
-def save_datatrace(dt, path='datatrace.pkl'):
-    dt.to_pickle(path)
-
-
-def load_datatrace(path='datatrace.pkl'):
-    return pd.read_pickle(path)
 
 
 def marginal(dt, items=None, like=None, regex=None, samples=None):
@@ -127,6 +142,9 @@ def find_candidates(dt, ll=1, adll=1, rand=1):
     median.name = 'median'
     candidates.append(median)
     return pd.DataFrame(candidates).append(dt.sample(rand))
+
+def hist_trace(datatrace, items=None, like=None, regex=None, samples=None, bins=200, layout=(4,4), figsize=(20,20)):
+    marginal(datatrace, items=items, like=like, regex=regex, samples=samples).hist(bins=bins, layout=layout, figsize=figsize)
 
 
 def scatter_datatrace(dt, items=None, like=None, regex=None, samples=None, bins=200, figsize=(15, 10), cluster=None, cmap=cm.rainbow):

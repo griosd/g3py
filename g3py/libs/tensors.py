@@ -46,8 +46,8 @@ def print_graph(f):
     return th.printing.debugprint(f)
 
 
-def tt_to_num(r, nan=0, inf=np.inf):
-    return tt.switch(tt.isnan(r), np.nan_to_num(np.float32(nan)), tt.switch(tt.isinf(r), np.nan_to_num(np.float32(inf)), r))
+def tt_to_num(r, nan=0, inf=1e10):
+    return tt.switch(tt.isnan(r), np.float32(nan), tt.switch(tt.isinf(r), np.nan_to_num(np.float32(inf)), r))
 
 
 def tt_to_cov(c):
@@ -119,9 +119,9 @@ class CholeskyRobust(th.gof.Op):
         return th.gof.Apply(self, [x], [x.type()])
 
     def _cholesky(self, K):
-        # L, info = sp.linalg.lapack.dpotrf(K, lower=1)
-        # if info == 0:
-        #    return L
+        L, info = sp.linalg.lapack.dpotrf(K, lower=1)
+        if info == 0:
+            return L
         # else:
         #print(K)
         diagK = np.diag(K)
@@ -142,7 +142,8 @@ class CholeskyRobust(th.gof.Op):
         try:
             z[0] = self._cholesky(x).astype(x.dtype)
         except:
-            raise sp.linalg.LinAlgError("not perform cholesky")
+            z[0] = (0*x).astype(x.dtype)
+            #raise sp.linalg.LinAlgError("not perform cholesky")
 
     def grad(self, inputs, gradients):
         """
@@ -172,7 +173,7 @@ class CholeskyRobust(th.gof.Op):
         def conjugate_solve_triangular(outer, inner):
             """Computes L^{-T} P L^{-1} for lower-triangular L."""
             return solve_upper_triangular(
-                outer.T, solve_upper_triangular(outer.T, inner.T).T)
+                outer.T, solve_upper_triangular(outer.T, tt_to_num(inner).T).T)
 
         s = conjugate_solve_triangular(
             chol_x, tril_and_halve_diagonal(tt_to_num(chol_x.T.dot(dz))))

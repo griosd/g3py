@@ -61,6 +61,7 @@ class MappingComposed(MappingOperation):
     def __init__(self, m1: Mapping, m2: Mapping):
         super().__init__(m1, m2)
         self.op = '@'
+        self.name = self.m1.name + " " + self.m2.name
 
     def __call__(self, x):
         return self.m1(self.m2(x))
@@ -151,7 +152,7 @@ class BoxCoxShifted(Mapping):
         return ((tt.sgn(shifted) * tt.abs_(shifted) ** self.power)-1.0)/self.power
 
     def logdet_dinv(self, y):
-        return (self.power - 1.0)*tt.sum(tt.log(tt.abs_(y+self.shift)))
+        return (self.power - 1.0)*tt.sum(tt_to_num(tt.log(y+self.shift), -1e-10, -1e-10))
 
 
 class Logistic(Mapping):
@@ -184,11 +185,11 @@ class Logistic(Mapping):
 
     def inv(self, y):
         p = tt.switch(y < self.lower, 0, tt.switch(y > self.lower + self.high, 1, (y - self.lower) / self.high))
-        return debug(self.location + self.scale * tt_to_num(tt.log(p / (1 - p))), 'inv')
+        return self.location + self.scale * tt_to_num(tt.log(p / (1 - p)))
 
     def logdet_dinv(self, y):
         p = tt.switch(y < self.lower, 0, tt.switch(y > self.lower + self.high, 1, (y - self.lower) / self.high))
-        return debug(tt.sum(tt_to_num(tt.log(self.scale / (self.high * p * (1 - p))))), 'logdet_dinv')
+        return tt.sum(tt_to_num(tt.log(self.scale / (self.high * p * (1 - p)))))
 
 
 class WarpingTanh(Mapping):
@@ -233,7 +234,7 @@ class WarpingBoxCox(Mapping):
             self.power = Hypers.FlatExp(parent + self.name + '_power', shape=self.n)
         if self.w is None:
             self.w = Hypers.FlatExp(parent + self.name + '_w', shape=self.n)
-        self.hypers += [self.shift, self.power]
+        self.hypers += [self.shift, self.power, self.w]
 
     def default_hypers(self, x=None, y=None):
         return {self.w:  ones(self.n) / self.n,

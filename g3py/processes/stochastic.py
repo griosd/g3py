@@ -6,7 +6,7 @@ import scipy as sp
 import theano as th
 from ..functions import Mean, Kernel, Mapping, KernelSum, WN, tt_to_num, def_space, trans_hypers
 from ..libs import tt_to_cov, makefn, plot_text, clone, DictObj, plot_2d, grid2d, show
-from ..models import ConstantStep, RobustSlice
+from ..models import ConstantStep, RobustSlice, RobustHamiltonianMC
 from .. import config
 from ipywidgets import interact
 from matplotlib import pyplot as plt
@@ -197,9 +197,14 @@ class StochasticProcess:
             """Nan Robust fastdlogp"""
             return self.model.fastfn(tt_to_num(pm.gradient(self.logpt, vars)))
 
+        def fastd2logp(self, vars=None):
+            """Nan Robust fastd2logp"""
+            return self.model.fastfn(tt_to_num(-pm.jacobian(tt_to_num(pm.gradient(self.logpt, vars), vars))))
+
         import types
         model.dlogp = types.MethodType(dlogp, model)
         model.fastdlogp = types.MethodType(fastdlogp, model)
+        model.fastd2logp = types.MethodType(fastd2logp, model)
 
         return model
 
@@ -464,7 +469,7 @@ class StochasticProcess:
             params = self.get_params_current()
         if outputs is None:
             outputs = self.outputs_values
-        domain = np.linspace(outputs.min() - outputs.std(), outputs.max() + outputs.std(), neval)
+        domain = np.linspace(outputs.min() , outputs.max() , neval)
         transform = self.compiles['mapping_inv_th'](domain, **params)
         plt.plot(domain, transform, label='mapping')
 
@@ -517,11 +522,10 @@ class StochasticProcess:
         plot_text(title, 'Domain y_'+str(self.space_index[indexs[0]]), 'Domain y_'+str(self.space_index[indexs[1]]), legend=False)
 
 
-    def plot_model(self, params=None, indexs=[0, 1]):
-        #plt.subplot(321)
-        #self.plot_location()
-        #plt.subplot(322)
-        #self.plot_concentration()
+    def plot_model(self, params=None, indexs=None):
+        if indexs is None:
+            indexs = [len(self.observed_index)//2, len(self.observed_index)//1]
+
         plt.subplot(121)
         self.plot_kernel(params=params)
         plt.subplot(122)
@@ -575,8 +579,8 @@ class StochasticProcess:
         self.params_widget = params
         self.plot(params = self.params_widget)
 
-    def widget_traces(self, traces):
-        self._widget_traces = traces
+    def widget_traces(self, traces, chain=0):
+        self._widget_traces = traces._straces[chain]
         interact(self.widget_plot_trace, __manual=True, id_trace=[0, len(self._widget_traces) - 1])
 
     def widget_plot_trace(self, id_trace):
@@ -727,7 +731,7 @@ class StochasticProcess:
         else:
             return params, points_list
 
-    def sample_hypers(self, start=None, samples=1000, chains=1, trace=None, method='HMC'):
+    def sample_hypers(self, start=None, samples=1000, chains=1, trace=None, method='Slice'):
         if start is None:
             start = self.get_params_current()
         if self.outputs.get_value() is None:
@@ -738,12 +742,13 @@ class StochasticProcess:
                 step = [ConstantStep(vars=self.fixed_vars)]  # Fue eliminado por error en pymc3
                 if len(self.sampling_vars) > 0:
                     if method == 'HMC':
-                        step += [pm.HamiltonianMC(vars=self.sampling_vars, scaling=self.get_params_default(), path_length=5., is_cov=False)]
+                        step += [RobustHamiltonianMC(vars=self.sampling_vars)]
                     else:
                         step += [RobustSlice(vars=self.sampling_vars)]  # Slice original se cuelga si parte del óptimo
             else:
                 if method == 'HMC':
-                    step = pm.HamiltonianMC(scaling=self.get_params_default(), path_length=5., is_cov=False)
+
+                    step = RobustHamiltonianMC()
                 else:
                     step = RobustSlice()
             trace = pm.sample(samples, step=step, start=start, njobs=chains, trace=trace)

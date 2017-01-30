@@ -5,7 +5,7 @@ from .traces import *
 
 
 def clone(c):
-    return copy.copy(c)
+    return copy(c)
 
 
 class DictObj(dict):
