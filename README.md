@@ -13,7 +13,7 @@ búsqueda de óptimos locales y recorrer el espacio en búsqueda de óptimos glo
 # Installation
 [https://pypi.python.org/pypi/g3py](https://pypi.python.org/pypi/g3py)
 ```
-pip install g3py
+pip install git+https://github.com/griosd/g3py.git
 ```
 
 # Tutorials
