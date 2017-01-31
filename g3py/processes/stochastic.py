@@ -6,7 +6,7 @@ import scipy as sp
 import theano as th
 from ..functions import Mean, Kernel, Mapping, KernelSum, WN, tt_to_num, def_space, trans_hypers
 from ..libs import tt_to_cov, makefn, plot_text, clone, DictObj, plot_2d, grid2d, show
-from ..models import ConstantStep, RobustSlice, RobustHamiltonianMC
+from ..models import ConstantStep, RobustSlice
 from .. import config
 from ipywidgets import interact
 from matplotlib import pyplot as plt
@@ -742,13 +742,13 @@ class StochasticProcess:
                 step = [ConstantStep(vars=self.fixed_vars)]  # Fue eliminado por error en pymc3
                 if len(self.sampling_vars) > 0:
                     if method == 'HMC':
-                        step += [RobustHamiltonianMC(vars=self.sampling_vars)]
+                        step += [pm.HamiltonianMC(vars=self.sampling_vars)]
                     else:
                         step += [RobustSlice(vars=self.sampling_vars)]  # Slice original se cuelga si parte del óptimo
             else:
                 if method == 'HMC':
 
-                    step = RobustHamiltonianMC()
+                    step = pm.HamiltonianMC()
                 else:
                     step = RobustSlice()
             trace = pm.sample(samples, step=step, start=start, njobs=chains, trace=trace)
