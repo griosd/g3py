@@ -85,15 +85,29 @@ def likelihood_datatrace(sp, datatrace, trace):
     adll = pd.Series(index=datatrace.index)
     niter = pd.Series(index=datatrace.index)
 
-    flogp = sp.model.logp
-    dflogp = sp.model.dlogp()
+    #flogp = sp.model.logp
+    #dflogp = sp.model.dlogp()
+
+    # Pasar de diccionario a arreglo
+    vars = pm.theanof.inputvars(sp.model.cont_vars)
+    start = sp.model.test_point
+    start = pm.model.Point(start, model=sp.model)
+    OrdVars = pm.blocking.ArrayOrdering(vars)
+    bij = pm.blocking.DictToArrayBijection(OrdVars, start)
+    logp = bij.mapf(sp.model.fastlogp)
+    dlogp = bij.mapf(sp.model.fastdlogp(vars))
+
+
     n_traces = len(trace._straces)
     for s in range(n_traces):
         lenght_trace = len(trace._straces[s])
         for i in range(lenght_trace):
             niter[s*lenght_trace + i] = i
-            ll[s*lenght_trace + i] = flogp(trace._straces[s][i])
-            adll[s*lenght_trace + i] = np.sum(np.abs(dflogp((trace._straces[s][i]))))
+            ll[s*lenght_trace + i] = logp(bij.map(trace._straces[s][i]))
+            adll[s*lenght_trace + i] = np.sum(np.abs(dlogp(bij.map(trace._straces[s][i]))))
+
+            #ll[s*lenght_trace + i] = flogp(trace._straces[s][i])
+            #adll[s*lenght_trace + i] = np.sum(np.abs(dflogp((trace._straces[s][i]))))
     datatrace['_niter'] = niter
     datatrace['_ll'] = ll
     datatrace['_adll'] = adll
