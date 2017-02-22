@@ -102,6 +102,33 @@ class Identity(Mapping):
         return 0.0
 
 
+class LinearMapping(Mapping):
+    def __init__(self, y=None, name=None, shift=None, scale=None):
+        super().__init__(y, name)
+        self.shift = shift
+        self.scale = scale
+
+    def check_hypers(self, parent=''):
+        if self.shift is None:
+            self.shift = Hypers.Flat(parent+self.name+'_shift')
+        if self.scale is None:
+            self.scale = Hypers.FlatExp(parent+self.name+'_scale')
+        self.hypers += [self.shift, self.scale]
+
+    def default_hypers(self, x=None, y=None):
+        return {self.shift: np.float(0.0),#np.float32(1.0),#
+                self.scale: np.float(1.0)}
+
+    def __call__(self, x):
+        return self.scale*(x - self.shift)
+
+    def inv(self, y):
+        return y/self.scale + self.shift
+
+    def logdet_dinv(self, y):
+        return -y.shape[0] * tt.log(self.scale)
+
+
 class LogShifted(Mapping):
     def __init__(self, y=None, name=None, shift=None):
         super().__init__(y, name)
@@ -148,11 +175,12 @@ class BoxCoxShifted(Mapping):
         return transformed-self.shift
 
     def inv(self, y):
-        shifted = y+self.shift
+        shifted = y + self.shift
         return ((tt.sgn(shifted) * tt.abs_(shifted) ** self.power)-1.0)/self.power
 
     def logdet_dinv(self, y):
-        return (self.power - 1.0)*tt.sum(tt_to_num(tt.log(y+self.shift), -1e-10, -1e-10))
+        shifted = y + self.shift
+        return (self.power - 1.0)*tt.sum(tt.log(tt.abs_(shifted)))
 
 
 class Logistic(Mapping):
@@ -282,7 +310,61 @@ class BoxCoxLinear(Mapping):
             self.scale)
 
 
-class SinhMapping(Mapping):
+class ArcsinhLinear(Mapping):
+    def __init__(self, y=None, name=None, shift=None, scale=None):
+        super().__init__(y, name)
+        self.shift = shift
+        self.scale = scale
+
+    def check_hypers(self, parent=''):
+        if self.shift is None:
+            self.shift = Hypers.Flat(parent+self.name+'_shift')
+        if self.scale is None:
+            self.scale = Hypers.FlatExp(parent+self.name+'_scale')
+        self.hypers += [self.shift, self.scale]
+
+    def default_hypers(self, x=None, y=None):
+        return {self.shift: np.mean(y),#np.float32(1.0),#
+                self.scale: np.std(y)}
+
+    def __call__(self, x):
+        return tt.sinh((x - self.shift)/self.scale)
+
+    def inv(self, y):
+        return tt.arcsinh(y)*self.scale + self.shift
+
+    def logdet_dinv(self, y):
+        return y.shape[0] * tt.log(self.scale) - 0.5*tt.sum(tt.log1p(y**2))
+
+
+class SinhLinear(Mapping):
+    def __init__(self, y=None, name=None, shift=None, scale=None):
+        super().__init__(y, name)
+        self.shift = shift
+        self.scale = scale
+
+    def check_hypers(self, parent=''):
+        if self.shift is None:
+            self.shift = Hypers.Flat(parent+self.name+'_shift')
+        if self.scale is None:
+            self.scale = Hypers.FlatExp(parent+self.name+'_scale')
+        self.hypers += [self.shift, self.scale]
+
+    def default_hypers(self, x=None, y=None):
+        return {self.shift: np.mean(y),#np.float32(1.0),#
+                self.scale: np.std(y)}
+
+    def __call__(self, x):
+        return tt.arcsinh(x)*self.scale + self.shift
+
+    def inv(self, y):
+        return tt.sinh((y-self.shift)/self.scale)
+
+    def logdet_dinv(self, y):
+        return -y.shape[0] * tt.log(self.scale) + tt.sum(tt.log(tt.cosh((y-self.shift)/self.scale)))
+
+
+class SinhArcsinh(Mapping):
     def __init__(self, y=None, name=None, shift=None, scale=None):
         super().__init__(y, name)
         self.shift = shift
@@ -297,13 +379,13 @@ class SinhMapping(Mapping):
 
     def default_hypers(self, x=None, y=None):
         return {self.shift: np.float(0.0),#np.float32(1.0),#
-                self.scale: np.abs(y).max()}
+                self.scale: np.float(1.0)}
 
     def __call__(self, x):
-        return tt.sinh(self.scale*x)/self.scale - self.shift
+        return tt.sinh((tt.arcsinh(x) - self.shift)/self.scale)
 
     def inv(self, y):
-        return tt.arcsinh(self.scale*(y+self.shift))/self.scale
+        return tt.sinh(self.shift + self.scale*tt.arcsinh(y))
 
     def logdet_dinv(self, y):
-        return -0.5*tt.sum(tt.log1p((self.scale*(y+self.shift))**2 ))
+        return tt.sum(tt.log(tt.cosh(self.shift + self.scale*tt.arcsinh(y)))) + y.shape[0] * tt.log(self.scale) - 0.5*tt.sum(tt.log1p(y**2))

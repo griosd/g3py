@@ -521,25 +521,29 @@ class StochasticProcess:
             title = 'Distribution2D'
         plot_text(title, 'Domain y_'+str(self.space_index[indexs[0]]), 'Domain y_'+str(self.space_index[indexs[1]]), legend=False)
 
-
-    def plot_model(self, params=None, indexs=None):
+    def plot_model(self, params=None, indexs=None, kernel=True, mapping=True, marginals=True, bivariate=True):
         if indexs is None:
-            indexs = [len(self.observed_index)//2, len(self.observed_index)//1]
+            indexs = [len(self.observed_index)//2, len(self.observed_index)//2+1]
 
-        plt.subplot(121)
-        self.plot_kernel(params=params)
-        plt.subplot(122)
-        self.plot_mapping(params=params)
+        if kernel:
+            plt.subplot(121)
+            self.plot_kernel(params=params)
+        if mapping:
+            plt.subplot(122)
+            self.plot_mapping(params=params)
         show()
-        plt.subplot(121)
-        self.plot_distribution(index=indexs[0], params=params, space=self.space_values[indexs[0]:indexs[0]+1, :], prior=True)
-        self.plot_distribution(index=indexs[0], params=params, space=self.space_values[indexs[0]:indexs[0]+1, :])
-        plt.subplot(122)
-        self.plot_distribution(index=indexs[1], params=params, space=self.space_values[indexs[1]:indexs[1]+1, :], prior=True)
-        self.plot_distribution(index=indexs[1], params=params, space=self.space_values[indexs[1]:indexs[1]+1, :])
-        show()
-        self.plot_distribution2D(indexs=indexs, params=params, space=self.space_values[indexs, :])
-        show()
+
+        if marginals:
+            plt.subplot(121)
+            self.plot_distribution(index=indexs[0], params=params, space=self.space_values[indexs[0]:indexs[0]+1, :], prior=True)
+            self.plot_distribution(index=indexs[0], params=params, space=self.space_values[indexs[0]:indexs[0]+1, :])
+            plt.subplot(122)
+            self.plot_distribution(index=indexs[1], params=params, space=self.space_values[indexs[1]:indexs[1]+1, :], prior=True)
+            self.plot_distribution(index=indexs[1], params=params, space=self.space_values[indexs[1]:indexs[1]+1, :])
+            show()
+        if bivariate:
+            self.plot_distribution2D(indexs=indexs, params=params, space=self.space_values[indexs, :])
+            show()
 
     def plot_kernel2D(self):
         pass

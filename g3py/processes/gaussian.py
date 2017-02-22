@@ -168,9 +168,11 @@ class TGPDist(pm.Continuous):
     @classmethod
     def logp_cov(cls, value, mu, cov, mapping):  # es más rápido pero se cae
         delta = tt_to_num(mapping.inv(value)) - mu
-        return -np.float32(0.5) * (tt.log(nL.det(cov)) + delta.T.dot(sL.solve(cov, delta))
-                                   + cov.shape[0].astype(th.config.floatX) * tt.log(np.float32(2.0 * np.pi))) \
-               + mapping.logdet_dinv(value)
+        minus_05 = -np.float32(0.5)
+        return mapping.logdet_dinv(value) \
+               + minus_05 * cov.shape[0].astype(th.config.floatX) * tt.log(np.float32(2.0 * np.pi)) \
+               + minus_05 * tt.log(nL.det(cov)) \
+               + minus_05 * delta.T.dot(sL.solve(cov, delta))
 
     @classmethod
     def logp_cho(cls, value, mu, cho, mapping):
@@ -179,11 +181,21 @@ class TGPDist(pm.Continuous):
         return -np.float32(0.5) * (cho.shape[0].astype(th.config.floatX) * tt.log(np.float32(2.0 * np.pi))
                                    + L.T.dot(L)) - tt.sum(tt.log(nL.diag(cho))) + mapping.logdet_dinv(value)
 
+    @classmethod
+    def logp_cov_cho(cls, value, mu, cov, cho, mapping):
+        delta = tt_to_num(mapping.inv(value) - mu)
+        Z = cho[0, 0]
+        L = sL.solve_lower_triangular(cho/Z, delta)/Z
+        return -np.float32(0.5) * (cho.shape[0].astype(th.config.floatX) * tt.log(np.float32(2.0 * np.pi))
+                                   + L.T.dot(L)) - tt.sum(tt.log(nL.diag(cho))) + mapping.logdet_dinv(value)
+
     def logp(self, value):
         if False:
             return tt_to_num(debug(self.logp_cov(value, self.mu, self.cov, self.mapping), 'logp_cov'), -np.inf, -np.inf)
-        else:
+        elif True:
             return tt_to_num(debug(self.logp_cho(value, self.mu, self.cho, self.mapping), 'logp_cho'), -np.inf, -np.inf)
+        else:
+            return tt_to_num(debug(self.logp_cov_cho(value, self.mu, self.cov, self.cho, self.mapping), 'logp_cov_cho'), -np.inf, -np.inf)
 
     @property
     def cho(self):
