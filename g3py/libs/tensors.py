@@ -45,6 +45,8 @@ def show_graph(f, name='temp.png'):
 def print_graph(f):
     return th.printing.debugprint(f)
 
+def inf_to_num(r, neg=-1e20, pos=1e20):
+    return tt.switch(tt.isinf(r) and r > 0, np.float32(pos), tt.switch(tt.isinf(r), np.float32(neg), r))
 
 def tt_to_num(r, nan=0, inf=1e10):
     return tt.switch(tt.isnan(r), np.float32(nan), tt.switch(tt.isinf(r), np.nan_to_num(np.float32(inf)), r))
@@ -91,8 +93,6 @@ class InverseFunction(th.gof.Op):
         x = inputs[0]
         dz = gradients[0]
         inv_x = self(x)
-
-
 
 
 class CholeskyRobust(th.gof.Op):
@@ -142,7 +142,7 @@ class CholeskyRobust(th.gof.Op):
         try:
             z[0] = self._cholesky(x).astype(x.dtype)
         except:
-            z[0] = (0*x).astype(x.dtype)
+            z[0] = (0*x + 1e-10*np.eye(len(x))).astype(x.dtype)
             #raise sp.linalg.LinAlgError("not perform cholesky")
 
     def grad(self, inputs, gradients):
@@ -185,5 +185,10 @@ class CholeskyRobust(th.gof.Op):
 
 
 cholesky_robust = CholeskyRobust()
-solve_lower_triangular = sT.solve_lower_triangular
-solve_upper_triangular = sT.solve_upper_triangular
+
+try:
+    solve_lower_triangular = sT.solve_lower_triangular
+    solve_upper_triangular = sT.solve_upper_triangular
+except:
+    solve_lower_triangular = sT.Solve(A_structure='lower_triangular', lower=True)
+    solve_upper_triangular = sT.Solve(A_structure='upper_triangular', lower=False)

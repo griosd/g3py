@@ -2,7 +2,8 @@ from .data import *
 from .plots import *
 from .tensors import *
 from .traces import *
-
+from .experiments import *
+from theano.ifelse import ifelse
 
 def clone(c):
     return copy(c)
