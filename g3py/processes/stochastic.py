@@ -677,6 +677,7 @@ class StochasticProcess:
                 points_list.append(('start'+str(i), self.model.logp(s), s))
         else:
             points_list.append(('start', self.model.logp(start), start))
+        n_starts = len(points_list)
         if self.outputs.get_value() is None:
             print('For find_MAP it is necessary to have observations')
             return start
@@ -697,7 +698,7 @@ class StochasticProcess:
                         name, logp, start = points_list[i]
                     if i % 2 == 0 or not powell:#
                         if name.endswith('_bfgs'):
-                            if i > 0:
+                            if i > n_starts:
                                 points += 1
                             continue
                         name += '_bfgs'
@@ -706,7 +707,7 @@ class StochasticProcess:
                         new = pm.find_MAP(fmin=sp.optimize.fmin_bfgs, vars=self.sampling_vars, start=start, disp=display)
                     else:
                         if name.endswith('_powell'):
-                            if i > 1:
+                            if i > n_starts:
                                 points += 1
                             continue
                         name += '_powell'
