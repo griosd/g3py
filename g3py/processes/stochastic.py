@@ -229,6 +229,11 @@ class StochasticProcess:
         self.compiles['kernel_space_inputs'] = makefn(params, self.kernel_space_inputs, precompile)
         self.compiles['kernel_f_space_inputs'] = makefn(params, self.kernel_f_space_inputs, precompile)
 
+        params = self.model.vars
+        self.compiles['mapping_outputs'] = makefn(params, self.mapping_outputs, precompile)
+        self.compiles['mapping_th'] = makefn([self.random_th] + params, self.mapping_th, precompile)
+        self.compiles['mapping_inv_th'] = makefn([self.random_th] + params, self.mapping_inv_th, precompile)
+
         params = [self.space_th] + self.model.vars
         self.compiles['prior_mean'] = makefn(params, self.prior_mean, precompile)
         self.compiles['prior_covariance'] = makefn(params, self.prior_covariance, precompile)
@@ -268,11 +273,6 @@ class StochasticProcess:
             self.compiles['posterior_sampler'] = makefn([self.random_th] + params, self.posterior_sampler, precompile)
         except:
             self.compiles['posterior_sampler'] = makefn([self.random_scalar, self.random_th] + params, self.posterior_sampler, precompile)
-
-        params = self.model.vars
-        self.compiles['mapping_outputs'] = makefn(params, self.mapping_outputs, precompile)
-        self.compiles['mapping_th'] = makefn([self.random_th] + params, self.mapping_th, precompile)
-        self.compiles['mapping_inv_th'] = makefn([self.random_th] + params, self.mapping_inv_th, precompile)
 
     def describe(self, title=None, x=None, y=None, text=None):
         if title is not None:
@@ -825,7 +825,7 @@ class StochasticProcess:
             plt.plot(self.observed_index, self.outputs_values, '.k', ms=20)
             plt.plot(self.observed_index, self.outputs_values, '.r', ms=15, label='Observations')
 
-    def subprocess(self, subkernel, mean=True, cov=False, var=True, median=False, quantiles=False, noise=False):
+    def subprocess(self, subkernel):
         pass
 
     def get_point(self, point):

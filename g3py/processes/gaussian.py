@@ -55,12 +55,12 @@ class GaussianProcess(StochasticProcess):
         self.posterior_noise_down = self.posterior_mean - 1.96 * self.posterior_noise
         self.posterior_sampler = self.posterior_mean + self.posterior_cholesky.dot(self.random_th)
 
-        # TODO
-        def subprocess(self, subkernel, cov=False, noise=False):
-            k_ni = subkernel.cov(self.space, self.inputs)
-            self.subprocess_mean = self.mean(self.space) + k_ni.dot(tsl.solve(self.kernel_inputs, self.mapping_outputs - self.location_inputs))
-            self.subprocess_covariance = self.kernel_f.cov(self.space) - k_ni.dot(tsl.solve(self.kernel_inputs, self.kernel_f_space_inputs.T))
-            self.subprocess_noise = self.kernel.cov(self.space) - k_ni.dot(tsl.solve(self.kernel_inputs, self.kernel_f_space_inputs.T))
+    def subprocess(self, subkernel):
+        k_cross = subkernel.cov(self.space_th, self.inputs)
+        subprocess_mean = self.location_space + k_cross.dot(tsl.solve(self.kernel_inputs,
+                                                                      self.mapping_outputs - self.location_inputs))
+        params = [self.space_th, self.inputs_th, self.outputs_th] + self.model.vars
+        return makefn(params, subprocess_mean, True)
 
 
 class TransformedGaussianProcess(StochasticProcess):
@@ -143,13 +143,6 @@ class TransformedGaussianProcess(StochasticProcess):
         self.posterior_noise_down = self.mapping(self.latent_posterior_mean - 1.96 * self.latent_posterior_noise)
         self.posterior_sampler = self.mapping(self.latent_posterior_mean + cholesky_robust(self.latent_posterior_covariance).dot(self.random_th))
         print('Posterior OK')
-
-        # TODO
-        def subprocess(self, subkernel, cov=False, noise=False):
-            k_ni = subkernel.cov(self.space, self.inputs)
-            self.subprocess_mean = self.mean(self.space) + k_ni.dot(tsl.solve(self.kernel_inputs, self.mapping_outputs - self.location_inputs))
-            self.subprocess_covariance = self.kernel_f.cov(self.space) - k_ni.dot(tsl.solve(self.kernel_inputs, self.kernel_f_space_inputs.T))
-            self.subprocess_noise = self.kernel.cov(self.space) - k_ni.dot(tsl.solve(self.kernel_inputs, self.kernel_f_space_inputs.T))
 
 
 def gauss_hermite(f, mu, sigma, a, w):
