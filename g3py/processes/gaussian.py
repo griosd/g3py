@@ -1,6 +1,6 @@
 from .stochastic import *
 from ..functions import Kernel, Mean, Mapping, Identity
-from ..libs import cholesky_robust, debug
+from ..libs import cholesky_robust, debug, ifelse
 from pymc3.distributions.distribution import generate_samples
 from scipy.stats._multivariate import multivariate_normal
 
@@ -55,12 +55,12 @@ class GaussianProcess(StochasticProcess):
         self.posterior_noise_down = self.posterior_mean - 1.96 * self.posterior_noise
         self.posterior_sampler = self.posterior_mean + self.posterior_cholesky.dot(self.random_th)
 
-        # TODO
-        def subprocess(self, subkernel, cov=False, noise=False):
-            k_ni = subkernel.cov(self.space, self.inputs)
-            self.subprocess_mean = self.mean(self.space) + k_ni.dot(tsl.solve(self.kernel_inputs, self.mapping_outputs - self.location_inputs))
-            self.subprocess_covariance = self.kernel_f.cov(self.space) - k_ni.dot(tsl.solve(self.kernel_inputs, self.kernel_f_space_inputs.T))
-            self.subprocess_noise = self.kernel.cov(self.space) - k_ni.dot(tsl.solve(self.kernel_inputs, self.kernel_f_space_inputs.T))
+    def subprocess(self, subkernel):
+        k_cross = subkernel.cov(self.space_th, self.inputs)
+        subprocess_mean = self.location_space + k_cross.dot(tsl.solve(self.kernel_inputs,
+                                                                      self.mapping_outputs - self.location_inputs))
+        params = [self.space_th, self.inputs_th, self.outputs_th] + self.model.vars
+        return makefn(params, subprocess_mean, True)
 
 
 class TransformedGaussianProcess(StochasticProcess):
@@ -144,13 +144,6 @@ class TransformedGaussianProcess(StochasticProcess):
         self.posterior_sampler = self.mapping(self.latent_posterior_mean + cholesky_robust(self.latent_posterior_covariance).dot(self.random_th))
         print('Posterior OK')
 
-        # TODO
-        def subprocess(self, subkernel, cov=False, noise=False):
-            k_ni = subkernel.cov(self.space, self.inputs)
-            self.subprocess_mean = self.mean(self.space) + k_ni.dot(tsl.solve(self.kernel_inputs, self.mapping_outputs - self.location_inputs))
-            self.subprocess_covariance = self.kernel_f.cov(self.space) - k_ni.dot(tsl.solve(self.kernel_inputs, self.kernel_f_space_inputs.T))
-            self.subprocess_noise = self.kernel.cov(self.space) - k_ni.dot(tsl.solve(self.kernel_inputs, self.kernel_f_space_inputs.T))
-
 
 def gauss_hermite(f, mu, sigma, a, w):
     grille = mu + sigma * np.sqrt(2).astype(th.config.floatX) * a
@@ -168,27 +161,49 @@ class TGPDist(pm.Continuous):
     @classmethod
     def logp_cov(cls, value, mu, cov, mapping):  # es más rápido pero se cae
         delta = tt_to_num(mapping.inv(value)) - mu
-        return -np.float32(0.5) * (tt.log(nL.det(cov)) + delta.T.dot(sL.solve(cov, delta))
-                                   + cov.shape[0].astype(th.config.floatX) * tt.log(np.float32(2.0 * np.pi))) \
-               + mapping.logdet_dinv(value)
+        minus_05 = -np.float32(0.5)
+        return mapping.logdet_dinv(value) \
+               + minus_05 * cov.shape[0].astype(th.config.floatX) * tt.log(np.float32(2.0 * np.pi)) \
+               + minus_05 * tt.log(nL.det(cov)) \
+               + minus_05 * delta.T.dot(sL.solve(cov, delta))
 
     @classmethod
     def logp_cho(cls, value, mu, cho, mapping):
-        delta = tt_to_num(mapping.inv(value) - mu)
-        L = sL.solve_lower_triangular(cho, delta)
+        delta = mapping.inv(value) - mu
+        cond = tt.or_(tt.any(tt.isinf_(delta)), tt.any(tt.isnan_(delta)))
+
+        _L = sL.solve_lower_triangular(cho, delta)
+        npi = np.float32(-0.5) * cho.shape[0].astype(th.config.floatX) * tt.log(np.float32(2.0 * np.pi))
+        dot2 = np.float32(-0.5) * _L.T.dot(_L)
+        det_k = - tt.sum(tt.log(nL.diag(cho)))
+        det_m = mapping.logdet_dinv(value)
+        r = npi + dot2 + det_k + det_m
+
+        return ifelse(cond, np.float32(-1e30), r)
+
+    @classmethod
+    def logp_cov_cho(cls, value, mu, cov, cho, mapping):
+        delta = mapping.inv(value) - mu
+        Z = cov[0, 0]
+
+        dot2 = delta.T.dot(sL.solve(cov/Z, delta))/Z
         return -np.float32(0.5) * (cho.shape[0].astype(th.config.floatX) * tt.log(np.float32(2.0 * np.pi))
-                                   + L.T.dot(L)) - tt.sum(tt.log(nL.diag(cho))) + mapping.logdet_dinv(value)
+                                   + dot2) - tt.sum(tt.log(nL.diag(cho))) + mapping.logdet_dinv(value)
 
     def logp(self, value):
         if False:
             return tt_to_num(debug(self.logp_cov(value, self.mu, self.cov, self.mapping), 'logp_cov'), -np.inf, -np.inf)
+        elif True:
+            return debug(self.logp_cho(value, self.mu, self.cho, self.mapping), 'logp_cho') #tt_to_num
         else:
-            return tt_to_num(debug(self.logp_cho(value, self.mu, self.cho, self.mapping), 'logp_cho'), -np.inf, -np.inf)
+            return debug(self.logp_cov_cho(value, self.mu, self.cov, self.cho, self.mapping), 'logp_cov_cho') #tt_to_num
+
+
 
     @property
     def cho(self):
         try:
-            return tt_to_num(cholesky_robust(self.cov))
+            return cholesky_robust(self.cov) #tt_to_num
         except:
             raise sp.linalg.LinAlgError("not cholesky")
 

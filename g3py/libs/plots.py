@@ -8,13 +8,15 @@ from .. import config
 
 
 def style_seaborn():
-    sb.set(style='darkgrid', color_codes=False)
+    #sb.set(style='darkgrid', color_codes=False)
+    plt.style.use('seaborn-darkgrid')
     plt.rcParams['figure.figsize'] = (20, 6)  #figure size
     config.plot_big = False
 
 
 def style_normal():
-    sb.set(style="white", color_codes=True) #white background
+    #sb.set(style="white", color_codes=True) #white background
+    plt.style.use('seaborn-white')
     plt.rcParams['figure.figsize'] = (20, 6)  #figure size
     plt.rcParams['axes.titlesize'] = 20  # title size
     plt.rcParams['axes.labelsize'] = 18  # xy-label size
@@ -26,8 +28,7 @@ def style_normal():
 
 
 def style_big():
-    sb.set(style="white", color_codes=True) #white background
-    plt.rcParams['figure.figsize'] = (20, 6)  #figure size
+    style_normal()
     plt.rcParams['xtick.labelsize'] = 36  # x-numbers size
     plt.rcParams['ytick.labelsize'] = 36  # x-numbers size
     plt.rcParams['axes.labelsize'] = 36  # xy-label size
@@ -97,4 +98,7 @@ def plot_2d(xy, x, y, grid=True):
     fig = plt.figure(figsize=[20, 10])
     ax = fig.gca(projection='3d')
     cset = ax.contour(x2d, y2d, fxy2d_hidden, zdir='z', offset=np.min(fxy2d_hidden), cmap=cm.RdBu_r)
+    cset = ax.contour(x2d, y2d, fxy2d_hidden, zdir='x', offset=np.min(x), cmap=cm.RdBu_r)
+    cset = ax.contour(x2d, y2d, fxy2d_hidden, zdir='y', offset=np.max(y), cmap=cm.RdBu_r)
+
     ax.plot_surface(x2d, y2d, fxy2d_hidden, alpha=0.4, cmap=cm.RdBu_r, rstride=1, cstride=1)

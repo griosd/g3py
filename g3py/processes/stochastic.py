@@ -229,6 +229,11 @@ class StochasticProcess:
         self.compiles['kernel_space_inputs'] = makefn(params, self.kernel_space_inputs, precompile)
         self.compiles['kernel_f_space_inputs'] = makefn(params, self.kernel_f_space_inputs, precompile)
 
+        params = self.model.vars
+        self.compiles['mapping_outputs'] = makefn(params, self.mapping_outputs, precompile)
+        self.compiles['mapping_th'] = makefn([self.random_th] + params, self.mapping_th, precompile)
+        self.compiles['mapping_inv_th'] = makefn([self.random_th] + params, self.mapping_inv_th, precompile)
+
         params = [self.space_th] + self.model.vars
         self.compiles['prior_mean'] = makefn(params, self.prior_mean, precompile)
         self.compiles['prior_covariance'] = makefn(params, self.prior_covariance, precompile)
@@ -268,11 +273,6 @@ class StochasticProcess:
             self.compiles['posterior_sampler'] = makefn([self.random_th] + params, self.posterior_sampler, precompile)
         except:
             self.compiles['posterior_sampler'] = makefn([self.random_scalar, self.random_th] + params, self.posterior_sampler, precompile)
-
-        params = self.model.vars
-        self.compiles['mapping_outputs'] = makefn(params, self.mapping_outputs, precompile)
-        self.compiles['mapping_th'] = makefn([self.random_th] + params, self.mapping_th, precompile)
-        self.compiles['mapping_inv_th'] = makefn([self.random_th] + params, self.mapping_inv_th, precompile)
 
     def describe(self, title=None, x=None, y=None, text=None):
         if title is not None:
@@ -521,25 +521,29 @@ class StochasticProcess:
             title = 'Distribution2D'
         plot_text(title, 'Domain y_'+str(self.space_index[indexs[0]]), 'Domain y_'+str(self.space_index[indexs[1]]), legend=False)
 
-
-    def plot_model(self, params=None, indexs=None):
+    def plot_model(self, params=None, indexs=None, kernel=True, mapping=True, marginals=True, bivariate=True):
         if indexs is None:
-            indexs = [len(self.observed_index)//2, len(self.observed_index)//1]
+            indexs = [len(self.observed_index)//2, len(self.observed_index)//2+1]
 
-        plt.subplot(121)
-        self.plot_kernel(params=params)
-        plt.subplot(122)
-        self.plot_mapping(params=params)
+        if kernel:
+            plt.subplot(121)
+            self.plot_kernel(params=params)
+        if mapping:
+            plt.subplot(122)
+            self.plot_mapping(params=params)
         show()
-        plt.subplot(121)
-        self.plot_distribution(index=indexs[0], params=params, space=self.space_values[indexs[0]:indexs[0]+1, :], prior=True)
-        self.plot_distribution(index=indexs[0], params=params, space=self.space_values[indexs[0]:indexs[0]+1, :])
-        plt.subplot(122)
-        self.plot_distribution(index=indexs[1], params=params, space=self.space_values[indexs[1]:indexs[1]+1, :], prior=True)
-        self.plot_distribution(index=indexs[1], params=params, space=self.space_values[indexs[1]:indexs[1]+1, :])
-        show()
-        self.plot_distribution2D(indexs=indexs, params=params, space=self.space_values[indexs, :])
-        show()
+
+        if marginals:
+            plt.subplot(121)
+            self.plot_distribution(index=indexs[0], params=params, space=self.space_values[indexs[0]:indexs[0]+1, :], prior=True)
+            self.plot_distribution(index=indexs[0], params=params, space=self.space_values[indexs[0]:indexs[0]+1, :])
+            plt.subplot(122)
+            self.plot_distribution(index=indexs[1], params=params, space=self.space_values[indexs[1]:indexs[1]+1, :], prior=True)
+            self.plot_distribution(index=indexs[1], params=params, space=self.space_values[indexs[1]:indexs[1]+1, :])
+            show()
+        if bivariate:
+            self.plot_distribution2D(indexs=indexs, params=params, space=self.space_values[indexs, :])
+            show()
 
     def plot_kernel2D(self):
         pass
@@ -673,6 +677,7 @@ class StochasticProcess:
                 points_list.append(('start'+str(i), self.model.logp(s), s))
         else:
             points_list.append(('start', self.model.logp(start), start))
+        n_starts = len(points_list)
         if self.outputs.get_value() is None:
             print('For find_MAP it is necessary to have observations')
             return start
@@ -693,7 +698,7 @@ class StochasticProcess:
                         name, logp, start = points_list[i]
                     if i % 2 == 0 or not powell:#
                         if name.endswith('_bfgs'):
-                            if i > 0:
+                            if i > n_starts:
                                 points += 1
                             continue
                         name += '_bfgs'
@@ -702,7 +707,7 @@ class StochasticProcess:
                         new = pm.find_MAP(fmin=sp.optimize.fmin_bfgs, vars=self.sampling_vars, start=start, disp=display)
                     else:
                         if name.endswith('_powell'):
-                            if i > 1:
+                            if i > n_starts:
                                 points += 1
                             continue
                         name += '_powell'
@@ -820,7 +825,7 @@ class StochasticProcess:
             plt.plot(self.observed_index, self.outputs_values, '.k', ms=20)
             plt.plot(self.observed_index, self.outputs_values, '.r', ms=15, label='Observations')
 
-    def subprocess(self, subkernel, mean=True, cov=False, var=True, median=False, quantiles=False, noise=False):
+    def subprocess(self, subkernel):
         pass
 
     def get_point(self, point):
