@@ -11,7 +11,7 @@ class Metric(Hypers):
 
     def gram(self, x1, x2):
         #try:
-        return tt_to_num(self(x1[:, self.dims].dimshuffle([0, 'x', 1]), x2[:, self.dims].dimshuffle(['x', 0, 1])))
+        return (self(x1[:, self.dims].dimshuffle([0, 'x', 1]), x2[:, self.dims].dimshuffle(['x', 0, 1])))
         #except ValueError:
         #    return tt_to_num(self(x1[:, self.dims].dimshuffle([0, 'x']), x2[:, self.dims].dimshuffle(['x', 0])))
 
