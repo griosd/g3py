@@ -175,13 +175,15 @@ class StochasticProcess:
         print('Compilation OK')
 
         self.observed(inputs, outputs)
+
+        self.logp_prior = None
+        self.compile_logprior()
         if file is not None:
             self.file = file
             try:
                 self.save_model()
             except:
                 print('Error in file '+str(file))
-
 
     def get_model(self):
         try:
@@ -207,6 +209,12 @@ class StochasticProcess:
         model.fastd2logp = types.MethodType(fastd2logp, model)
 
         return model
+
+    def compile_logprior(self):
+        self.logp_prior = self.model.fn(tt.add(*map(tt.sum, [var.logpt for var in self.model.free_RVs] + self.model.potentials)))
+
+    def logp_like(self, *args, **kwargs):
+        return self.model.logp(*args, **kwargs) - self.logp_prior(*args, **kwargs)
 
     def define_distribution(self):
         pass
@@ -523,7 +531,7 @@ class StochasticProcess:
 
     def plot_model(self, params=None, indexs=None, kernel=True, mapping=True, marginals=True, bivariate=True):
         if indexs is None:
-            indexs = [len(self.observed_index)//2, len(self.observed_index)//2+1]
+            indexs = [self.observed_index[len(self.observed_index)//2], self.observed_index[len(self.observed_index)//2]+1]
 
         if kernel:
             plt.subplot(121)
@@ -621,11 +629,14 @@ class StochasticProcess:
             params_return.update(self.params_fixed)
         return params_return
 
-    def get_params_random(self, mean=None, sigma=0.1, fixed=True):
+    def get_params_random(self, mean=None, sigma=0.1, prop=True, fixed=True):
         if mean is None:
             mean = self.get_params_default()
         for k, v in mean.items():
-            mean[k] = v * (1 + sigma * np.random.randn(v.size).reshape(v.shape)).astype(th.config.floatX)
+            if prop:
+                mean[k] = v * (1 + sigma * np.random.randn(v.size).reshape(v.shape)).astype(th.config.floatX)
+            else:
+                mean[k] = v + sigma * np.random.randn(v.size).reshape(v.shape).astype(th.config.floatX)
         if fixed:
             mean.update(self.params_fixed)
         return mean
@@ -689,6 +700,7 @@ class StochasticProcess:
             plt.show()
         with self.model:
             i = -1
+            points -= 1
             while i < points:
                 i += 1
                 try:
@@ -721,7 +733,6 @@ class StochasticProcess:
                         plt.show()
                 except:
                     pass
-
 
         optimal = points_list[0]
         for test in points_list:

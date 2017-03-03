@@ -91,7 +91,7 @@ def def_space(space=None, name=None, squeeze=False):
             space_th = None
         else:
             space_th = th.shared(space_x.values, name, borrow=True)
-    return space_th, space_x, space_t
+    return space_th, space_x, space_t.astype(np.int32)
 
 
 class Hypers:

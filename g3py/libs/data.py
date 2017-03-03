@@ -36,20 +36,21 @@ def data_eurusd():
     return hr.index.values, hr.values
 
 
-def data_abalone(raw=False):
+def data_abalone(dataframe=True, raw=False):
     names = ['Sex', 'Length', 'Diam', 'Height', 'Whole', 'Shucked', 'Viscera', 'Shell', 'Rings']
     print('abalone')
     abalone = pd.read_csv(g3.__path__[0] + '/data/abalone.data', names=names)
     if not raw:
         abalone['Sex'] = (abalone['Sex'] == 'M') * -1.0 + (abalone['Sex'] == 'F') * 1.0 + 0.0
-        abalone = abalone.drop('Rings', axis=1)
-    return abalone
-    x = abalone.drop('Rings', axis=1).values.astype(dtype=np.float32)
-    y = abalone['Rings'].values.astype(dtype=np.float32)
-    return x, y
+    if dataframe:
+        return abalone
+    else:
+        x = abalone.drop('Rings', axis=1).values.astype(dtype=np.float32)
+        y = abalone['Rings'].values.astype(dtype=np.float32)
+        return x, y
 
 
-def data_creep(raw=False):
+def data_creep(dataframe=True, raw=False):
     names = ['Lifetime', 'Rupture_stress', 'Temperature', 'Carbon', 'Silicon', 'Manganese', \
              'Phosphorus', 'Sulphur', 'Chromium', 'Molybdenum', 'Tungsten', 'Nickel', 'Copper', \
              'Vanadium', 'Niobium', 'Nitrogen', 'Aluminium', 'Boron', 'Cobalt', 'Tantalum', 'Oxygen', \
@@ -59,11 +60,16 @@ def data_creep(raw=False):
     print('creep')
     creep = pd.read_table(g3.__path__[0] + '/data/creep', names=names).astype('float32')
     if not raw:
-        creep = creep.drop(['Rupture_stress', 'Tantalum', 'Cooling_rate_annealing', 'Rhenium'], axis=1)
-    return creep
+        creep = creep.drop(['Tantalum', 'Cooling_rate_annealing', 'Rhenium'], axis=1)
+    if dataframe:
+        return creep
+    else:
+        x = creep.drop('Rupture_stress', axis=1).values.astype(dtype=np.float32)
+        y = creep['Rupture_stress'].values.astype(dtype=np.float32)
+        return x, y
 
 
-def data_ailerons(raw=False):
+def data_ailerons(dataframe=True, raw=False):
     names = ['climbRate', 'Sgz', 'p', 'q', 'curPitch', 'curRoll', 'absRoll', 'diffClb', 'diffRollRate', \
              'diffDiffClb', 'SeTime1', 'SeTime2', 'SeTime3', 'SeTime4', 'SeTime5', 'SeTime6', 'SeTime7', \
              'SeTime8', 'SeTime9', 'SeTime10', 'SeTime11', 'SeTime12', 'SeTime13', 'SeTime14', \
@@ -75,10 +81,14 @@ def data_ailerons(raw=False):
                           pd.read_csv(g3.__path__[0] + '/data/ailerons.test', names=names)]).astype('float32')
     if not raw:
         ailerons['goal'] = ailerons['goal']*1000
-        ailerons = ailerons.drop(['goal', 'diffSeTime2', 'diffSeTime4', 'diffSeTime6', 'diffSeTime8', 'diffSeTime10',
+        ailerons = ailerons.drop(['diffSeTime2', 'diffSeTime4', 'diffSeTime6', 'diffSeTime8', 'diffSeTime10',
                                   'diffSeTime12', 'diffSeTime14'], axis=1)
-
-    return ailerons
+    if dataframe:
+        return ailerons
+    else:
+        x = ailerons.drop('goal', axis=1).values.astype(dtype=np.float32)
+        y = ailerons['goal'].values.astype(dtype=np.float32)
+        return x, y
 
 
 def data_rivers():

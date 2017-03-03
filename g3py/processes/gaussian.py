@@ -179,7 +179,9 @@ class TGPDist(pm.Continuous):
         det_m = mapping.logdet_dinv(value)
         r = npi + dot2 + det_k + det_m
 
-        return ifelse(cond, np.float32(-1e30), r)
+        cond2 = tt.or_(tt.any(tt.isinf_(det_m)), tt.any(tt.isnan_(det_m)))
+        cond3 = tt.or_(tt.any(tt.isinf_(_L)), tt.any(tt.isnan_(_L)))
+        return ifelse(cond, np.float32(-1e30), ifelse(cond2, np.float32(-1e30), ifelse(cond3, np.float32(-1e30), r)))
 
     @classmethod
     def logp_cov_cho(cls, value, mu, cov, cho, mapping):
