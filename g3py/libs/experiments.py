@@ -1,26 +1,28 @@
 import os, sys, time
 import pandas as pd
 import pymc3 as pm
+import seaborn as sb
 import multiprocessing as mp
+import matplotlib.pyplot as plt
 from datetime import datetime as dt
 
 
-from ..libs import random_obs, uniform_obs, likelihood_datatrace, save_pkl, load_pkl
+from ..libs import random_obs, uniform_obs, likelihood_datatrace, save_pkl, load_pkl, marginal
 
 
 class Experiment:
-
-    def __init__(self, models, file=None):
-        if file is not None:
+    def __init__(self, models, file=None, load=True):
+        self.file = file
+        if self.file is not None and load:
             try:
-                load = load_pkl(file)
-                self.__dict__.update(load.__dict__)
+                exp = self.load()
+                self.__dict__.update(exp.__dict__)
+                self.load_simulations()
+                self.load_results()
                 return
             except:
-                print('Not found experiment in '+str(file))
+                pass
         self.models = models
-        self.file = file
-        self.results = Results()
 
         self.data_x = None
         self.data_y = None
@@ -28,7 +30,6 @@ class Experiment:
         self.data_limit = 1
         self.data_min = True
         self.data_method = random_obs
-        self.data_simulation = dict()
 
         self.scores_mean = True
         self.scores_median = True
@@ -42,7 +43,13 @@ class Experiment:
         self.points = None
         self.powell = None
 
-        self.save()
+        try:
+            self.simulations_raw = self.load_simulations()
+            self.results_raw = self.load_results()
+        except:
+            self.simulations_raw = pd.DataFrame(columns=['obs', 'test','datetime'], index=None)
+            self.results_raw = pd.DataFrame(columns=['n_sim', 'model', 'start', 'params', 'scores_obs', 'scores_test',
+                                                     'time_params', 'time_obs', 'time_test','datetime'])
 
     def save(self, file=None):
         if file is not None:
@@ -50,9 +57,35 @@ class Experiment:
         if self.file is not None:
             save_pkl(self, self.file)
 
+    def save_simulations(self):
+        if self.file is not None:
+            save_pkl(self.simulations_raw, self.file + '.s')
+
     def save_results(self):
         if self.file is not None:
-            save_pkl(self, self.file+'.r')
+            save_pkl(self.results_raw, self.file + '.r')
+
+    def load(self):
+        return load_pkl(self.file)
+
+    def load_simulations(self):
+        self.simulations_raw = load_pkl(self.file + '.s')
+        return self.simulations_raw
+
+    def load_results(self):
+        self.results_raw = load_pkl(self.file + '.r')
+        return self.results_raw
+
+    def add_simulation(self, index, obs, test):
+        self.simulations_raw.loc[index] = {'obs': obs, 'test': test, 'datetime': str(dt.now())}
+        self.save_simulations()
+
+    def add_result(self, n_sim, model, start, params, scores_obs, scores_test, time_params, time_scores_obs, time_scores_test):
+        self.results_raw.loc[len(self.results_raw)] = {'n_sim': n_sim, 'model': model, 'start': start, 'params': params,
+                                               'scores_obs': scores_obs, 'scores_test': scores_test,
+                                               'time_params': time_params, 'time_obs': time_scores_obs,
+                                               'time_test': time_scores_test, 'datetime': str(dt.now())}
+        self.save_results()
 
     def data(self, x, y, p, limit=1.0, method='random', include_min=False):
         self.data_x = x
@@ -91,81 +124,99 @@ class Experiment:
         if self.find_MAP:
             if self.starts is 'default':
                 start = [sp.get_params_default(),
-                         sp.get_params_random(mean=sp.get_params_current(), sigma=0.1),
-                         sp.get_params_random(mean=sp.get_params_default(), sigma=0.2),
-                         sp.get_params_random(mean=sp.get_params_current(), sigma=0.3),
-                         sp.get_params_random(mean=sp.get_params_default(), sigma=0.4)]
+                         sp.get_params_random(mean=sp.get_params_current(), sigma=0.1, prop=True),
+                         sp.get_params_random(mean=sp.get_params_default(), sigma=0.5, prop=True),
+                         sp.get_params_random(mean=sp.get_params_current(), sigma=0.1, prop=False),
+                         sp.get_params_random(mean=sp.get_params_default(), sigma=0.5, prop=False)]
             else:
                 start = sp.get_params_default()
-            if self.master:
+            if self.master is not None and self.master != sp:
                 start = [sp.get_params_process(self.master, params=self.master.get_params_current())] + start
             params = sp.find_MAP(start=start, points=self.points, powell=self.powell)
         else:
             params = sp.get_params_default()
-        return params
+        return start, params
 
-    def run(self, n_simulations=1):
-        total_sims = len(self.data_simulation)
-        for n_sim in range(total_sims, total_sims + n_simulations):
-            obs_j, x_obs, y_obs, test_j, x_test, y_test = self.new_data()
-            self.data_simulation[n_sim] = (obs_j, test_j)
+    def run(self, n_simulations=1, repeat=[], plot=False):
+        total_sims = len(self.simulations_raw)
+        if type(repeat) is int:
+            repeat = list(range(repeat))
+        for n_sim in list(range(total_sims, total_sims + n_simulations)) + repeat:
+            if n_sim not in self.simulations_raw.index:
+                print('\n' * 2 + '*' * 70+'\n' + '*' * 70 + '\nSimulation #'+str(n_sim) )
+                obs_j, x_obs, y_obs, test_j, x_test, y_test = self.new_data()
+                self.add_simulation(n_sim, obs_j, test_j)
+                print('*' * 70)
+            else:
+                obs_j, test_j = self.simulations_raw.loc[n_sim].obs, self.simulations_raw.loc[n_sim].test
+                x_obs, y_obs, x_test, y_test = self.data_x[obs_j], self.data_y[obs_j], self.data_x[test_j], self.data_y[test_j]
+                print('\n' * 2 + '*' * 60 + '\n' + '*' * 60 + '\nRepetition #' + str(n_sim) + '\n' + '*' * 60)
             for sp in self.models:
+                print('\n'*2+'*'*50 + '\n' +sp.name+' #'+str(n_sim) + '\n'+'*'*50)
                 sp.observed(x_obs, y_obs)
+                if plot:
+                    print('\n' + sp.name)
                 tictoc = time.time()
-                params = self.select_model(sp)
+                start, params = self.select_model(sp)
                 time_params, tictoc = time.time() - tictoc, time.time()
-
-                sp.set_space(x_obs, y_obs)
+                if plot:
+                    sp.plot(params)
+                    sp.plot_model(params)
+                sp.set_params(params)
+                sp.set_space(x_obs, y_obs, obs_j)
                 scores_obs = self.calc_scores(sp, params)
                 time_scores_obs, tictoc = time.time() - tictoc, time.time()
 
-                sp.set_space(x_test, y_test)
+                sp.set_space(x_test, y_test, test_j)
                 scores_test = self.calc_scores(sp, params)
                 time_scores_test, tictoc = time.time() - tictoc, time.time()
-
-                self.results.add(n_sim, sp, params, scores_obs, scores_test, time_params, time_scores_obs, time_scores_test)
-                self.save_results()
+                if plot:
+                    print(scores_test, time_params, time_scores_obs, time_scores_test)
+                self.add_result(n_sim, sp.name, start, params, scores_obs, scores_test, time_params, time_scores_obs, time_scores_test)
 
     def describe(self):
-        return self.__dict__
+        return {k:v for k,v in self.__dict__.items() if k not in ['results_raw', 'simulations_raw']}
 
-
-class Results:
-    def __init__(self):
-        self.n_sim = list()
-        self.model = list()
-        self.params = list()
-        self.obs = list()
-        self.test = list()
-        self.time_params = list()
-        self.time_obs = list()
-        self.time_test = list()
-
-    def add(self, n_sim, model, params, obs, test, time_params, time_obs, time_test):
-        self.n_sim.append(n_sim)
-        self.model.append(model)
-        self.params.append(params)
-        self.obs.append(obs)
-        self.test.append(test)
-        self.time_params.append(time_params)
-        self.time_obs.append(time_obs)
-        self.time_test.append(time_test)
-
-    def __call__(self, model=None):
-
-        df = pd.DataFrame(columns=['n_sim', 'model', 'params', 'time_params', 'time_obs', 'time_test']
-                                  + ['obs'+k for k in self.obs[0].keys()]+['test'+k for k in self.test[0].keys()])
-        for i in range(len(self.n_sim)):
-            sim = {'n_sim': self.n_sim[i], 'model': self.model[i].name, 'params': (self.params[i]),
-                   'time_params': self.time_params[i], 'time_obs': self.time_obs[i], 'time_test': self.time_test[i]}
-            sim.update({'obs'+k: v for k, v in self.obs[i].items()})
-            sim.update({'test'+k: v for k, v in self.test[i].items()})
-            df = df.append(sim, ignore_index=True)
+    def results(self, model=None, scores_columns=True, params_columns=False, raw=False, like=None):
+        if raw or self.results_raw.empty:
+            return self.results_raw
         if model is not None:
             if type(model) is not list:
                 model = [model]
-            df = df[[m in model for m in df.model]]
-        return df
+
+        df = pd.DataFrame(columns=['n_sim', 'model', 'time_params', 'time_obs', 'time_test','datetime'])
+        for i in range(len(self.results_raw)):
+            row = self.results_raw.iloc[i]
+            if model is not None and row.model not in model:
+                continue
+            sim = {'n_sim': row.n_sim, 'model': row.model, 'time_params': row.time_params, 'time_obs': row.time_obs,
+                   'time_test': row.time_test, 'start': row.start, 'datetime': row.datetime}
+            if scores_columns:
+                sim.update({'obs'+k: v for k, v in row.scores_obs.items()})
+                sim.update({'test'+k: v for k, v in row.scores_test.items()})
+            else:
+                sim.update({'obs': row.scores_obs, 'test': row.scores_test})
+
+            if params_columns:
+                sim.update({'p_' + k: v for k, v in row.params.items()})
+            else:
+                sim.update({'params': row.params})
+            df = df.append(sim, ignore_index=True)
+        return marginal(df, like=like)
+
+    def simulations(self):
+        return self.simulations_raw
+
+    def plot(self, score=None, bw=0.15, jitter=0.05):
+        if score is None:
+            return
+        data = self.results()
+        sb.lvplot(y='model', x=score, data=data)
+        sb.violinplot(y='model', x=score, data=data, inner='quartile', bw=bw)
+        sb.swarmplot(y='model', x=score, data=data, color='w', alpha=0.5)
+        sb.stripplot(y='model', x=score, data=data, color='w', alpha=0.5, jitter=jitter)
+        sb.pointplot(y='model', x=score, data=data, color='k')
+        plt.title(score)
 
 
 def likelihood_datatrace_mp(sp, traces, index):
