@@ -80,7 +80,7 @@ class ARD(Metric):
     def check_hypers(self, parent=''):
         super().check_hypers(parent=parent)
         if self.rate is None:
-            self.rate = Hypers.FlatExp(parent + 'rate', shape=self.shape)
+            self.rate = Hypers.FlatPos(parent + 'rate', shape=self.shape)
         self.hypers += [self.rate]
 
     def input_sensitivity(self):

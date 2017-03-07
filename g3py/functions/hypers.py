@@ -159,6 +159,10 @@ class Hypers:
         with modelcontext():
             return pm.Flat(name, transform=non_transform_log, shape=shape, testval=testval(shape), dtype=th.config.floatX)
     @staticmethod
+    def FlatPos(name, shape=(), testval=ones):
+        with modelcontext():
+            return PositiveFlat(name, shape=shape, testval=testval(shape), dtype=th.config.floatX)
+    @staticmethod
     def FlatExpId(name, shape=(), testval=ones):
         with modelcontext():
             return pm.Flat(name, transform=LogIdTransform(), shape=shape, testval=testval(shape), dtype=th.config.floatX)
@@ -177,8 +181,26 @@ class NonTransformLog(pm.distributions.transforms.ElemwiseTransform):
         return tt.log(x)
 
     def jacobian_det(self, x):
-        return 0
+        return tt.switch(tt.exp(x) > 1e-10, 0, -np.inf)
+
 non_transform_log = NonTransformLog()
+
+
+class PositiveFlat(pm.Continuous):
+    """
+    Uninformative log-likelihood that returns 0 regardless of
+    the passed value.
+    """
+
+    def __init__(self, *args, **kwargs):
+        super(PositiveFlat, self).__init__(*args, **kwargs)
+        self.median = 1
+
+    def random(self, point=None, size=None, repeat=None):
+        raise ValueError('Cannot sample from Flat distribution')
+
+    def logp(self, value):
+        return tt.switch(value > 0, 0, -np.inf)
 
 
 class Freedom(Hypers):

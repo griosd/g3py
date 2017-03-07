@@ -45,8 +45,10 @@ def show_graph(f, name='temp.png'):
 def print_graph(f):
     return th.printing.debugprint(f)
 
+
 def inf_to_num(r, neg=-1e20, pos=1e20):
     return tt.switch(tt.isinf(r) and r > 0, np.float32(pos), tt.switch(tt.isinf(r), np.float32(neg), r))
+
 
 def tt_to_num(r, nan=0, inf=1e10):
     return tt.switch(tt.isnan(r), np.float32(nan), tt.switch(tt.isinf(r), np.nan_to_num(np.float32(inf)), r))
@@ -58,7 +60,7 @@ def tt_to_cov(c):
     return tt.switch(m > 0, r, r + (1e-6-m)*tt.eye(c.shape[0]) )
 
 
-def inverse_function(func, z, tol=1e-3, n_steps=1024, alpha=0.1):
+def inverse_function(func, z, tol=1e-3, n_steps=32, alpha=0.1):
     def iter_newton(x):
         diff = (func(x) - z)
         dfunc = tt.grad(tt.sum(diff), x)

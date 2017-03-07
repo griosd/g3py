@@ -143,6 +143,7 @@ def find_candidates(dt, ll=1, adll=1, rand=1):
     candidates.append(median)
     return pd.DataFrame(candidates).append(dt.sample(rand))
 
+
 def hist_trace(datatrace, items=None, like=None, regex=None, samples=None, bins=200, layout=(4,4), figsize=(20,20)):
     marginal(datatrace, items=items, like=like, regex=regex, samples=samples).hist(bins=bins, layout=layout, figsize=figsize)
 
