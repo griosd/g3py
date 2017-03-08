@@ -181,6 +181,7 @@ class TGPDist(pm.Continuous):
 
         cond2 = tt.or_(tt.any(tt.isinf_(det_m)), tt.any(tt.isnan_(det_m)))
         cond3 = tt.or_(tt.any(tt.isinf_(_L)), tt.any(tt.isnan_(_L)))
+        #return ifelse(cond, np.float32(-1e30), r)
         return ifelse(cond, np.float32(-1e30), ifelse(cond2, np.float32(-1e30), ifelse(cond3, np.float32(-1e30), r)))
 
     @classmethod

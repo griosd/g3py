@@ -143,7 +143,7 @@ class LogShifted(Mapping):
         return tt.exp(x) + self.shift
 
     def inv(self, y):
-        return tt.log(tt.maximum(y - self.shift, np.float32(1e-100)))
+        return tt.log(tt.maximum(y - self.shift, np.float32(1e-32)))
 
     def logdet_dinv(self, y):
         return -tt.sum(tt.log(y - self.shift))
@@ -174,7 +174,6 @@ class BoxCoxShifted(Mapping):
     def inv(self, y):
         shifted = y + self.shift
         return tt.switch(self.power < 1e-5, tt.log(shifted), ((tt.sgn(shifted) * tt.abs_(shifted) ** self.power)-1.0)/self.power)
-
 
     def logdet_dinv(self, y):
         shifted = y + self.shift

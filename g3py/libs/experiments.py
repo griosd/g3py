@@ -1,4 +1,5 @@
 import os, sys, time
+import numpy as np
 import pandas as pd
 import pymc3 as pm
 import seaborn as sb
@@ -42,14 +43,16 @@ class Experiment:
         self.master = None
         self.points = None
         self.powell = None
+        self.holdout = None
+        self.holdout_p = 0
 
         try:
             self.simulations_raw = self.load_simulations()
             self.results_raw = self.load_results()
         except:
-            self.simulations_raw = pd.DataFrame(columns=['obs', 'test','datetime'], index=None)
-            self.results_raw = pd.DataFrame(columns=['n_sim', 'model', 'start', 'params', 'scores_obs', 'scores_test',
-                                                     'time_params', 'time_obs', 'time_test','datetime'])
+            self.simulations_raw = pd.DataFrame(columns=['obs', 'valid', 'test', 'datetime'], index=None)
+            self.results_raw = pd.DataFrame(columns=['n_sim', 'model', 'start', 'params', 'scores_obs', 'scores_valid', 'scores_test',
+                                                     'time_params', 'time_obs', 'time_valid', 'time_test', 'datetime'])
 
     def save(self, file=None):
         if file is not None:
@@ -76,15 +79,18 @@ class Experiment:
         self.results_raw = load_pkl(self.file + '.r')
         return self.results_raw
 
-    def add_simulation(self, index, obs, test):
-        self.simulations_raw.loc[index] = {'obs': obs, 'test': test, 'datetime': str(dt.now())}
+    def add_simulation(self, index, obs, valid, test):
+        self.simulations_raw.loc[index] = {'obs': obs, 'valid': valid, 'test': test, 'datetime': str(dt.now())}
         self.save_simulations()
 
-    def add_result(self, n_sim, model, start, params, scores_obs, scores_test, time_params, time_scores_obs, time_scores_test):
-        self.results_raw.loc[len(self.results_raw)] = {'n_sim': n_sim, 'model': model, 'start': start, 'params': params,
-                                               'scores_obs': scores_obs, 'scores_test': scores_test,
-                                               'time_params': time_params, 'time_obs': time_scores_obs,
-                                               'time_test': time_scores_test, 'datetime': str(dt.now())}
+    def add_result(self, n_sim, model, start, params, scores_obs, scores_valid, scores_test, time_params,
+                   time_scores_obs, time_scores_valid, time_scores_test):
+        self.results_raw.loc[len(self.results_raw)] = {'n_sim': n_sim, 'model': model, 'start': start,
+                                                       'params': params, 'scores_obs': scores_obs,
+                                                       'scores_valid': scores_valid, 'scores_test': scores_test,
+                                                       'time_params': time_params, 'time_obs': time_scores_obs,
+                                                       'time_valid': time_scores_valid, 'time_test': time_scores_test,
+                                                       'datetime': str(dt.now())}
         self.save_results()
 
     def data(self, x, y, p, limit=1.0, method='random', include_min=False):
@@ -101,7 +107,14 @@ class Experiment:
     def new_data(self):
         obs_j, x_obs, y_obs, test_j, x_test, y_test = self.data_method(x=self.data_x, y=self.data_y, p=self.data_p,
                                                                        s=self.data_limit, include_min=self.data_min)
-        return obs_j, x_obs, y_obs, test_j, x_test, y_test
+        if self.holdout_p > 0:
+            valid_j, x_valid, y_valid, sub_obs_j, sub_x_obs, sub_y_obs = self.data_method(x=obs_j, y=obs_j, p=self.holdout_p, include_min=self.data_min)
+            obs_j, valid_j = obs_j[sub_obs_j], obs_j[valid_j]
+            x_obs, y_obs = self.data_x[obs_j], self.data_y[obs_j]
+            x_valid, y_valid = self.data_x[valid_j], self.data_y[valid_j]
+        else:
+            valid_j, x_valid, y_valid = None, None, None
+        return obs_j, x_obs, y_obs, valid_j, x_valid, y_valid, test_j, x_test, y_test
 
     def scores(self, logp=True, mean=True, median=False, variance=False):
         self.scores_mean = mean
@@ -113,26 +126,43 @@ class Experiment:
         return sp.scores(params, logp=self.scores_logp, bias=self.scores_mean, median=self.scores_median,
                          variance=self.scores_variance)
 
-    def model_selection(self, find_MAP=True, points=2, powell=True, starts='default', master=None):
+    def model_selection(self, find_MAP=True, points=2, powell=True, starts='default', master=None, holdout=None, holdout_p=0):
         self.find_MAP = find_MAP
         self.points = points
         self.powell = powell
         self.starts = starts
         self.master = master
+        self.holdout = holdout
+        self.holdout_p = holdout_p
 
-    def select_model(self, sp):
+    def select_model(self, sp, x_valid=None, y_valid=None):
         if self.find_MAP:
             if self.starts is 'default':
                 start = [sp.get_params_default(),
-                         sp.get_params_random(mean=sp.get_params_current(), sigma=0.1, prop=True),
+                         sp.get_params_random(mean=sp.get_params_default(), sigma=0.2, prop=True),
+                         sp.get_params_random(mean=sp.get_params_default(), sigma=0.2, prop=False),
                          sp.get_params_random(mean=sp.get_params_default(), sigma=0.5, prop=True),
-                         sp.get_params_random(mean=sp.get_params_current(), sigma=0.1, prop=False),
                          sp.get_params_random(mean=sp.get_params_default(), sigma=0.5, prop=False)]
             else:
                 start = sp.get_params_default()
             if self.master is not None and self.master != sp:
                 start = [sp.get_params_process(self.master, params=self.master.get_params_current())] + start
-            params = sp.find_MAP(start=start, points=self.points, powell=self.powell)
+
+            params, points_list = sp.find_MAP(start=start, points=self.points, powell=self.powell, return_points=True)
+            if (self.holdout_p > 0) and (x_valid is not None) and (y_valid is not None):
+                sp.set_space(x_valid, y_valid)
+                params_scores = self.calc_scores(sp, params)
+                params_scores['_nll'] = -sp.model.logp(params).max()
+                name = 'find_MAP'
+                for (n, l, p) in points_list:
+                    scores = self.calc_scores(sp, p)
+                    scores['_nll'] = l.min()
+                    print(n, l, scores[self.holdout])
+                    if scores[self.holdout] < params_scores[self.holdout]:
+                        name = n
+                        params_scores = scores
+                        params = p
+                print('Selected: '+name, params_scores)
         else:
             params = sp.get_params_default()
         return start, params
@@ -144,20 +174,25 @@ class Experiment:
         for n_sim in list(range(total_sims, total_sims + n_simulations)) + repeat:
             if n_sim not in self.simulations_raw.index:
                 print('\n' * 2 + '*' * 70+'\n' + '*' * 70 + '\nSimulation #'+str(n_sim) )
-                obs_j, x_obs, y_obs, test_j, x_test, y_test = self.new_data()
-                self.add_simulation(n_sim, obs_j, test_j)
+                obs_j, x_obs, y_obs, valid_j, x_valid, y_valid, test_j, x_test, y_test = self.new_data()
+                self.add_simulation(n_sim, obs_j, valid_j, test_j)
                 print('*' * 70)
             else:
-                obs_j, test_j = self.simulations_raw.loc[n_sim].obs, self.simulations_raw.loc[n_sim].test
-                x_obs, y_obs, x_test, y_test = self.data_x[obs_j], self.data_y[obs_j], self.data_x[test_j], self.data_y[test_j]
+                obs_j, valid_j, test_j = self.simulations_raw.loc[n_sim]['obs'], self.simulations_raw.loc[n_sim]['valid'], self.simulations_raw.loc[n_sim]['test']
+                x_obs, y_obs, x_valid, y_valid, x_test, y_test = self.data_x[obs_j], self.data_y[obs_j], \
+                                                                 self.data_x[valid_j], self.data_y[valid_j], \
+                                                                 self.data_x[test_j], self.data_y[test_j]
                 print('\n' * 2 + '*' * 60 + '\n' + '*' * 60 + '\nRepetition #' + str(n_sim) + '\n' + '*' * 60)
+
             for sp in self.models:
-                print('\n'*2+'*'*50 + '\n' +sp.name+' #'+str(n_sim) + '\n'+'*'*50)
+                print('\n'*2+'*'*50 + '\n' + sp.name+' #'+str(n_sim) + '\n'+'*'*50)
                 sp.observed(x_obs, y_obs)
                 if plot:
                     print('\n' + sp.name)
+
                 tictoc = time.time()
-                start, params = self.select_model(sp)
+                start, params = self.select_model(sp, x_valid, y_valid)
+
                 time_params, tictoc = time.time() - tictoc, time.time()
                 if plot:
                     sp.plot(params)
@@ -166,16 +201,24 @@ class Experiment:
                 sp.set_space(x_obs, y_obs, obs_j)
                 scores_obs = self.calc_scores(sp, params)
                 time_scores_obs, tictoc = time.time() - tictoc, time.time()
+                if valid_j is not None:
+                    sp.set_space(x_valid, y_valid, valid_j)
+                    scores_valid = self.calc_scores(sp, params)
+                else:
+                    scores_valid = {}
+                time_scores_valid, tictoc = time.time() - tictoc, time.time()
 
+                sp.observed(np.concatenate([x_obs, x_valid]), np.concatenate([y_obs, y_valid]))
                 sp.set_space(x_test, y_test, test_j)
                 scores_test = self.calc_scores(sp, params)
                 time_scores_test, tictoc = time.time() - tictoc, time.time()
                 if plot:
                     print(scores_test, time_params, time_scores_obs, time_scores_test)
-                self.add_result(n_sim, sp.name, start, params, scores_obs, scores_test, time_params, time_scores_obs, time_scores_test)
+                self.add_result(n_sim, sp.name, start, params, scores_obs, scores_valid, scores_test, time_params,
+                                time_scores_obs, time_scores_valid, time_scores_test)
 
     def describe(self):
-        return {k:v for k,v in self.__dict__.items() if k not in ['results_raw', 'simulations_raw']}
+        return {k: v for k, v in self.__dict__.items() if k not in ['results_raw', 'simulations_raw']}
 
     def results(self, model=None, scores_columns=True, params_columns=False, raw=False, like=None):
         if raw or self.results_raw.empty:
@@ -184,18 +227,20 @@ class Experiment:
             if type(model) is not list:
                 model = [model]
 
-        df = pd.DataFrame(columns=['n_sim', 'model', 'time_params', 'time_obs', 'time_test','datetime'])
+        df = pd.DataFrame(columns=['n_sim', 'model', 'time_params', 'time_obs', 'time_valid', 'time_test', 'datetime'])
         for i in range(len(self.results_raw)):
             row = self.results_raw.iloc[i]
             if model is not None and row.model not in model:
                 continue
             sim = {'n_sim': row.n_sim, 'model': row.model, 'time_params': row.time_params, 'time_obs': row.time_obs,
-                   'time_test': row.time_test, 'start': row.start, 'datetime': row.datetime}
+                   'time_valid': row.time_valid, 'time_test': row.time_test, 'start': row.start, 'datetime': row.datetime}
+
             if scores_columns:
                 sim.update({'obs'+k: v for k, v in row.scores_obs.items()})
-                sim.update({'test'+k: v for k, v in row.scores_test.items()})
+                sim.update({'valid' + k: v for k, v in row.scores_valid.items()})
+                sim.update({'test' + k: v for k, v in row.scores_test.items()})
             else:
-                sim.update({'obs': row.scores_obs, 'test': row.scores_test})
+                sim.update({'obs': row.scores_obs, 'valid': row.scores_valid, 'test': row.scores_test})
 
             if params_columns:
                 sim.update({'p_' + k: v for k, v in row.params.items()})
@@ -207,10 +252,11 @@ class Experiment:
     def simulations(self):
         return self.simulations_raw
 
-    def plot(self, score=None, bw=0.15, jitter=0.05):
+    def plot(self, score=None, data=None, bw=0.15, jitter=0.05):
         if score is None:
             return
-        data = self.results()
+        if data is None:
+            data = self.results()
         sb.lvplot(y='model', x=score, data=data)
         sb.violinplot(y='model', x=score, data=data, inner='quartile', bw=bw)
         sb.swarmplot(y='model', x=score, data=data, color='w', alpha=0.5)
