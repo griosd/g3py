@@ -51,7 +51,7 @@ class Experiment:
             self.results_raw = self.load_results()
         except:
             self.simulations_raw = pd.DataFrame(columns=['obs', 'valid', 'test', 'datetime'], index=None)
-            self.results_raw = pd.DataFrame(columns=['n_sim', 'model', 'start', 'params', 'scores_obs', 'scores_valid', 'scores_test',
+            self.results_raw = pd.DataFrame(columns=['n_sim', 'model', 'selected', 'start', 'params', 'scores_obs', 'scores_valid', 'scores_test',
                                                      'time_params', 'time_obs', 'time_valid', 'time_test', 'datetime'])
 
     def save(self, file=None):
@@ -83,10 +83,10 @@ class Experiment:
         self.simulations_raw.loc[index] = {'obs': obs, 'valid': valid, 'test': test, 'datetime': str(dt.now())}
         self.save_simulations()
 
-    def add_result(self, n_sim, model, start, params, scores_obs, scores_valid, scores_test, time_params,
+    def add_result(self, n_sim, model, selected, start, params, scores_obs, scores_valid, scores_test, time_params,
                    time_scores_obs, time_scores_valid, time_scores_test):
-        self.results_raw.loc[len(self.results_raw)] = {'n_sim': n_sim, 'model': model, 'start': start,
-                                                       'params': params, 'scores_obs': scores_obs,
+        self.results_raw.loc[len(self.results_raw)] = {'n_sim': n_sim, 'model': model, 'selected': selected,
+                                                       'start': start, 'params': params, 'scores_obs': scores_obs,
                                                        'scores_valid': scores_valid, 'scores_test': scores_test,
                                                        'time_params': time_params, 'time_obs': time_scores_obs,
                                                        'time_valid': time_scores_valid, 'time_test': time_scores_test,
@@ -149,28 +149,29 @@ class Experiment:
                 start = [sp.get_params_process(self.master, params=self.master.get_params_current())] + start
 
             params, points_list = sp.find_MAP(start=start, points=self.points, powell=self.powell, return_points=True)
+            selected = 'find_MAP'
             if (self.holdout_p > 0) and (x_valid is not None) and (y_valid is not None):
                 sp.set_space(x_valid, y_valid)
                 params_scores = self.calc_scores(sp, params)
-                params_scores['_nll'] = -sp.model.logp(params).max()
-                name = 'find_MAP'
+                params_scores['_nll'] = -sp.logp_dict(params).max()
                 for (n, l, p) in points_list:
                     scores = self.calc_scores(sp, p)
                     scores['_nll'] = l.min()
                     print(n, l, scores[self.holdout])
                     if scores[self.holdout] < params_scores[self.holdout]:
-                        name = n
+                        selected = n
                         params_scores = scores
                         params = p
-                print('Selected: '+name, params_scores)
+                print('Selected: '+selected, params_scores)
         else:
             params = sp.get_params_default()
-        return start, params
+        return selected, start, params
 
     def run(self, n_simulations=1, repeat=[], plot=False):
         total_sims = len(self.simulations_raw)
         if type(repeat) is int:
             repeat = list(range(repeat))
+        print('Simulations: n=', n_simulations, ' repeat=', repeat)
         for n_sim in list(range(total_sims, total_sims + n_simulations)) + repeat:
             if n_sim not in self.simulations_raw.index:
                 print('\n' * 2 + '*' * 70+'\n' + '*' * 70 + '\nSimulation #'+str(n_sim) )
@@ -191,7 +192,7 @@ class Experiment:
                     print('\n' + sp.name)
 
                 tictoc = time.time()
-                start, params = self.select_model(sp, x_valid, y_valid)
+                selected, start, params = self.select_model(sp, x_valid, y_valid)
 
                 time_params, tictoc = time.time() - tictoc, time.time()
                 if plot:
@@ -214,7 +215,7 @@ class Experiment:
                 time_scores_test, tictoc = time.time() - tictoc, time.time()
                 if plot:
                     print(scores_test, time_params, time_scores_obs, time_scores_test)
-                self.add_result(n_sim, sp.name, start, params, scores_obs, scores_valid, scores_test, time_params,
+                self.add_result(n_sim, sp.name, selected, start, params, scores_obs, scores_valid, scores_test, time_params,
                                 time_scores_obs, time_scores_valid, time_scores_test)
 
     def describe(self):
@@ -227,12 +228,12 @@ class Experiment:
             if type(model) is not list:
                 model = [model]
 
-        df = pd.DataFrame(columns=['n_sim', 'model', 'time_params', 'time_obs', 'time_valid', 'time_test', 'datetime'])
+        df = pd.DataFrame(columns=['n_sim', 'model', 'selected', 'time_params', 'time_obs', 'time_valid', 'time_test', 'datetime'])
         for i in range(len(self.results_raw)):
             row = self.results_raw.iloc[i]
             if model is not None and row.model not in model:
                 continue
-            sim = {'n_sim': row.n_sim, 'model': row.model, 'time_params': row.time_params, 'time_obs': row.time_obs,
+            sim = {'n_sim': row.n_sim, 'model': row.model, 'selected': row.selected, 'time_params': row.time_params, 'time_obs': row.time_obs,
                    'time_valid': row.time_valid, 'time_test': row.time_test, 'start': row.start, 'datetime': row.datetime}
 
             if scores_columns:
@@ -263,6 +264,10 @@ class Experiment:
         sb.stripplot(y='model', x=score, data=data, color='w', alpha=0.5, jitter=jitter)
         sb.pointplot(y='model', x=score, data=data, color='k')
         plt.title(score)
+
+    def drop_duplicates(self):
+        self.results_raw = self.results_raw.drop_duplicates(subset=['n_sim', 'model'], keep='last').reset_index(drop=True)
+        self.save_results()
 
 
 def likelihood_datatrace_mp(sp, traces, index):

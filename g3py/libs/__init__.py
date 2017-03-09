@@ -24,3 +24,6 @@ class DictObj(dict):
             del self[name]
         else:
             raise AttributeError("No such attribute: " + name)
+
+def nan_to_high(x):
+    return np.where(np.isfinite(x), x, 1.0e100)

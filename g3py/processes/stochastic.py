@@ -1,20 +1,26 @@
 import _pickle as pickle
 import os
+import time
+import datetime
 import numpy as np
 import pymc3 as pm
 import scipy as sp
 import theano as th
 from ..functions import Mean, Kernel, Mapping, KernelSum, WN, tt_to_num, def_space, trans_hypers
-from ..libs import tt_to_cov, makefn, plot_text, clone, DictObj, plot_2d, grid2d, show
+from ..libs import tt_to_cov, makefn, plot_text, clone, DictObj, plot_2d, grid2d, show, nan_to_high
 from ..models import ConstantStep, RobustSlice
 from .. import config
 from ipywidgets import interact
 from matplotlib import pyplot as plt
 from theano import tensor as tt
+from scipy import optimize
+from inspect import signature
+from tqdm import tqdm
 import theano.tensor.nlinalg as nL
 import theano.tensor.slinalg as sL
 import theano.tensor.slinalg as tsl
 import theano.tensor.nlinalg as tnl
+import emcee
 
 Model = pm.Model
 
@@ -178,6 +184,7 @@ class StochasticProcess:
 
         self.logp_prior = None
         self.compile_logprior()
+
         if file is not None:
             self.file = file
             try:
@@ -211,10 +218,22 @@ class StochasticProcess:
         return model
 
     def compile_logprior(self):
-        self.logp_prior = self.model.fn(tt.add(*map(tt.sum, [var.logpt for var in self.model.free_RVs] + self.model.potentials)))
+        self.logp_prior = self.model.bijection.mapf(self.model.fn(tt.add(*map(tt.sum, [var.logpt for var in self.model.free_RVs] + self.model.potentials))))
 
     def logp_like(self, *args, **kwargs):
-        return self.model.logp(*args, **kwargs) - self.logp_prior(*args, **kwargs)
+        return self.model.logp_array(*args, **kwargs) - self.logp_prior(*args, **kwargs)
+
+    def logp_array(self, params):
+        return self.model.logp_array(params)
+
+    def dlogp_array(self, params):
+        return self.model.dlogp_array(params)
+
+    def dict_to_array(self, params):
+        return self.model.dict_to_array(params)
+
+    def logp_dict(self, params):
+        return self.model.logp_array(self.model.dict_to_array(params))
 
     def define_distribution(self):
         pass
@@ -677,7 +696,86 @@ class StochasticProcess:
             params = self.get_params_current()
         return {k:v for k,v in params.items() if k not in self.params_fixed.keys()}
 
+    def optimize(self, fmin, vars, start, *args, **kwargs):
+        if 'fprime' in signature(fmin).parameters:
+            r = fmin(lambda x: nan_to_high(-self.logp_array(x)), self.model.bijection.map(start),
+                     fprime=lambda x: np.nan_to_num(-self.dlogp_array(x)), *args, **kwargs)
+        else:
+            r = fmin(lambda x: nan_to_high(-self.logp_array(x)), self.model.bijection.map(start), *args, **kwargs)
+        return self.model.bijection.rmap(r)
+
     def find_MAP(self, start=None, points=1, plot=False, return_points=False, display=True, powell=True):
+        points_list = list()
+        if start is None:
+            start = self.get_params_current()
+        if type(start) is list:
+            i = 0
+            for s in start:
+                i += 1
+                points_list.append(('start'+str(i), self.logp_dict(s), s))
+        else:
+            points_list.append(('start', self.logp_dict(start), start))
+        n_starts = len(points_list)
+        if self.outputs.get_value() is None:
+            print('For find_MAP it is necessary to have observations')
+            return start
+        if display:
+            print('Starting function value (-logp): ' + str(-self.logp_dict(points_list[0][2])))
+        if plot:
+            plt.figure(0)
+            self.plot(params=points_list[0][2], title='start')
+            plt.show()
+        with self.model:
+            i = -1
+            points -= 1
+            while i < points:
+                i += 1
+                try:
+                    if powell:
+                        name, logp, start = points_list[i // 2]
+                    else:
+                        name, logp, start = points_list[i]
+                    if i % 2 == 0 or not powell:#
+                        if name.endswith('_bfgs'):
+                            if i > n_starts:
+                                points += 1
+                            continue
+                        name += '_bfgs'
+                        if display:
+                            print('\n' + name)
+                        new = self.optimize(fmin=sp.optimize.fmin_bfgs, vars=self.sampling_vars, start=start, disp=display)
+                    else:
+                        if name.endswith('_powell'):
+                            if i > n_starts:
+                                points += 1
+                            continue
+                        name += '_powell'
+                        if display:
+                            print('\n' + name)
+                        new = self.optimize(fmin=sp.optimize.fmin_powell, vars=self.sampling_vars, start=start, disp=display)
+                    points_list.append((name, self.logp_dict(new), new))
+                    if plot:
+                        plt.figure(i+1)
+                        self.plot(params=new, title=name)
+                        plt.show()
+                except Exception as error:
+                    print(error)
+                    pass
+
+        optimal = points_list[0]
+        for test in points_list:
+            if test[1] > optimal[1]:
+                optimal = test
+        name, logp, params = optimal
+        if display:
+            #print(params)
+            pass
+        if return_points is False:
+            return params
+        else:
+            return params, points_list
+
+    def find_MAP_old(self, start=None, points=1, plot=False, return_points=False, display=True, powell=True):
         points_list = list()
         if start is None:
             start = self.get_params_current()
@@ -768,7 +866,35 @@ class StochasticProcess:
                 else:
                     step = RobustSlice()
             trace = pm.sample(samples, step=step, start=start, njobs=chains, trace=trace)
+
         return trace
+
+    def ensemble_hypers(self, start=None, samples=1000, chains=None, ntemps=None):
+        if start is None:
+            start = self.find_MAP()
+        if isinstance(start, dict):
+            start = self.dict_to_array(start)
+        ndim = len(start)
+        if chains is None:
+            chains = 2*ndim
+        if ntemps is None:
+            sampler = emcee.EnsembleSampler(chains, ndim, self.logp_array)
+            noise = np.random.normal(loc=1, scale=0.1, size=(chains, ndim))
+            p0 = noise * np.ones((chains, 1)) * start
+        else:
+            sampler = emcee.PTSampler(ntemps, chains, ndim, self.logp_like, self.logp_prior)
+            noise = np.random.normal(loc=1, scale=0.1, size=(ntemps, chains, ndim))
+            p0 = noise * np.ones((ntemps, chains, 1)) * start
+
+        for result in tqdm(sampler.sample(p0, iterations=samples), total=samples):
+            pass
+
+        lnprob, echain = sampler.lnprobability, sampler.chain
+        sampler.reset()
+        if ntemps is None:
+            return lnprob, echain
+        else:
+            return lnprob[0, :, :], echain[0, :, :]
 
     def save_model(self, path=None, params=None):
         if path is None:
