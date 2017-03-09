@@ -67,6 +67,8 @@ class StochasticProcess:
         # Space, Hidden, Observed
         if type(space) is int:
             space = np.random.rand(2, space).astype(dtype=th.config.floatX)
+        space_raw = space
+        space = space_raw[:2, :]
         __, self.space_values, self.space_index = def_space(space)
         self.inputs, self.inputs_values, self.observed_index = def_space(space, self.name + '_inputs')
         self.outputs, self.outputs_values, __ = def_space(np.zeros(len(space)), self.name + '_outputs', squeeze=True)
@@ -185,6 +187,7 @@ class StochasticProcess:
         self.logp_prior = None
         self.compile_logprior()
 
+        self.set_space(space_raw)
         if file is not None:
             self.file = file
             try:

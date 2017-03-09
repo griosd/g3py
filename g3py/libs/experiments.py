@@ -6,7 +6,7 @@ import seaborn as sb
 import multiprocessing as mp
 import matplotlib.pyplot as plt
 from datetime import datetime as dt
-
+from tqdm import tqdm
 
 from ..libs import random_obs, uniform_obs, likelihood_datatrace, save_pkl, load_pkl, marginal
 
@@ -172,7 +172,8 @@ class Experiment:
         if type(repeat) is int:
             repeat = list(range(repeat))
         print('Simulations: n=', n_simulations, ' repeat=', repeat)
-        for n_sim in list(range(total_sims, total_sims + n_simulations)) + repeat:
+        for n_sim in tqdm(list(range(total_sims, total_sims + n_simulations)) + repeat,
+                          total = n_simulations + len(repeat)):
             if n_sim not in self.simulations_raw.index:
                 print('\n' * 2 + '*' * 70+'\n' + '*' * 70 + '\nSimulation #'+str(n_sim) )
                 obs_j, x_obs, y_obs, valid_j, x_valid, y_valid, test_j, x_test, y_test = self.new_data()
@@ -185,7 +186,7 @@ class Experiment:
                                                                  self.data_x[test_j], self.data_y[test_j]
                 print('\n' * 2 + '*' * 60 + '\n' + '*' * 60 + '\nRepetition #' + str(n_sim) + '\n' + '*' * 60)
 
-            for sp in self.models:
+            for sp in tqdm(self.models, total = len(self.models)):
                 print('\n'*2+'*'*50 + '\n' + sp.name+' #'+str(n_sim) + '\n'+'*'*50)
                 sp.observed(x_obs, y_obs)
                 if plot:
