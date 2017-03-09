@@ -908,8 +908,8 @@ class StochasticProcess:
                 with open(path, 'wb') as f:
                     pickle.dump(self, f, protocol=-1)
             print('Saved model '+path)
-        except:
-            print('Error saving model '+path)
+        except Exception as details:
+            print('Error saving model '+path, details)
 
     def plot_space(self, space=None, independ=False ,observed=False):
         if space is not None:
