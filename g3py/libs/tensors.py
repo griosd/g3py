@@ -60,7 +60,7 @@ def tt_to_cov(c):
     return tt.switch(m > 0, r, r + (1e-6-m)*tt.eye(c.shape[0]) )
 
 
-def inverse_function(func, z, tol=1e-3, n_steps=32, alpha=0.1):
+def inverse_function(func, z, tol=1e-3, n_steps=1024, alpha=0.1):
     def iter_newton(x):
         diff = (func(x) - z)
         dfunc = tt.grad(tt.sum(diff), x)

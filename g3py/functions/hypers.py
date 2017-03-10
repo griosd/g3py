@@ -181,7 +181,7 @@ class NonTransformLog(pm.distributions.transforms.ElemwiseTransform):
         return tt.log(x)
 
     def jacobian_det(self, x):
-        return tt.switch(tt.exp(x) > 1e-10, 0, -np.inf)
+        return tt.switch(tt.exp(x) > 1e-6, 0, -np.inf)
 
 non_transform_log = NonTransformLog()
 

@@ -41,7 +41,7 @@ def data_abalone(dataframe=True, raw=False):
     print('abalone')
     abalone = pd.read_csv(g3.__path__[0] + '/data/abalone.data', names=names)
     if not raw:
-        abalone['Sex'] = (abalone['Sex'] == 'M') * -1.0 + (abalone['Sex'] == 'F') * 1.0 + 0.0
+        abalone['Sex'] = (abalone['Sex'] == 'M') * 1.0 + (abalone['Sex'] == 'F') * 0.0 + 0.0
     if dataframe:
         return abalone
     else:
@@ -61,6 +61,7 @@ def data_creep(dataframe=True, raw=False):
     creep = pd.read_table(g3.__path__[0] + '/data/creep', names=names).astype('float32')
     if not raw:
         creep = creep.drop(['Tantalum', 'Cooling_rate_annealing', 'Rhenium'], axis=1)
+        creep['Rupture_stress'] *= 1e-2
     if dataframe:
         return creep
     else:
@@ -77,10 +78,10 @@ def data_ailerons(dataframe=True, raw=False):
              'diffSeTime7', 'diffSeTime8', 'diffSeTime9', 'diffSeTime10', 'diffSeTime11', \
              'diffSeTime12', 'diffSeTime13', 'diffSeTime14', 'alpha', 'Se', 'goal']
     print('ailerons')
-    ailerons = pd.concat([pd.read_csv(g3.__path__[0] + '/data/ailerons.data', names=names),
-                          pd.read_csv(g3.__path__[0] + '/data/ailerons.test', names=names)]).astype('float32')
+    ailerons = pd.concat([pd.read_csv(g3.__path__[0] + '/data/ailerons.data', names=names)]).astype('float32')
+                          #pd.read_csv(g3.__path__[0] + '/data/ailerons.test', names=names)]).astype('float32')
     if not raw:
-        ailerons['goal'] = ailerons['goal']*1000
+        ailerons['goal'] *= 1e4
         ailerons = ailerons.drop(['diffSeTime2', 'diffSeTime4', 'diffSeTime6', 'diffSeTime8', 'diffSeTime10',
                                   'diffSeTime12', 'diffSeTime14'], axis=1)
     if dataframe:

@@ -43,6 +43,7 @@ class Experiment:
         self.master = None
         self.points = None
         self.powell = None
+        self.max_time = None
         self.holdout = None
         self.holdout_p = 0
 
@@ -126,7 +127,7 @@ class Experiment:
         return sp.scores(params, logp=self.scores_logp, bias=self.scores_mean, median=self.scores_median,
                          variance=self.scores_variance)
 
-    def model_selection(self, find_MAP=True, points=2, powell=True, starts='default', master=None, holdout=None, holdout_p=0):
+    def model_selection(self, find_MAP=True, points=2, powell=True, starts='default', master=None, holdout=None, holdout_p=0, max_time=None):
         self.find_MAP = find_MAP
         self.points = points
         self.powell = powell
@@ -134,34 +135,46 @@ class Experiment:
         self.master = master
         self.holdout = holdout
         self.holdout_p = holdout_p
+        self.max_time = max_time
 
     def select_model(self, sp, x_valid=None, y_valid=None):
         if self.find_MAP:
             if self.starts is 'default':
-                start = [sp.get_params_default(),
-                         sp.get_params_random(mean=sp.get_params_default(), sigma=0.2, prop=True),
-                         sp.get_params_random(mean=sp.get_params_default(), sigma=0.2, prop=False),
-                         sp.get_params_random(mean=sp.get_params_default(), sigma=0.5, prop=True),
-                         sp.get_params_random(mean=sp.get_params_default(), sigma=0.5, prop=False)]
+                start = [sp.get_params_test(),
+                         sp.get_params_default(),
+                         sp.get_params_random(mean=sp.get_params_test(), sigma=0.1, prop=False),
+                         sp.get_params_random(mean=sp.get_params_default(), sigma=0.1, prop=True),
+                         sp.get_params_random(mean=sp.get_params_test(), sigma=0.2, prop=False),
+                         sp.get_params_random(mean=sp.get_params_default(), sigma=0.2, prop=True)]
+            elif self.starts is 'mcmc':
+                lnp, chain = sp.ensemble_hypers(start=sp.get_params_default(), samples=25)
+                step = -1
+                start = list()
+                for k in range(min(chain.shape[0], self.points)):
+                    start.append(sp.model.bijection.rmap(chain[k, step, :]))
             else:
                 start = sp.get_params_default()
             if self.master is not None and self.master != sp:
-                start = [sp.get_params_process(self.master, params=self.master.get_params_current())] + start
+                start = [sp.get_params_process(self.master, params=self.master.get_params_test()),
+                         sp.get_params_process(self.master, params=self.master.get_params_default())] + start
 
-            params, points_list = sp.find_MAP(start=start, points=self.points, powell=self.powell, return_points=True)
+            params, points_list = sp.find_MAP(start=start, points=self.points, powell=self.powell, max_time=self.max_time, return_points=True)
             selected = 'find_MAP'
             if (self.holdout_p > 0) and (x_valid is not None) and (y_valid is not None):
                 sp.set_space(x_valid, y_valid)
                 params_scores = self.calc_scores(sp, params)
                 params_scores['_nll'] = -sp.logp_dict(params).max()
                 for (n, l, p) in points_list:
-                    scores = self.calc_scores(sp, p)
-                    scores['_nll'] = l.min()
-                    print(n, l, scores[self.holdout])
-                    if scores[self.holdout] < params_scores[self.holdout]:
-                        selected = n
-                        params_scores = scores
-                        params = p
+                    try:
+                        scores = self.calc_scores(sp, p)
+                        scores['_nll'] = l.min()
+                        print(n, l, scores[self.holdout])
+                        if scores[self.holdout] < params_scores[self.holdout]:
+                            selected = n
+                            params_scores = scores
+                            params = p
+                    except:
+                        pass
                 print('Selected: '+selected, params_scores)
         else:
             params = sp.get_params_default()
@@ -172,8 +185,7 @@ class Experiment:
         if type(repeat) is int:
             repeat = list(range(repeat))
         print('Simulations: n=', n_simulations, ' repeat=', repeat)
-        for n_sim in tqdm(list(range(total_sims, total_sims + n_simulations)) + repeat,
-                          total = n_simulations + len(repeat)):
+        for n_sim in tqdm(list(range(total_sims, total_sims+n_simulations)) + repeat, total=n_simulations+len(repeat)):
             if n_sim not in self.simulations_raw.index:
                 print('\n' * 2 + '*' * 70+'\n' + '*' * 70 + '\nSimulation #'+str(n_sim) )
                 obs_j, x_obs, y_obs, valid_j, x_valid, y_valid, test_j, x_test, y_test = self.new_data()

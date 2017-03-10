@@ -4,6 +4,8 @@ from .tensors import *
 from .traces import *
 from .experiments import *
 from theano.ifelse import ifelse
+import warnings
+
 
 def clone(c):
     return copy(c)
@@ -25,5 +27,16 @@ class DictObj(dict):
         else:
             raise AttributeError("No such attribute: " + name)
 
+
 def nan_to_high(x):
     return np.where(np.isfinite(x), x, 1.0e100)
+
+
+class MaxTime(object):
+    def __init__(self, max_sec=60):
+        self.max_sec = max_sec + time.time()
+
+    def __call__(self, xk=None):
+
+        if time.time() > self.max_sec:
+            raise Exception("Terminating: time limit reached")
