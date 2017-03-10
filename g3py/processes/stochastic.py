@@ -7,7 +7,7 @@ import pymc3 as pm
 import scipy as sp
 import theano as th
 from ..functions import Mean, Kernel, Mapping, KernelSum, WN, tt_to_num, def_space, trans_hypers
-from ..libs import tt_to_cov, makefn, plot_text, clone, DictObj, plot_2d, grid2d, show, nan_to_high
+from ..libs import tt_to_cov, makefn, plot_text, clone, DictObj, plot_2d, grid2d, show, nan_to_high, MaxTime
 from ..models import ConstantStep, RobustSlice
 from .. import config
 from ipywidgets import interact
@@ -445,7 +445,7 @@ class StochasticProcess:
             scores['_MedianL1'] = np.mean(np.abs(pred.median - hidden))
             scores['_MedianL2'] = np.mean((pred.median - hidden)**2)
         if logp:
-            scores['_NLL'] = - pred.logp(hidden) / len(hidden)
+            #scores['_NLL'] = - pred.logp(hidden) / len(hidden)
             scores['_NLPD'] = - pred.logpred(hidden) / len(hidden)
         return scores
 
@@ -700,15 +700,26 @@ class StochasticProcess:
             params = self.get_params_current()
         return {k:v for k,v in params.items() if k not in self.params_fixed.keys()}
 
-    def optimize(self, fmin, vars, start, *args, **kwargs):
+    def optimize(self, fmin=None, vars=None, start=None, max_time=None, *args, **kwargs):
+        if fmin is None:
+            fmin = sp.optimize.fmin_bfgs
+        if vars is None:
+            vars = self.sampling_vars
+        if start is None:
+            start = self.get_params_default()
+        if max_time is None:
+            callback = None
+        else:
+            callback = MaxTime(max_time)
+
         if 'fprime' in signature(fmin).parameters:
             r = fmin(lambda x: nan_to_high(-self.logp_array(x)), self.model.bijection.map(start),
-                     fprime=lambda x: np.nan_to_num(-self.dlogp_array(x)), *args, **kwargs)
+                     fprime=lambda x: np.nan_to_num(-self.dlogp_array(x)), callback=callback, *args, **kwargs)
         else:
-            r = fmin(lambda x: nan_to_high(-self.logp_array(x)), self.model.bijection.map(start), *args, **kwargs)
+            r = fmin(lambda x: nan_to_high(-self.logp_array(x)), self.model.bijection.map(start), callback=callback, *args, **kwargs)
         return self.model.bijection.rmap(r)
 
-    def find_MAP(self, start=None, points=1, plot=False, return_points=False, display=True, powell=True):
+    def find_MAP(self, start=None, points=1, plot=False, return_points=False, display=True, powell=True, max_time=None):
         points_list = list()
         if start is None:
             start = self.get_params_current()
@@ -747,7 +758,7 @@ class StochasticProcess:
                         name += '_bfgs'
                         if display:
                             print('\n' + name)
-                        new = self.optimize(fmin=sp.optimize.fmin_bfgs, vars=self.sampling_vars, start=start, disp=display)
+                        new = self.optimize(fmin=sp.optimize.fmin_bfgs, vars=self.sampling_vars, start=start, max_time=max_time, disp=display)
                     else:
                         if name.endswith('_powell'):
                             if i > n_starts:
@@ -756,7 +767,7 @@ class StochasticProcess:
                         name += '_powell'
                         if display:
                             print('\n' + name)
-                        new = self.optimize(fmin=sp.optimize.fmin_powell, vars=self.sampling_vars, start=start, disp=display)
+                        new = self.optimize(fmin=sp.optimize.fmin_powell, vars=self.sampling_vars, start=start, max_time=max_time, disp=display)
                     points_list.append((name, self.logp_dict(new), new))
                     if plot:
                         plt.figure(i+1)
