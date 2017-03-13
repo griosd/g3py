@@ -173,7 +173,7 @@ class BoxCoxShifted(Mapping):
 
     def inv(self, y):
         shifted = y + self.shift
-        return tt.switch(self.power < 1e-5, tt.log(shifted), ((tt.sgn(shifted) * tt.abs_(shifted) ** self.power)-1.0)/self.power)
+        return th.ifelse.ifelse(self.power < 1e-5, tt.log(shifted), ((tt.sgn(shifted) * tt.abs_(shifted) ** self.power)-1.0)/self.power)
 
     def logdet_dinv(self, y):
         shifted = y + self.shift
@@ -212,6 +212,41 @@ class BoxCoxLinear(Mapping):
 
     def logdet_dinv(self, y):
         return (self.power - 1.0) * tt.sum(tt.log(tt.abs_(self.scale * (y + self.shift)))) + y.shape[0].astype(th.config.floatX) * tt.log(
+            self.scale)
+
+
+class BoxCoxLinear2(Mapping):
+    def __init__(self, y=None, name=None, shift=None, scale=None, power=None):
+        super().__init__(y, name)
+        self.shift = shift
+        self.scale = scale
+        self.power = power
+
+    def check_hypers(self, parent=''):
+        if self.shift is None:
+            self.shift = Hypers.Flat(parent + self.name + '_shift')
+        if self.scale is None:
+            self.scale = Hypers.FlatExp(parent + self.name + '_scale')
+        if self.power is None:
+            self.power = Hypers.FlatExp(parent + self.name + '_power')
+        self.hypers += [self.shift, self.scale, self.power]
+
+    def default_hypers(self, x=None, y=None):
+        return {self.shift: np.float32(1.0),  # np.array(y.min() - np.abs(y[1:]-y[:-1]).min()),
+                self.scale: np.float32(1.0),
+                self.power: np.float32(1.0)}
+
+    def __call__(self, x):
+        scaled = self.power * x + 1.0
+        transformed = tt.sgn(scaled) * tt.abs_(scaled) ** (1.0 / self.power)
+        return (transformed - self.shift) / self.scale
+
+    def inv(self, y):
+        shifted = self.scale * y + self.shift
+        return th.ifelse.ifelse(self.power < 1e-5, tt.log(shifted), ((tt.sgn(shifted) * tt.abs_(shifted) ** self.power) - 1.0) / self.power)
+
+    def logdet_dinv(self, y):
+        return th.ifelse.ifelse(self.power < 1e-5, -1 , self.power - 1.0) * tt.sum(tt.log(tt.abs_(self.scale * y + self.shift))) + y.shape[0].astype(th.config.floatX) * tt.log(
             self.scale)
 
 
