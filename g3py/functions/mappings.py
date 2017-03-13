@@ -246,7 +246,7 @@ class BoxCoxLinear2(Mapping):
         return th.ifelse.ifelse(self.power < 1e-5, tt.log(shifted), ((tt.sgn(shifted) * tt.abs_(shifted) ** self.power) - 1.0) / self.power)
 
     def logdet_dinv(self, y):
-        return th.ifelse.ifelse(self.power < 1e-5, -1 , self.power - 1.0) * tt.sum(tt.log(tt.abs_(self.scale * y + self.shift))) + y.shape[0].astype(th.config.floatX) * tt.log(
+        return th.ifelse.ifelse(self.power < 1e-5, -1.0, self.power - 1.0) * tt.sum(tt.log(tt.abs_(self.scale * y + self.shift))) + y.shape[0].astype(th.config.floatX) * tt.log(
             self.scale)
 
 
