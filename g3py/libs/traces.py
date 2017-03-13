@@ -31,7 +31,7 @@ def load_datatrace(path='datatrace.pkl'):
     return pd.read_pickle(path)
 
 
-def chains_to_datatrace(sp, chains, ll=None):
+def chains_to_datatrace(sp, chains, ll=None, transforms=True):
     columns = list()
     for v in sp.model.bijection.ordering.vmap:
         columns += pm.backends.tracetab.create_flat_names(v.var, v.shp)
@@ -43,7 +43,127 @@ def chains_to_datatrace(sp, chains, ll=None):
         if ll is not None:
             pdchain['_ll'] = ll[nchain]
         datatrace = datatrace.append(pdchain, ignore_index=True)
+    if transforms:
+        ncolumn = 0
+        varnames = sp.get_params_test().keys()
+        for v in datatrace.columns:
+            if '___' in v:
+                name = v[:v.find('___')+1]
+            else:
+                name = v
+            if name not in varnames:
+                continue
+            dist = sp.model[name].distribution
+            if hasattr(dist, 'transform_used'):
+                trans = dist.transform_used
+                datatrace.insert(ncolumn, v.replace('_'+trans.name+'_', ''), trans.backward(datatrace[v]).eval())
+                ncolumn += 1
     return datatrace
+
+
+def datatraceplot(datatrace, varnames=None, transform=lambda x: x, figsize=None,
+                  lines=None, combined=False, plot_transformed=True, grid=True,
+                  alpha=0.35, priors=None, prior_alpha=1, prior_style='--',
+                  ax=None):
+    """Plot samples histograms and values
+
+    Parameters
+    ----------
+
+    datatrace : result of MCMC run on DataFrame format
+    varnames : list of variable names
+        Variables to be plotted, if None all variable are plotted
+    transform : callable
+        Function to transform data (defaults to identity)
+    figsize : figure size tuple
+        If None, size is (12, num of variables * 2) inch
+    lines : dict
+        Dictionary of variable name / value  to be overplotted as vertical
+        lines to the posteriors and horizontal lines on sample values
+        e.g. mean of posteriors, true values of a simulation
+    combined : bool
+        Flag for combining multiple chains into a single chain. If False
+        (default), chains will be plotted separately.
+    plot_transformed : bool
+        Flag for plotting automatically transformed variables in addition to
+        original variables (defaults to False).
+    grid : bool
+        Flag for adding gridlines to histogram. Defaults to True.
+    alpha : float
+        Alpha value for plot line. Defaults to 0.35.
+    priors : iterable of PyMC distributions
+        PyMC prior distribution(s) to be plotted alongside poterior. Defaults
+        to None (no prior plots).
+    prior_alpha : float
+        Alpha value for prior plot. Defaults to 1.
+    prior_style : str
+        Line style for prior plot. Defaults to '--' (dashed line).
+    ax : axes
+        Matplotlib axes. Accepts an array of axes, e.g.:
+
+        >>> fig, axs = plt.subplots(3, 2) # 3 RVs
+        >>> pymc3.traceplot(trace, ax=axs)
+
+        Creates own axes by default.
+
+    Returns
+    -------
+
+    ax : matplotlib axes
+
+    """
+    datatrace = datatrace.set_index(['_nchain'])
+    if combined:
+        datatrace.index = datatrace.index * 0
+    else:
+        datatrace = datatrace.drop(['_niter'], axis=1)
+    if varnames is None:
+        if plot_transformed:
+            varnames = [name for name in datatrace.columns]
+        else:
+            varnames = [name for name in datatrace.columns if not name.endswith('_')]
+
+    n = len(varnames)
+
+    if figsize is None:
+        figsize = (12, n * 2)
+
+    if ax is None:
+        fig, ax = plt.subplots(n, 2, squeeze=False, figsize=figsize)
+    elif ax.shape != (n, 2):
+        pm._log.warning('traceplot requires n*2 subplots')
+        return None
+
+    for i, v in enumerate(varnames):
+        prior = None
+        if priors is not None:
+            prior = priors[i]
+
+        for key in datatrace.index.unique():
+            d = datatrace.loc[key][v]
+            d = np.squeeze(transform(d))
+            d = pm.plots.make_2d(d)
+            if d.dtype.kind == 'i':
+                pm.plots.histplot_op(ax[i, 0], d, alpha=alpha)
+            else:
+                pm.plots.kdeplot_op(ax[i, 0], d, prior, prior_alpha, prior_style)
+            ax[i, 0].set_title(str(v))
+            ax[i, 0].grid(grid)
+            ax[i, 1].set_title(str(v))
+            ax[i, 1].plot(d, alpha=alpha)
+
+            ax[i, 0].set_ylabel("Frequency")
+            ax[i, 1].set_ylabel("Sample value")
+
+            if lines:
+                try:
+                    ax[i, 0].axvline(x=lines[v], color="r", lw=1.5)
+                    ax[i, 1].axhline(y=lines[v], color="r",
+                                     lw=1.5, alpha=alpha)
+                except KeyError:
+                    pass
+            ax[i, 0].set_ylim(ymin=0)
+    plt.tight_layout()
 
 
 def save_traces(sp, traces, path):
