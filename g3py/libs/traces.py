@@ -26,8 +26,24 @@ def save_datatrace(dt, path='datatrace.pkl'):
     os.makedirs(path[:path.rfind('/')], exist_ok=True)
     dt.to_pickle(path)
 
+
 def load_datatrace(path='datatrace.pkl'):
     return pd.read_pickle(path)
+
+
+def chains_to_datatrace(sp, chains, ll=None):
+    columns = list()
+    for v in sp.model.bijection.ordering.vmap:
+        columns += pm.backends.tracetab.create_flat_names(v.var, v.shp)
+    datatrace = pd.DataFrame()
+    for nchain in range(len(chains)):
+        pdchain = pd.DataFrame(chains[nchain, :, :], columns=columns)
+        pdchain['_nchain'] = nchain
+        pdchain['_niter'] = pdchain.index
+        if ll is not None:
+            pdchain['_ll'] = ll[nchain]
+        datatrace = datatrace.append(pdchain, ignore_index=True)
+    return datatrace
 
 
 def save_traces(sp, traces, path):
@@ -35,9 +51,11 @@ def save_traces(sp, traces, path):
     with sp.model:
         pm.backends.text.dump(path, traces)
 
+
 def load_traces(sp, path):
     with sp.model:
         return pm.backends.text.load(path)
+
 
 def load_traces_dir(sp, dir_traces, last_samples=None):
     with sp.model:
@@ -118,7 +136,6 @@ def cluster_datatrace(dt, n_components=10, n_init=1, excludes='_'):
     gm = mixture.BayesianGaussianMixture(n_components=n_components, covariance_type='full', max_iter=1000, n_init=n_init).fit(datatrace_filter)
     cluster_gm = gm.predict(datatrace_filter)
     dt['_cluster'] = cluster_gm
-
 
 
 def marginal(dt, items=None, like=None, regex=None, samples=None):
