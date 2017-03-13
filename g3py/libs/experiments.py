@@ -12,7 +12,7 @@ from ..libs import random_obs, uniform_obs, likelihood_datatrace, save_pkl, load
 
 
 class Experiment:
-    def __init__(self, models, file=None, load=True):
+    def __init__(self, models=None, file=None, load=True):
         self.file = file
         if self.file is not None and load:
             try:
@@ -20,6 +20,8 @@ class Experiment:
                 self.__dict__.update(exp.__dict__)
                 self.load_simulations()
                 self.load_results()
+                if models is not None:
+                    self.models = models
                 return
             except:
                 pass
