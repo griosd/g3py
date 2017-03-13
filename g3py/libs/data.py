@@ -61,7 +61,7 @@ def data_creep(dataframe=True, raw=False):
     creep = pd.read_table(g3.__path__[0] + '/data/creep', names=names).astype('float32')
     if not raw:
         creep = creep.drop(['Tantalum', 'Cooling_rate_annealing', 'Rhenium'], axis=1)
-        creep['Rupture_stress'] *= 1e-2
+        creep['Rupture_stress'] *= 1e-1
     if dataframe:
         return creep
     else:

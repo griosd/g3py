@@ -7,7 +7,7 @@ import pymc3 as pm
 import scipy as sp
 import theano as th
 from ..functions import Mean, Kernel, Mapping, KernelSum, WN, tt_to_num, def_space, trans_hypers
-from ..libs import tt_to_cov, makefn, plot_text, clone, DictObj, plot_2d, grid2d, show, nan_to_high, MaxTime
+from ..libs import tt_to_cov, makefn, plot_text, clone, DictObj, plot_2d, grid2d, show, nan_to_high, MaxTime, chains_to_datatrace
 from ..models import ConstantStep, RobustSlice
 from .. import config
 from ipywidgets import interact
@@ -698,7 +698,10 @@ class StochasticProcess:
     def get_params_sampling(self, params=None):
         if params is None:
             params = self.get_params_current()
-        return {k:v for k,v in params.items() if k not in self.params_fixed.keys()}
+        return {k: v for k, v in params.items() if k not in self.params_fixed.keys()}
+
+    def get_params_datatrace(self, dt, loc):
+        return self.model.bijection.rmap(dt.loc[loc])
 
     def optimize(self, fmin=None, vars=None, start=None, max_time=None, *args, **kwargs):
         if fmin is None:
@@ -884,7 +887,7 @@ class StochasticProcess:
 
         return trace
 
-    def ensemble_hypers(self, start=None, samples=1000, chains=None, ntemps=None):
+    def ensemble_hypers(self, start=None, samples=1000, chains=None, ntemps=None, raw=False):
         if start is None:
             start = self.find_MAP()
         if isinstance(start, dict):
@@ -906,10 +909,12 @@ class StochasticProcess:
 
         lnprob, echain = sampler.lnprobability, sampler.chain
         sampler.reset()
-        if ntemps is None:
-            return lnprob, echain
+        if ntemps is not None:
+            lnprob, echain = lnprob[0, :, :], echain[0, :, :]
+        if raw:
+            return echain, lnprob
         else:
-            return lnprob[0, :, :], echain[0, :, :]
+            return chains_to_datatrace(self, echain, lnprob)
 
     def save_model(self, path=None, params=None):
         if path is None:
