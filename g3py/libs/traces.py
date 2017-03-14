@@ -251,8 +251,9 @@ def likelihood_datatrace(sp, datatrace, trace):
     datatrace['_adll'] = adll
 
 
-def cluster_datatrace(dt, n_components=10, n_init=1, excludes='_'):
-    datatrace_filter = dt.filter(regex='^(?!' + excludes + ')')
+def cluster_datatrace(dt, n_components=10, n_init=1):
+    excludes = '^((?!_nchain|_niter|_log_|_logodds_|_interval_|_lowerbound_|_upperbound_|_sumto1_|_stickbreaking_|_circular_).)*$'
+    datatrace_filter = dt.filter(regex=excludes)
     gm = mixture.BayesianGaussianMixture(n_components=n_components, covariance_type='full', max_iter=1000, n_init=n_init).fit(datatrace_filter)
     cluster_gm = gm.predict(datatrace_filter)
     dt['_cluster'] = cluster_gm
