@@ -8,14 +8,16 @@ from .. import config
 
 
 def style_seaborn():
-    #sb.set(style='darkgrid', color_codes=False)
+    plt.style.use('classic')
+    sb.set(style='darkgrid', color_codes=False)
     plt.style.use('seaborn-darkgrid')
     plt.rcParams['figure.figsize'] = (20, 6)  #figure size
     config.plot_big = False
 
 
 def style_normal():
-    #sb.set(style="white", color_codes=True) #white background
+    plt.style.use('classic')
+    sb.set(style="white", color_codes=True) #white background
     plt.style.use('seaborn-white')
     plt.rcParams['figure.figsize'] = (20, 6)  #figure size
     plt.rcParams['axes.titlesize'] = 20  # title size
