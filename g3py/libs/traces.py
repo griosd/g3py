@@ -44,7 +44,9 @@ def chains_to_datatrace(sp, chains, ll=None, transforms=True):
             pdchain['_ll'] = ll[nchain]
         datatrace = datatrace.append(pdchain, ignore_index=True)
     if transforms:
-        ncolumn = 0
+        ncolumn = len(datatrace.columns) - 2
+        if ll is not None:
+            ncolumn -= 1
         varnames = sp.get_params_test().keys()
         for v in datatrace.columns:
             if '___' in v:
