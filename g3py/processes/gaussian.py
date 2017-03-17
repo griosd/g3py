@@ -56,9 +56,8 @@ class GaussianProcess(StochasticProcess):
         self.posterior_sampler = self.posterior_mean + self.posterior_cholesky.dot(self.random_th)
 
     def subprocess(self, subkernel):
-        k_cross = subkernel.cov(self.space_th, self.inputs)
-        subprocess_mean = self.location_space + k_cross.dot(tsl.solve(self.kernel_inputs,
-                                                                      self.mapping_outputs - self.location_inputs))
+        k_cross = subkernel.cov(self.space_th, self.inputs_th)
+        subprocess_mean = self.location_space + k_cross.dot(tsl.solve(self.kernel_inputs, self.mapping_outputs - self.location_inputs))
         params = [self.space_th, self.inputs_th, self.outputs_th] + self.model.vars
         return makefn(params, subprocess_mean, True)
 
