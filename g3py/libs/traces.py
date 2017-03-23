@@ -1,6 +1,7 @@
 import os
 import pickle
 import numpy as np
+import scipy as sp
 import pandas as pd
 import pymc3 as pm
 import seaborn as sb
@@ -31,22 +32,66 @@ def load_datatrace(path='datatrace.pkl'):
     return pd.read_pickle(path)
 
 
-def chains_to_datatrace(sp, chains, ll=None, transforms=True):
+def gelman_rubin(chains, method='multi'):
+    # This method return the abs(gelman_rubin-1), so near to 0 is best
+    nwalkers, nsamples, ndim = chains.shape
+    if method is 'multi':
+        B = nsamples * np.cov(np.mean(chains, axis=1).T)
+        W = B * 0
+        for chain in range(nwalkers):
+            W += np.cov(chains[chain, :, :].T)
+        W /= nwalkers
+        Vhat = W * (nsamples - 1) / nsamples + B / nsamples
+        eigvalues = np.linalg.eigvals((1 / nsamples) * np.linalg.solve(W, Vhat))  # np.matmul(np.linalg.inv(W), Vhat))
+        return np.abs((nsamples - 1) / nsamples + ((nwalkers + 1) / nwalkers) * np.max(eigvalues) - 1)
+    else:
+        Rhat = np.zeros(ndim)
+        for i in range(ndim):
+            x = chains[:, :, i]
+            # Calculate between-chain variance
+            B = nsamples * np.var(np.mean(x, axis=1), axis=0, ddof=1)
+            # Calculate within-chain variance
+            W = np.mean(np.var(x, axis=1, ddof=1), axis=0)
+            # Estimate of marginal posterior variance
+            Vhat = W * (nsamples - 1) / nsamples + B / nsamples
+            Rhat[i] = np.sqrt(Vhat / W)
+        return np.max(np.abs(Rhat - 1))
+
+
+def burn_in_samples(chains, tol=0.1, method='multi'):
+    score = gelman_rubin(chains, method)
+    if score > tol:
+        return -1
+    lower = 0
+    upper = chains.shape[1]
+    while lower + 1 < upper:
+        n = lower + (upper - lower) // 2
+        if gelman_rubin(chains[:, :n, :]) < tol:
+            upper = n
+        else:
+            lower = n
+    return upper
+
+
+def chains_to_datatrace(sp, chains, ll=None, transforms=True, burnin_tol=None, burnin_method='multi'):
     columns = list()
     for v in sp.model.bijection.ordering.vmap:
         columns += pm.backends.tracetab.create_flat_names(v.var, v.shp)
+    n_vars = len(columns)
     datatrace = pd.DataFrame()
+    if burnin_tol is not None:
+        nburn = burn_in_samples(chains, tol=burnin_tol, method=burnin_method)
     for nchain in range(len(chains)):
         pdchain = pd.DataFrame(chains[nchain, :, :], columns=columns)
         pdchain['_nchain'] = nchain
         pdchain['_niter'] = pdchain.index
+        if burnin_tol is not None:
+            pdchain['_burnin'] = pdchain['_niter'] > nburn
         if ll is not None:
             pdchain['_ll'] = ll[nchain]
         datatrace = datatrace.append(pdchain, ignore_index=True)
     if transforms:
-        ncolumn = len(datatrace.columns) - 2
-        if ll is not None:
-            ncolumn -= 1
+        ncolumn = n_vars
         varnames = sp.get_params_test().keys()
         for v in datatrace.columns:
             if '___' in v:
@@ -61,6 +106,18 @@ def chains_to_datatrace(sp, chains, ll=None, transforms=True):
                 datatrace.insert(ncolumn, v.replace('_'+trans.name+'_', ''), trans.backward(datatrace[v]).eval())
                 ncolumn += 1
     return datatrace
+
+
+def datatrace_to_chains(process, dt, flat=False, burnin=True):
+    if burnin:
+        chain = dt[dt._burnin]
+    else:
+        chain = dt
+    if flat:
+        return chain.ix[:, :process.ndim].values
+    else:
+        levshape = chain.set_index([chain._nchain, chain._niter]).index.levshape
+        return chain.ix[:, :process.ndim].values.reshape(levshape[0], levshape[1], process.ndim)
 
 
 def datatraceplot(datatrace, varnames=None, transform=lambda x: x, figsize=None,
@@ -254,7 +311,7 @@ def likelihood_datatrace(sp, datatrace, trace):
 
 
 def cluster_datatrace(dt, n_components=10, n_init=1):
-    excludes = '^((?!_nchain|_niter|_log_|_logodds_|_interval_|_lowerbound_|_upperbound_|_sumto1_|_stickbreaking_|_circular_).)*$'
+    excludes = '^((?!_nchain|_niter|_burnin|_log_|_logodds_|_interval_|_lowerbound_|_upperbound_|_sumto1_|_stickbreaking_|_circular_).)*$'
     datatrace_filter = dt.filter(regex=excludes)
     gm = mixture.BayesianGaussianMixture(n_components=n_components, covariance_type='full', max_iter=1000, n_init=n_init).fit(datatrace_filter)
     cluster_gm = gm.predict(datatrace_filter)
@@ -318,3 +375,134 @@ def kde_datatrace(dt, items=None, size=6, n_levels=20, cmap="Blues_d"):
     g.map_offdiag(plt.scatter)
     g.map_offdiag(sb.kdeplot, n_levels=n_levels, cmap=cmap)
     return g
+
+
+def effective_sample_min(process, alpha=0.05, error=0.05, p=None):
+    """Calculate number of minimum effective samples needed for good enough estimates.
+
+    Args:
+        process (StochasticProcess): StochasticProcess with model
+        alpha (float): Wanted error precision (probability of satisfying "real-error" < error)
+        error (float): Wanted precision (max. Monte Carlo error)
+        p (int): Number of variables in the model
+    Returns:
+        float: Number of samples needed
+
+    .. _Multivariate Output Analysis for MCMC:
+        https://arxiv.org/pdf/1512.07713v2.pdf
+
+    """
+    if p is None:
+        p = process.ndim
+    return np.pi*(2**(2/p))*(sp.stats.chi2.ppf(1-alpha, p)) / (((p*sp.special.gamma(p/2))**(2/p))*(error**2))
+
+
+def effective_sample_size(process, dt, method='mIS', batch_size=None, flat=False, burnin=True):
+    chains = datatrace_to_chains(process, dt, flat=flat, burnin=burnin)
+    if flat:
+        chains = chains[None, :, :]
+    nwalkers, nsamples, ndim = chains.shape
+    chains_mESS = np.zeros(nwalkers)
+    for chain in range(nwalkers):
+        chains_mESS[chain] = _mESS(chains[chain, :, :], method, batch_size)
+    return np.floor(np.sum(chains_mESS)).astype(np.int)
+
+
+def _mESS(chain, method='mIS', batch_size=None):
+    nsamples, ndim = chain.shape
+    lambda_cov = np.cov(chain.T)
+    if method == 'batch' or batch_size is not None:
+        if batch_size is None:
+            batch_size = 1
+        sigma_cov = _sigma_batch(chain, batch_size)
+    elif method == 'adjusted':
+        sigma_cov = _sigma_mIS_adj(chain)
+    else: #mIS
+        sigma_cov = _sigma_mIS(chain)
+
+    return nsamples*(np.linalg.det(lambda_cov)/np.linalg.det(sigma_cov))**(1/ndim)
+
+
+def _is_positive_definite(M):
+    try:
+        np.linalg.cholesky(M)
+        return True
+    except np.linalg.LinAlgError:
+        return False
+
+
+def _autocov_matrix(chain, lag):
+    n = chain.shape[0]
+    x = chain - np.mean(chain, axis=0)
+    return (1/n)*(x[:(n-lag), :].T.dot(x[lag:, :]))
+
+
+def _autocov_matrix_2(chain, i):
+    return _autocov_matrix(chain, lag =2 * i) + _autocov_matrix(chain, lag =2 * i + 1)
+
+
+def _sigma_batch(chain, batch_size):
+    # Estimador consistente (bajo ciertas hipotesis) de matriz de covarianza para el CLT de Markov
+    # https://arxiv.org/pdf/1512.07713v1.pdf
+    nsamples, ndim = chain.shape
+    a = np.floor(nsamples / batch_size).astype(np.int)
+    mu = np.mean(chain)
+    block_means = np.zeros((a, ndim))
+    k = np.arange(a) * batch_size
+    for i in range(batch_size):
+        block_means += chain[k, :]
+        k += 1
+    block_means /= batch_size
+    A = block_means - mu
+    return (batch_size / (a - 1)) * np.matmul(A.T, A)
+
+
+def _sigma_mIS(chain):
+    # estimador mIS de sigma_cov de clt de Markov
+    # http://users.stat.umn.edu/~galin/DaiJones.pdf
+    n = chain.shape[0]
+    sn = 0
+    sigma_cov = _autocov_matrix(chain, lag = 0) + 2 * _autocov_matrix(chain, lag = 1) #Sigma_m(Trace, m = sn)
+    while not _is_positive_definite(sigma_cov):
+        sigma_cov += 2 * _autocov_matrix_2(chain, sn + 1)
+        sn += 1
+    sn -= 1 # sigma_cov = Sigma_{n,s_n}
+    k = np.floor(n/2 - 1).astype(np.int)
+    m = sn + 1
+    sigma_cov_init = sigma_cov
+    sigma_cov += 2 * _autocov_matrix_2(chain, sn + 1) # sigma_cov = Sigma_{n,m}
+    while np.linalg.det(sigma_cov_init) < np.linalg.det(sigma_cov) and m <= k: #checkear <=
+        sigma_cov_init = sigma_cov
+        sigma_cov += 2 * _autocov_matrix_2(chain, m + 1)
+        m += 1
+    return sigma_cov
+
+
+def _sigma_mIS_adj(chain):
+    # estimador mISadj de sigma_cov de clt de Markov
+    # http://users.stat.umn.edu/~galin/DaiJones.pdf
+    n = chain.shape[0]
+    sn = 0
+    sigma_cov = _autocov_matrix(chain, lag = 0) + 2 * _autocov_matrix(chain, lag = 1) #Sigma_m(Trace, m = sn)
+    while not _is_positive_definite(sigma_cov):
+        sigma_cov += 2 * _autocov_matrix_2(chain, sn + 1)
+        sn += 1
+    sn -= 1 # sigma_cov = Sigma_{n,s_n}
+    k = np.floor(n/2 - 1).astype(np.int)
+    m = sn + 1
+    sigma_cov_adj = sigma_cov
+    sigma_cov_init = sigma_cov
+    sigma_cov += 2 * _autocov_matrix_2(chain, sn + 1) # sigma_cov = Sigma_{n,m}
+    while np.linalg.det(sigma_cov_init) < np.linalg.det(sigma_cov) and m <= k:
+        sigma_cov_init = sigma_cov
+        sigma_cov_update = 2 * _autocov_matrix_2(chain, m + 1)
+        if not _is_positive_definite(sigma_cov_update):
+            val, vec = np.linalg.eigh(sigma_cov_update)
+            val_pos = np.diag(np.max(val, 0))
+            sigma_cov_update_adj = vec.dot((np.linalg.solve(vec.T,val_pos.T)).T)
+        else:
+            sigma_cov_update_adj = sigma_cov_update
+        sigma_cov += sigma_cov_update
+        sigma_cov_adj += sigma_cov_update_adj
+        m += 1
+    return sigma_cov_adj
