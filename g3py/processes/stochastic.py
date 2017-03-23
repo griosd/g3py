@@ -1,5 +1,5 @@
 import _pickle as pickle
-import os
+import os, sys
 import time
 import datetime
 import numpy as np
@@ -476,37 +476,47 @@ class StochasticProcess:
         if data:
             self.plot_observations(big)
         plot_text(title, self.description['x'], self.description['y'], loc=loc)
-        show()
         if plot_space:
+            show()
             self.plot_space()
             plot_text('Space X', 'Index', 'Value', legend=False)
 
-    def plot_distribution(self, index=0, params=None, space=None, inputs=None, outputs=None, mean=True, var=True, cov=False, median=False, quantiles=False, noise=False, prior=False, sigma=4, neval=100, title=None):
+    def plot_distribution(self, index=0, params=None, space=None, inputs=None, outputs=None, mean=True, var=True, cov=False, median=False, quantiles=False, noise=False, prior=False, sigma=4, neval=100, title=None, swap=False, label=None):
         pred = self.predict(params=params, space=space, inputs=inputs, outputs=outputs, mean=mean, var=var, cov=cov, median=median, quantiles=quantiles, noise=noise, distribution=True, prior=prior)
         domain = np.linspace(pred.mean - sigma * pred.std, pred.mean + sigma * pred.std, neval)
         dist_plot = np.zeros(len(domain))
         for i in range(len(domain)):
             dist_plot[i] = pred.distribution(domain[i:i + 1])
-        if prior:
-            plt.plot(domain, dist_plot, label='prior')
-        else:
-            plt.plot(domain, dist_plot, label='posterior')
+        if label is None:
+            if prior:
+                label='prior'
+            else:
+                label='posterior'
         if title is None:
             title = 'Marginal Distribution'
-        plot_text(title+' y_'+str(self.space_index[index]), 'Domain y', '')
+        if swap:
+            plt.plot(dist_plot, domain, label=label)
+            plot_text(title+' y_'+str(self.space_index[index]), 'Density', 'Domain y')
+        else:
+            plt.plot(domain, dist_plot,label=label)
+            plot_text(title+' y_'+str(self.space_index[index]), 'Domain y', 'Density')
 
-    def plot_mapping(self, params=None, space=None, inputs=None, outputs=None, neval=100,title=None):
+    def plot_mapping(self, params=None, domain=None, inputs=None, outputs=None, neval=100, title=None, label='mapping'):
         if params is None:
             params = self.get_params_current()
         if outputs is None:
             outputs = self.outputs_values
-        domain = np.linspace(outputs.min() , outputs.max() , neval)
-        transform = self.compiles['mapping_inv_th'](domain, **params)
-        plt.plot(domain, transform, label='mapping')
+        if domain is None:
+            domain = np.linspace(outputs.mean() - 2 * np.sqrt(outputs.var()),
+                                 outputs.mean() + 2 * np.sqrt(outputs.var()), neval)
+        #inv_transform = self.compiles['mapping_th'](domain, **params)
+        #plt.plot(inv_transform, domain, label='mapping_th')
 
-        #inv_domain = np.linspace(transform.min() - transform.std(), transform.max() + transform.std(), neval)
-        #inv_transform = self.compiles['mapping_th'](inv_domain, **params)
-        #plt.plot(inv_transform, inv_domain, label='mapping_th')
+        #if domain is None:
+        #    domain = np.linspace(outputs.mean() - 2*np.sqrt(outputs.var()), outputs.mean() + 2*np.sqrt(outputs.var()), neval)
+        transform = self.compiles['mapping_inv_th'](domain, **params)
+        plt.plot(domain, transform, label=label)
+
         if title is None:
             title = 'Mapping'
         plot_text(title, 'Domain y', 'Domain T(y)')
@@ -595,6 +605,10 @@ class StochasticProcess:
     def sampling_vars(self):
         return [t for t in self.model.vars if t not in self.fixed_vars]
 
+    @property
+    def ndim(self):
+        return self.model.bijection.ordering.dimensions
+
     def check_params_dims(self, params):
         r = dict()
         for k, v in params.items():
@@ -624,6 +638,11 @@ class StochasticProcess:
     def widget_plot_params(self, **params):
         self.widget_plot(self.check_params_dims(params))
 
+    def widget_plot_model(self, **params):
+        self.params_widget =self.check_params_dims(params)
+        self.plot_model(params=self.params_widget, indexs=None, kernel=False, mapping=True, marginals=True,
+                        bivariate=False)
+
     def widget_params(self, params=None):
         if params is None:
             params = self.get_params_widget()
@@ -637,6 +656,20 @@ class StochasticProcess:
             else:
                 intervals[k] = [-5.00, 5.00]
         interact(self.widget_plot_params, __manual=True, **intervals)
+
+    def widget_model(self, params=None):
+        if params is None:
+            params = self.get_params_widget()
+        intervals = dict()
+        for k, v in params.items():
+            v = np.squeeze(v)
+            if v > 0.1:
+                intervals[k] = [0, 2*v]
+            elif v < -0.1:
+                intervals[k] = [2*v, 0]
+            else:
+                intervals[k] = [-5.00, 5.00]
+        interact(self.widget_plot_model, __manual=True, **intervals)
 
     def get_params_process(self, process=None, params=None, current=None, fixed=False):
         if process is None:
@@ -887,7 +920,8 @@ class StochasticProcess:
 
         return trace
 
-    def ensemble_hypers(self, start=None, samples=1000, chains=None, ntemps=None, raw=False):
+    def ensemble_hypers(self, start=None, samples=1000, chains=None, ntemps=None, raw=False,
+                        burnin_tol=0.05, burnin_method='multi'):
         if start is None:
             start = self.find_MAP()
         if isinstance(start, dict):
@@ -904,6 +938,7 @@ class StochasticProcess:
             noise = np.random.normal(loc=1, scale=0.1, size=(ntemps, chains, ndim))
             p0 = noise * np.ones((ntemps, chains, 1)) * start
 
+        sys.stdout.flush()
         for result in tqdm(sampler.sample(p0, iterations=samples), total=samples):
             pass
 
@@ -914,7 +949,7 @@ class StochasticProcess:
         if raw:
             return echain, lnprob
         else:
-            return chains_to_datatrace(self, echain, lnprob)
+            return chains_to_datatrace(self, echain, ll=lnprob, burnin_tol=burnin_tol, burnin_method=burnin_method)
 
     def save_model(self, path=None, params=None):
         if path is None:
@@ -1008,4 +1043,3 @@ class StochasticProcess:
 
     def eval_widget(self):
         return self.eval_point(self.get_params_widget())
-
