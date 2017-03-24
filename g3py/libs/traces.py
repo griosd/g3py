@@ -399,6 +399,7 @@ def effective_sample_min(process, alpha=0.05, error=0.05, p=None):
 
 def effective_sample_size(process, dt, method='mIS', batch_size=None, flat=False, reshape=False, burnin=True):
     chains = datatrace_to_chains(process, dt, flat=flat, burnin=burnin)
+    #print(chains.shape)
     dim_sample = 1
     #flat samples
     if flat:
@@ -407,17 +408,21 @@ def effective_sample_size(process, dt, method='mIS', batch_size=None, flat=False
         nwalkers, nsamples, ndim = chains.shape
         chains = np.transpose(chains, axes=[1, 0, 2]).reshape(1, nsamples, nwalkers * ndim)
         dim_sample = nwalkers
+    #print(chains.shape)
     #flat dimension
     nwalkers, nsamples, ndim = chains.shape
     chains_mESS = np.zeros(nwalkers)
-    for chain in range(nwalkers):
-        chains_mESS[chain] = _mESS(chains[chain, :, :], method, batch_size)
-    return np.floor(dim_sample*np.sum(chains_mESS)).astype(np.int)
+    for nchain in range(nwalkers):
+        chains_mESS[nchain] = _mESS(chains[nchain, :, :], method, batch_size)
+    return np.floor(dim_sample*np.sum(chains_mESS))
 
 
 def _mESS(chain, method='mIS', batch_size=None):
     nsamples, ndim = chain.shape
-    lambda_cov = np.cov(chain.T)
+    cov_chain = np.cov(chain.T)
+    det_cov = np.abs(np.linalg.det(cov_chain))
+    if det_cov == 0:
+        return 1
     if method == 'batch' or batch_size is not None:
         if batch_size is None:
             batch_size = 1
@@ -426,8 +431,11 @@ def _mESS(chain, method='mIS', batch_size=None):
         sigma_cov = _sigma_mIS_adj(chain)
     else: #mIS
         sigma_cov = _sigma_mIS(chain)
-
-    return nsamples*(np.linalg.det(lambda_cov)/np.linalg.det(sigma_cov))**(1/ndim)
+    det_sigma = np.abs(np.linalg.det(sigma_cov))
+    if det_sigma == 0:
+        return 1
+    #print(det_cov, det_sigma, det_cov/det_sigma, (det_cov/det_sigma)**(1/ndim), nsamples*(det_cov/det_sigma)**(1/ndim))
+    return nsamples*(det_cov/det_sigma)**(1/ndim)
 
 
 def _is_positive_definite(M):
@@ -441,6 +449,8 @@ def _is_positive_definite(M):
 def _autocov_matrix(chain, lag):
     n = chain.shape[0]
     x = chain - np.mean(chain, axis=0)
+    #print(x[:(n - lag), :].T.shape, x[lag:, :].shape)
+    #return (1 / n) * np.matmul(x[:(n - lag), :].T, x[lag:, :])
     return (1/n)*(x[:(n-lag), :].T.dot(x[lag:, :]))
 
 
@@ -468,17 +478,18 @@ def _sigma_mIS(chain):
     # estimador mIS de sigma_cov de clt de Markov
     # http://users.stat.umn.edu/~galin/DaiJones.pdf
     n = chain.shape[0]
+    k = np.floor(n / 2 - 1).astype(np.int)
     sn = 0
     sigma_cov = _autocov_matrix(chain, lag = 0) + 2 * _autocov_matrix(chain, lag = 1) #Sigma_m(Trace, m = sn)
-    while not _is_positive_definite(sigma_cov):
+    while sn < k and not _is_positive_definite(sigma_cov):
+        #print(sn, k)
         sigma_cov += 2 * _autocov_matrix_2(chain, sn + 1)
         sn += 1
     sn -= 1 # sigma_cov = Sigma_{n,s_n}
-    k = np.floor(n/2 - 1).astype(np.int)
     m = sn + 1
     sigma_cov_init = sigma_cov
     sigma_cov += 2 * _autocov_matrix_2(chain, sn + 1) # sigma_cov = Sigma_{n,m}
-    while np.linalg.det(sigma_cov_init) < np.linalg.det(sigma_cov) and m <= k: #checkear <=
+    while np.linalg.det(sigma_cov_init) < np.linalg.det(sigma_cov) and m < k: #checkear <=
         sigma_cov_init = sigma_cov
         sigma_cov += 2 * _autocov_matrix_2(chain, m + 1)
         m += 1
@@ -489,18 +500,18 @@ def _sigma_mIS_adj(chain):
     # estimador mISadj de sigma_cov de clt de Markov
     # http://users.stat.umn.edu/~galin/DaiJones.pdf
     n = chain.shape[0]
+    k = np.floor(n / 2 - 1).astype(np.int)
     sn = 0
     sigma_cov = _autocov_matrix(chain, lag = 0) + 2 * _autocov_matrix(chain, lag = 1) #Sigma_m(Trace, m = sn)
-    while not _is_positive_definite(sigma_cov):
+    while sn < k and not _is_positive_definite(sigma_cov):
         sigma_cov += 2 * _autocov_matrix_2(chain, sn + 1)
         sn += 1
     sn -= 1 # sigma_cov = Sigma_{n,s_n}
-    k = np.floor(n/2 - 1).astype(np.int)
     m = sn + 1
     sigma_cov_adj = sigma_cov
     sigma_cov_init = sigma_cov
     sigma_cov += 2 * _autocov_matrix_2(chain, sn + 1) # sigma_cov = Sigma_{n,m}
-    while np.linalg.det(sigma_cov_init) < np.linalg.det(sigma_cov) and m <= k:
+    while np.linalg.det(sigma_cov_init) < np.linalg.det(sigma_cov) and m < k:
         sigma_cov_init = sigma_cov
         sigma_cov_update = 2 * _autocov_matrix_2(chain, m + 1)
         if not _is_positive_definite(sigma_cov_update):
