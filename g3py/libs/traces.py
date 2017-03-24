@@ -397,15 +397,22 @@ def effective_sample_min(process, alpha=0.05, error=0.05, p=None):
     return np.pi*(2**(2/p))*(sp.stats.chi2.ppf(1-alpha, p)) / (((p*sp.special.gamma(p/2))**(2/p))*(error**2))
 
 
-def effective_sample_size(process, dt, method='mIS', batch_size=None, flat=False, burnin=True):
+def effective_sample_size(process, dt, method='mIS', batch_size=None, flat=False, reshape=False, burnin=True):
     chains = datatrace_to_chains(process, dt, flat=flat, burnin=burnin)
+    dim_sample = 1
+    #flat samples
     if flat:
         chains = chains[None, :, :]
+    elif reshape:
+        nwalkers, nsamples, ndim = chains.shape
+        chains = np.transpose(chains, axes=[1, 0, 2]).reshape(1, nsamples, nwalkers * ndim)
+        dim_sample = nwalkers
+    #flat dimension
     nwalkers, nsamples, ndim = chains.shape
     chains_mESS = np.zeros(nwalkers)
     for chain in range(nwalkers):
         chains_mESS[chain] = _mESS(chains[chain, :, :], method, batch_size)
-    return np.floor(np.sum(chains_mESS)).astype(np.int)
+    return np.floor(dim_sample*np.sum(chains_mESS)).astype(np.int)
 
 
 def _mESS(chain, method='mIS', batch_size=None):
