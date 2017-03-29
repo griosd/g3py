@@ -247,7 +247,7 @@ class _StochasticProcess:
 
     def logp_fixed_prior(self, params):
         self._fixed_array[self.sampling_dims] = params
-        return self.model.logp_prior(self._fixed_array)
+        return self.logp_prior(self._fixed_array)
 
     def logp_fixed_like(self, params):
         self._fixed_array[self.sampling_dims] = params
