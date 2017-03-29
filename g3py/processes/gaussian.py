@@ -11,11 +11,11 @@ class GaussianProcess(StochasticProcess):
         super().__init__(space=space, location=location, kernel=kernel, mapping=Identity(), noise=noise,
                          freedom=None, name=name, inputs=inputs, outputs=outputs, hidden=hidden, file=file, precompile=precompile, *args, **kwargs)
 
-    def define_distribution(self):
+    def _define_distribution(self):
         self.distribution = TGPDist(self.name, mu=self.location(self.inputs), cov=tt_to_cov(self.kernel.cov(self.inputs)),
                             mapping=Identity(), tgp=self, observed=self.outputs, testval=self.outputs, dtype=th.config.floatX)
 
-    def define_process(self):
+    def _define_process(self):
         # Prior
         self.prior_mean = self.location_space
         self.prior_covariance = self.kernel_f_space
@@ -78,11 +78,11 @@ class TransformedGaussianProcess(StochasticProcess):
         self.latent_posterior_std = None
         self.latent_posterior_noise = None
 
-    def define_distribution(self):
+    def _define_distribution(self):
         self.distribution = TGPDist(self.name, mu=self.location(self.inputs), cov=tt_to_cov(self.kernel.cov(self.inputs)),
                                     mapping=self.mapping, tgp=self, observed=self.outputs, testval=self.outputs, dtype=th.config.floatX)
 
-    def define_process(self, n=10):
+    def _define_process(self, n=10):
         # Gauss-Hermite
         _a, _w = np.polynomial.hermite.hermgauss(n)
         a = th.shared(_a.astype(th.config.floatX), borrow=True).dimshuffle([0, 'x'])

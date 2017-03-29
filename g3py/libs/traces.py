@@ -59,28 +59,39 @@ def gelman_rubin(chains, method='multi'):
 
 
 def burn_in_samples(chains, tol=0.1, method='multi'):
-    score = gelman_rubin(chains, method)
+    try:
+        score = gelman_rubin(chains, method)
+    except:
+        method = 'uni'
+        try:
+            score = gelman_rubin(chains, method)
+        except:
+            score = np.inf
     if score > tol:
-        return -1
+        return chains.shape[1]
     lower = 0
     upper = chains.shape[1]
     while lower + 1 < upper:
         n = lower + (upper - lower) // 2
-        if gelman_rubin(chains[:, :n, :]) < tol:
+        if gelman_rubin(chains[:, :n, :], method) < tol:
             upper = n
         else:
             lower = n
     return upper
 
 
-def chains_to_datatrace(sp, chains, ll=None, transforms=True, burnin_tol=None, burnin_method='multi'):
+def chains_to_datatrace(sp, chains, ll=None, transforms=True, burnin_tol=None, burnin_method='multi', burnin_dims=None):
     columns = list()
     for v in sp.model.bijection.ordering.vmap:
         columns += pm.backends.tracetab.create_flat_names(v.var, v.shp)
     n_vars = len(columns)
     datatrace = pd.DataFrame()
     if burnin_tol is not None:
-        nburn = burn_in_samples(chains, tol=burnin_tol, method=burnin_method)
+        if burnin_dims is None:
+            chains_to_burnin = chains[:, :, sp.sampling_dims]
+        else:
+            chains_to_burnin = chains[:, :, burnin_dims]
+        nburn = burn_in_samples(chains_to_burnin, tol=burnin_tol, method=burnin_method)
     for nchain in range(len(chains)):
         pdchain = pd.DataFrame(chains[nchain, :, :], columns=columns)
         pdchain['_nchain'] = nchain
@@ -120,7 +131,7 @@ def datatrace_to_chains(process, dt, flat=False, burnin=True):
         return chain.ix[:, :process.ndim].values.reshape(levshape[0], levshape[1], process.ndim)
 
 
-def datatraceplot(datatrace, varnames=None, transform=lambda x: x, figsize=None,
+def plot_datatrace(datatrace, burnin = False, varnames=None, transform=lambda x: x, figsize=None,
                   lines=None, combined=False, plot_transformed=True, grid=True,
                   alpha=0.35, priors=None, prior_alpha=1, prior_style='--',
                   ax=None):
@@ -171,7 +182,13 @@ def datatraceplot(datatrace, varnames=None, transform=lambda x: x, figsize=None,
     ax : matplotlib axes
 
     """
-    datatrace = datatrace.set_index(['_nchain'])
+    nburnin = (~datatrace[datatrace._nchain == 0]._burnin).sum()
+    if burnin and hasattr(datatrace, '_burnin'):
+        datatrace = datatrace[datatrace._burnin]
+        chain_iters = np.arange(nburnin, datatrace._niter.max()+1)
+    else:
+        chain_iters = np.arange(0, datatrace._niter.max()+1)
+    datatrace = datatrace.set_index(['_nchain']).drop(['_burnin'], axis=1)
     if combined:
         datatrace.index = datatrace.index * 0
     else:
@@ -206,22 +223,21 @@ def datatraceplot(datatrace, varnames=None, transform=lambda x: x, figsize=None,
                 pm.plots.histplot_op(ax[i, 0], d, alpha=alpha)
             else:
                 pm.plots.kdeplot_op(ax[i, 0], d, prior, prior_alpha, prior_style)
-            ax[i, 0].set_title(str(v))
-            ax[i, 0].grid(grid)
-            ax[i, 1].set_title(str(v))
-            ax[i, 1].plot(d, alpha=alpha)
-
-            ax[i, 0].set_ylabel("Frequency")
-            ax[i, 1].set_ylabel("Sample value")
-
-            if lines:
-                try:
-                    ax[i, 0].axvline(x=lines[v], color="r", lw=1.5)
-                    ax[i, 1].axhline(y=lines[v], color="r",
-                                     lw=1.5, alpha=alpha)
-                except KeyError:
-                    pass
-            ax[i, 0].set_ylim(ymin=0)
+            ax[i, 1].plot(chain_iters, d, alpha=alpha)
+        ax[i, 1].axvline(x=nburnin, color="r", lw=1.5, alpha=alpha)
+        if lines:
+            try:
+                ax[i, 0].axvline(x=lines[v], color="r", lw=1.5)
+                ax[i, 1].axhline(y=lines[v], color="r",
+                                 lw=1.5, alpha=alpha)
+            except KeyError:
+                pass
+        ax[i, 0].set_title(str(v))
+        ax[i, 1].set_title(str(v))
+        ax[i, 0].set_ylabel("Frequency")
+        ax[i, 1].set_ylabel("Sample value")
+        ax[i, 0].grid(grid)
+        ax[i, 0].set_ylim(ymin=0)
     plt.tight_layout()
 
 
@@ -310,7 +326,7 @@ def likelihood_datatrace(sp, datatrace, trace):
     datatrace['_adll'] = adll
 
 
-def cluster_datatrace(dt, n_components=10, n_init=1):
+def cluster_datatrace(dt, n_components=5, n_init=1):
     excludes = '^((?!_nchain|_niter|_burnin|_log_|_logodds_|_interval_|_lowerbound_|_upperbound_|_sumto1_|_stickbreaking_|_circular_).)*$'
     datatrace_filter = dt.filter(regex=excludes)
     gm = mixture.BayesianGaussianMixture(n_components=n_components, covariance_type='full', max_iter=1000, n_init=n_init).fit(datatrace_filter)
@@ -335,23 +351,28 @@ def conditional(dt, lambda_df):
     return conditional_traces
 
 
-def find_candidates(dt, ll=1, adll=1, rand=1):
+def find_candidates(dt, ll=1, l1=0, l2=0, rand=0):
     # modes
+    dt = dt.drop_duplicates(subset=[k for k in dt.columns if not k.startswith('_')])
     candidates = list()
     if '_ll' in dt:
         for index, row in dt.nlargest(ll, '_ll').iterrows():
             row.name = "ll[" + str(row.name) + "]"
             candidates.append(row)
-    if '_adll' in dt:
-        for index, row in dt.nsmallest(adll, '_adll').iterrows():
-            row.name = "adll[" + str(row.name) + "]"
+    if '_l1' in dt:
+        for index, row in dt.nsmallest(l1, '_l1').iterrows():
+            row.name = "l1[" + str(row.name) + "]"
             candidates.append(row)
-    mean = dt.mean()
-    mean.name = 'mean'
-    candidates.append(mean)
-    median = dt.median()
-    median.name = 'median'
-    candidates.append(median)
+    if '_l2' in dt:
+        for index, row in dt.nsmallest(l1, '_l2').iterrows():
+            row.name = "l2[" + str(row.name) + "]"
+            candidates.append(row)
+    #mean = dt.mean()
+    #mean.name = 'mean'
+    #candidates.append(mean)
+    #median = dt.median()
+    #median.name = 'median'
+    #candidates.append(median)
     return pd.DataFrame(candidates).append(dt.sample(rand))
 
 
@@ -359,8 +380,12 @@ def hist_trace(datatrace, items=None, like=None, regex=None, samples=None, bins=
     marginal(datatrace, items=items, like=like, regex=regex, samples=samples).hist(bins=bins, layout=layout, figsize=figsize)
 
 
-def scatter_datatrace(dt, items=None, like=None, regex=None, samples=None, bins=200, figsize=(15, 10), cluster=None, cmap=cm.rainbow):
+def scatter_datatrace(dt, items=None, like=None, regex=None, samples=100000, bins=200, figsize=(15, 10), burnin=True, cluster=None, cmap=cm.rainbow):
+    if burnin and hasattr(dt, '_burnin'):
+        dt = dt[dt._burnin]
     df = marginal(dt, items=items, like=like, regex=regex, samples=samples)
+    if cluster is None and hasattr(dt, '_cluster'):
+        cluster = dt._cluster
     if cluster is None:
         pd.scatter_matrix(df, grid=True, hist_kwds={'normed': True, 'bins': bins}, figsize=figsize)
     else:
@@ -397,8 +422,13 @@ def effective_sample_min(process, alpha=0.05, error=0.05, p=None):
     return np.pi*(2**(2/p))*(sp.stats.chi2.ppf(1-alpha, p)) / (((p*sp.special.gamma(p/2))**(2/p))*(error**2))
 
 
-def effective_sample_size(process, dt, method='mIS', batch_size=None, flat=False, reshape=False, burnin=True):
+def effective_sample_size(process, dt, method='mIS', batch_size=None, fixed=True, flat=False, reshape=False, burnin=True):
     chains = datatrace_to_chains(process, dt, flat=flat, burnin=burnin)
+    if fixed:
+        if flat:
+            chains = chains[:, process.sampling_dims]
+        else:
+            chains = chains[:, :, process.sampling_dims]
     #print(chains.shape)
     dim_sample = 1
     #flat samples

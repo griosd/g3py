@@ -24,6 +24,7 @@ import emcee
 
 Model = pm.Model
 
+
 def load_model(path):
     # with pm.Model():
     with open(path, 'rb') as f:
@@ -35,7 +36,7 @@ def load_model(path):
         #    print('Error loading model '+path)
 
 
-class StochasticProcess:
+class _StochasticProcess:
     """Abstract class used to define a StochasticProcess.
 
     Attributes:
@@ -62,7 +63,7 @@ class StochasticProcess:
                                 'text': 'text'}
         else:
             self.description = description
-        self.model = self.get_model()
+        self.model = self._get_model()
 
         # Space, Hidden, Observed
         if type(space) is int:
@@ -121,6 +122,9 @@ class StochasticProcess:
         self.params_current = None
         self.params_widget = None
         self.params_fixed = DictObj()
+        self._fixed_array = None
+        self.sampling_dims = None
+        self.fixed_dims = None
 
         # Basic Tensors
         self.location_space = self.location(self.space_th)
@@ -130,8 +134,8 @@ class StochasticProcess:
         self.kernel_inputs = tt_to_cov(self.kernel.cov(self.inputs))
         self.kernel_space_inputs = tt_to_num(self.kernel.cov(self.space_th, self.inputs))
 
-        self.kernel_f_space = tt_to_cov(self.kernel_f.cov(self.space_th))
-        self.kernel_f_inputs = tt_to_cov(self.kernel_f.cov(self.inputs))
+        self.kernel_f_space = self.kernel_f.cov(self.space_th)
+        self.kernel_f_inputs = self.kernel_f.cov(self.inputs)
         self.kernel_f_space_inputs = tt_to_num(self.kernel_f.cov(self.space_th, self.inputs))
 
         self.mapping_outputs = tt_to_num(self.mapping.inv(self.outputs))
@@ -176,18 +180,19 @@ class StochasticProcess:
 
         self.compiles = DictObj()
         print('Init Definition')
-        self.define_process()
+        self._define_process()
         print('Definition OK')
 
-        self.compile(precompile)
+        self._compile(precompile)
         print('Compilation OK')
 
         self.observed(inputs, outputs)
 
         self.logp_prior = None
-        self.compile_logprior()
+        self._compile_logprior()
 
         #__, self.space_values, self.space_index = def_space(space_raw)
+        self.fix_params()
         self.set_space(space_raw, self.hidden)
         if file is not None:
             self.file = file
@@ -196,7 +201,7 @@ class StochasticProcess:
             except:
                 print('Error in file '+str(file))
 
-    def get_model(self):
+    def _get_model(self):
         try:
             model = pm.Model.get_context()
         except:
@@ -221,11 +226,8 @@ class StochasticProcess:
 
         return model
 
-    def compile_logprior(self):
+    def _compile_logprior(self):
         self.logp_prior = self.model.bijection.mapf(self.model.fn(tt.add(*map(tt.sum, [var.logpt for var in self.model.free_RVs] + self.model.potentials))))
-
-    def logp_like(self, *args, **kwargs):
-        return self.model.logp_array(*args, **kwargs) - self.logp_prior(*args, **kwargs)
 
     def logp_array(self, params):
         return self.model.logp_array(params)
@@ -239,13 +241,58 @@ class StochasticProcess:
     def logp_dict(self, params):
         return self.model.logp_array(self.model.dict_to_array(params))
 
-    def define_distribution(self):
+    def logp_fixed(self, params):
+        self._fixed_array[self.sampling_dims] = params
+        return self.model.logp_array(self._fixed_array)
+
+    def logp_fixed_prior(self, params):
+        self._fixed_array[self.sampling_dims] = params
+        return self.logp_prior(self._fixed_array)
+
+    def logp_fixed_like(self, params):
+        self._fixed_array[self.sampling_dims] = params
+        return self.model.logp_array(self._fixed_array) - self.logp_prior(self._fixed_array)
+
+    def dlogp_fixed(self, params):
+        self._fixed_array[self.sampling_dims] = params
+        return self.model.dlogp_array(self._fixed_array)[self.sampling_dims]
+
+    def _define_distribution(self):
         pass
 
-    def define_process(self):
+    def _define_process(self):
         pass
 
-    def compile(self, precompile=False):
+    @property
+    def fixed_vars(self):
+        return [t for t in self.model.vars if t.name in self.params_fixed.keys()]
+
+    @property
+    def sampling_vars(self):
+        return [t for t in self.model.vars if t not in self.fixed_vars]
+
+    @property
+    def ndim(self):
+        return self.model.bijection.ordering.dimensions
+
+    def fix_params(self, fixed_params=None):
+        if fixed_params is None:
+            fixed_params = DictObj()
+        self.params_fixed = fixed_params
+        self._fixed_array = self.dict_to_array(self.get_params_default())
+        dimensions = list(range(self.ndim))
+        dims = list()
+        for k in self.model.bijection.ordering.vmap:
+            if k.var not in self.params_fixed.keys():
+                dims += dimensions[k.slc]
+        self.sampling_dims = dims
+        dims = list()
+        for k in self.model.bijection.ordering.vmap:
+            if k.var in self.params_fixed.keys():
+                dims += dimensions[k.slc]
+        self.fixed_dims = dims
+
+    def _compile(self, precompile=False):
         params = [self.space_th] + self.model.vars
         self.compiles['location_space'] = makefn(params, self.location_space, precompile)
         self.compiles['kernel_space'] = makefn(params, self.kernel_space, precompile)
@@ -305,16 +352,6 @@ class StochasticProcess:
         except:
             self.compiles['posterior_sampler'] = makefn([self.random_scalar, self.random_th] + params, self.posterior_sampler, precompile)
 
-    def describe(self, title=None, x=None, y=None, text=None):
-        if title is not None:
-            self.description['title'] = title
-        if title is not None:
-            self.description['x'] = x
-        if title is not None:
-            self.description['y'] = y
-        if title is not None:
-            self.description['text'] = text
-
     def set_space(self, space, hidden=None, index=None):
         __, self.space_values, self.space_index = def_space(space)
         self.hidden = hidden
@@ -336,7 +373,7 @@ class StochasticProcess:
         self.outputs.set_value(self.outputs_values, borrow=True)
         if self.distribution is None:
             with self.model:
-                self.define_distribution()
+                self._define_distribution()
 
     def prior(self, params=None, space=None, mean=True, var=True, cov=False, median=False, quantiles=False, noise=False, samples=0, distribution=False):
         if params is None:
@@ -448,6 +485,407 @@ class StochasticProcess:
             #scores['_NLL'] = - pred.logp(hidden) / len(hidden)
             scores['_NLPD'] = - pred.logpred(hidden) / len(hidden)
         return scores
+
+    def set_params(self, params):
+        self.params_current = params
+
+    def default_hypers(self):
+        x = np.array(self.inputs_values)
+        y = np.squeeze(np.array(self.outputs_values))
+        return {**self.location.default_hypers_dims(x, y), **self.kernel.default_hypers_dims(x, y),
+                **self.mapping.default_hypers_dims(x, y)}
+
+    def get_params_process(self, process=None, params=None, current=None, fixed=False):
+        if process is None:
+            process = self
+        if params is None:
+            params = process.get_params_current()
+        if current is None:
+            current = self.get_params_current()
+        params_transform = {k.replace(process.name, self.name, 1): v for k, v in params.items()}
+        params_return = DictObj({k: v for k, v in params_transform.items() if k in current.keys()})
+        params_return.update({k: v for k, v in current.items() if k not in params_transform.keys()})
+        if fixed:
+            params_return.update(self.params_fixed)
+        return params_return
+
+    def get_params_random(self, mean=None, sigma=0.1, prop=True, fixed=True):
+        if mean is None:
+            mean = self.get_params_default()
+        for k, v in mean.items():
+            if prop:
+                mean[k] = v * (1 + sigma * np.random.randn(v.size).reshape(v.shape)).astype(th.config.floatX)
+            else:
+                mean[k] = v + sigma * np.random.randn(v.size).reshape(v.shape).astype(th.config.floatX)
+        if fixed:
+            mean.update(self.params_fixed)
+        return mean
+
+    def get_params_test(self, fixed=False):
+        test = clone(self.model.test_point)
+        if fixed:
+            test.update(self.params_fixed)
+        return test
+
+    def get_params_default(self, fixed=True):
+        if self.observed_index is None:
+            return self.get_params_test(fixed)
+        default = DictObj()
+        for k, v in trans_hypers(self.default_hypers()).items():
+            if k in self.model.vars:
+                default[k.name] = v
+        if fixed:
+            default.update(self.params_fixed)
+        return default
+
+    def get_params_current(self, fixed=True):
+        if self.params_current is None:
+            return self.get_params_default(fixed)
+        if fixed:
+            self.params_current.update(self.params_fixed)
+        return clone(self.params_current)
+
+    def get_params_widget(self, fixed=False):
+        if self.params_widget is None:
+            return self.get_params_default(fixed)
+        if fixed:
+            self.params_widget.update(self.params_fixed)
+        return clone(self.params_widget)
+
+    def get_params_sampling(self, params=None):
+        if params is None:
+            params = self.get_params_current()
+        return {k: v for k, v in params.items() if k not in self.params_fixed.keys()}
+
+    def get_params_datatrace(self, dt, loc):
+        return self.model.bijection.rmap(dt.loc[loc])
+
+    def _optimize(self, fmin=None, vars=None, start=None, max_time=None, *args, **kwargs):
+        if fmin is None:
+            fmin = sp.optimize.fmin_bfgs
+        if vars is None:
+            vars = self.sampling_vars
+        if start is None:
+            start = self.get_params_default()
+        if max_time is None:
+            callback = None
+        else:
+            callback = MaxTime(max_time)
+
+        if 'fprime' in signature(fmin).parameters:
+            r = fmin(lambda x: nan_to_high(-self.logp_fixed(x)), self.model.bijection.map(start)[self.sampling_dims],
+                     fprime=lambda x: np.nan_to_num(-self.dlogp_fixed(x)), callback=callback, *args, **kwargs)
+        else:
+            r = fmin(lambda x: nan_to_high(-self.logp_fixed(x)), self.model.bijection.map(start)[self.sampling_dims],
+                     callback=callback, *args, **kwargs)
+        self._fixed_array[self.sampling_dims] = r
+        return self.model.bijection.rmap(self._fixed_array)
+
+    def find_MAP(self, start=None, points=1, plot=False, return_points=False, display=True, powell=True, max_time=None):
+        points_list = list()
+        if start is None:
+            start = self.get_params_current()
+        if type(start) is list:
+            i = 0
+            for s in start:
+                i += 1
+                points_list.append(('start'+str(i), self.logp_dict(s), s))
+        else:
+            points_list.append(('start', self.logp_dict(start), start))
+        n_starts = len(points_list)
+        if self.outputs.get_value() is None:
+            print('For find_MAP it is necessary to have observations')
+            return start
+        if display:
+            print('Starting function value (-logp): ' + str(-self.logp_dict(points_list[0][2])))
+        if plot:
+            plt.figure(0)
+            self.plot(params=points_list[0][2], title='start')
+            plt.show()
+        with self.model:
+            i = -1
+            points -= 1
+            while i < points:
+                i += 1
+                try:
+                    if powell:
+                        name, logp, start = points_list[i // 2]
+                    else:
+                        name, logp, start = points_list[i]
+                    if i % 2 == 0 or not powell:#
+                        if name.endswith('_bfgs'):
+                            if i > n_starts:
+                                points += 1
+                            continue
+                        name += '_bfgs'
+                        if display:
+                            print('\n' + name)
+                        new = self._optimize(fmin=sp.optimize.fmin_bfgs, vars=self.sampling_vars, start=start, max_time=max_time, disp=display)
+                    else:
+                        if name.endswith('_powell'):
+                            if i > n_starts:
+                                points += 1
+                            continue
+                        name += '_powell'
+                        if display:
+                            print('\n' + name)
+                        new = self._optimize(fmin=sp.optimize.fmin_powell, vars=self.sampling_vars, start=start, max_time=max_time, disp=display)
+                    points_list.append((name, self.logp_dict(new), new))
+                    if plot:
+                        plt.figure(i+1)
+                        self.plot(params=new, title=name)
+                        plt.show()
+                except Exception as error:
+                    print(error)
+                    pass
+
+        optimal = points_list[0]
+        for test in points_list:
+            if test[1] > optimal[1]:
+                optimal = test
+        name, logp, params = optimal
+        if display:
+            #print(params)
+            pass
+        if return_points is False:
+            return params
+        else:
+            return params, points_list
+
+    def find_MAP_old(self, start=None, points=1, plot=False, return_points=False, display=True, powell=True):
+        points_list = list()
+        if start is None:
+            start = self.get_params_current()
+        if type(start) is list:
+            i = 0
+            for s in start:
+                i += 1
+                points_list.append(('start'+str(i), self.model.logp(s), s))
+        else:
+            points_list.append(('start', self.model.logp(start), start))
+        n_starts = len(points_list)
+        if self.outputs.get_value() is None:
+            print('For find_MAP it is necessary to have observations')
+            return start
+        if display:
+            print('Starting function value (-logp): ' + str(-self.model.logp(points_list[0][2])))
+        if plot:
+            plt.figure(0)
+            self.plot(params=points_list[0][2], title='start')
+            plt.show()
+        with self.model:
+            i = -1
+            points -= 1
+            while i < points:
+                i += 1
+                try:
+                    if powell:
+                        name, logp, start = points_list[i // 2]
+                    else:
+                        name, logp, start = points_list[i]
+                    if i % 2 == 0 or not powell:#
+                        if name.endswith('_bfgs'):
+                            if i > n_starts:
+                                points += 1
+                            continue
+                        name += '_bfgs'
+                        if display:
+                            print('\n' + name)
+                        new = pm.find_MAP(fmin=sp.optimize.fmin_bfgs, vars=self.sampling_vars, start=start, disp=display)
+                    else:
+                        if name.endswith('_powell'):
+                            if i > n_starts:
+                                points += 1
+                            continue
+                        name += '_powell'
+                        if display:
+                            print('\n' + name)
+                        new = pm.find_MAP(fmin=sp.optimize.fmin_powell, vars=self.sampling_vars, start=start, disp=display)
+                    points_list.append((name, self.model.logp(new), new))
+                    if plot:
+                        plt.figure(i+1)
+                        self.plot(params=new, title=name)
+                        plt.show()
+                except:
+                    pass
+
+        optimal = points_list[0]
+        for test in points_list:
+            if test[1] > optimal[1]:
+                optimal = test
+        name, logp, params = optimal
+        if display:
+            #print(params)
+            pass
+        if return_points is False:
+            return params
+        else:
+            return params, points_list
+
+    def sample_hypers(self, start=None, samples=1000, chains=1, trace=None, method='Slice'):
+        if start is None:
+            start = self.get_params_current()
+        if self.outputs.get_value() is None:
+            print('For sample_hypers it is necessary to have observations')
+            return start
+        with self.model:
+            if len(self.fixed_vars) > 0:
+                step = [pm.CompoundStep(vars=self.fixed_vars)]  # Fue eliminado por error en pymc3
+                if len(self.sampling_vars) > 0:
+                    if method == 'HMC':
+                        step += [pm.HamiltonianMC(vars=self.sampling_vars)]
+                    else:
+                        step += [RobustSlice(vars=self.sampling_vars)]  # Slice original se cuelga si parte del óptimo
+            else:
+                if method == 'HMC':
+
+                    step = pm.HamiltonianMC()
+                else:
+                    step = RobustSlice()
+            trace = pm.sample(samples, step=step, start=start, njobs=chains, trace=trace)
+
+        return trace
+
+    def ensemble_hypers(self, start=None, samples=1000, chains=None, ntemps=None, raw=False,
+                        burnin_tol=0.01, burnin_method='multi'):
+        if start is None:
+            start = self.find_MAP()
+        if isinstance(start, dict):
+            start = self.dict_to_array(start)
+        start = start[self.sampling_dims]
+        ndim = len(self.sampling_dims)
+        if chains is None:
+            chains = 2*self.ndim
+        if ntemps is None:
+            sampler = emcee.EnsembleSampler(chains, ndim, self.logp_fixed)
+            noise = np.random.normal(loc=1, scale=0.1, size=(chains, ndim))
+            p0 = noise * np.ones((chains, 1)) * start
+        else:
+            sampler = emcee.PTSampler(ntemps, chains, ndim, self.logp_fixed_like, self.logp_fixed_prior)
+            noise = np.random.normal(loc=1, scale=0.1, size=(ntemps, chains, ndim))
+            p0 = noise * np.ones((ntemps, chains, 1)) * start
+        p0 += (p0 == 0)*np.random.normal(loc=0, scale=0.01, size=p0.shape)
+        sys.stdout.flush()
+        for result in tqdm(sampler.sample(p0, iterations=samples), total=samples):
+            pass
+
+        lnprob, echain = sampler.lnprobability, sampler.chain
+        sampler.reset()
+        if raw:
+            return echain, lnprob
+        else:
+            if ntemps is not None:
+                lnprob, echain = lnprob[0, :, :], echain[0, :, :]
+            complete_chain = np.empty((echain.shape[0], echain.shape[1], self.ndim))
+            complete_chain[:, :, self.sampling_dims] = echain
+            complete_chain[:, :, self.fixed_dims] = self._fixed_array[self.fixed_dims]
+            return chains_to_datatrace(self, complete_chain, ll=lnprob, burnin_tol=burnin_tol, burnin_method=burnin_method, burnin_dims=self.sampling_dims)
+
+    def save_model(self, path=None, params=None):
+        if path is None:
+            path = self.file
+        if params is not None:
+            self.set_params(params)
+        try:
+            if os.path.isfile(path):
+                os.remove(path)
+            with self.model:
+                with open(path, 'wb') as f:
+                    pickle.dump(self, f, protocol=-1)
+            print('Saved model '+path)
+        except Exception as details:
+            print('Error saving model '+path, details)
+
+    def subprocess(self, subkernel):
+        pass
+
+    def get_point(self, point):
+        return {v.name: point[v.name] for v in self.model.vars}
+
+    def point_to_In(self, point):
+        r = list()
+        for k, v in point.items():
+            r.append(th.In(self.model[k], value=v))
+        return r
+
+    def eval_point(self, point):
+        r = dict()
+        for k, v in point.items():
+            r[self.model[k]] = v
+        return r
+
+    def eval_default(self):
+        return self.eval_point(self.get_params_default())
+
+    def eval_current(self):
+        return self.eval_point(self.get_params_current())
+
+    def eval_widget(self):
+        return self.eval_point(self.get_params_widget())
+
+
+class StochasticProcess(_StochasticProcess):
+
+    def describe(self, title=None, x=None, y=None, text=None):
+        if title is not None:
+            self.description['title'] = title
+        if title is not None:
+            self.description['x'] = x
+        if title is not None:
+            self.description['y'] = y
+        if title is not None:
+            self.description['text'] = text
+
+    def plot_space(self, space=None, independ=False ,observed=False):
+        if space is not None:
+            self.set_space(space)
+        if independ:
+            for i in range(self.space_values.shape[1]):
+                plt.figure(i)
+                plt.plot(self.space_index, self.space_values[:, i])
+        else:
+            plt.plot(self.space_index, self.space_values)
+        if self.observed_index is not None and observed:
+            if independ:
+                for i in range(self.space_values.shape[1]):
+                    plt.figure(i)
+                    plt.plot(self.observed_index, self.inputs_values[:, i], '.k')
+            else:
+                plt.plot(self.observed_index, self.inputs_values, '.k')
+
+    def plot_hidden(self, big=None):
+        if big is None:
+            big = config.plot_big
+        if big:
+            self._plot_hidden_big()
+        else:
+            self._plot_hidden_normal()
+
+    def _plot_hidden_normal(self):
+        if self.hidden is not None:
+            plt.plot(self.space_index, self.hidden[0:len(self.space_index)],  label='Hidden Processes')
+
+    def _plot_hidden_big(self):
+        if self.hidden is not None:
+            plt.plot(self.space_index, self.hidden[0:len(self.space_index)], linewidth=4, label='Hidden Processes')
+
+    def plot_observations(self, big=None):
+        if big is None:
+            big = config.plot_big
+        if big:
+            self._plot_observations_big()
+        else:
+            self._plot_observations_normal()
+
+    def _plot_observations_normal(self):
+        if self.outputs_values is not None:
+            plt.plot(self.observed_index, self.outputs_values, '.k', ms=10)
+            plt.plot(self.observed_index, self.outputs_values, '.r', ms=6, label='Observations')
+
+    def _plot_observations_big(self):
+        if self.outputs_values is not None:
+            plt.plot(self.observed_index, self.outputs_values, '.k', ms=20)
+            plt.plot(self.observed_index, self.outputs_values, '.r', ms=15, label='Observations')
 
     def plot(self, params=None, space=None, inputs=None, outputs=None, mean=True, var=False, cov=False, median=False, quantiles=True, noise=True, samples=0, prior=False,
              data=True, big=None, plot_space=False, title=None, loc=1):
@@ -589,27 +1027,7 @@ class StochasticProcess:
     def plot_kernel2D(self):
         pass
 
-    def set_params(self, params):
-        self.params_current = params
-
-    def fix_params(self, fixed_params=None):
-        if fixed_params is None:
-            fixed_params = DictObj()
-        self.params_fixed = fixed_params
-
-    @property
-    def fixed_vars(self):
-        return [t for t in self.model.vars if t.name in self.params_fixed.keys()]
-
-    @property
-    def sampling_vars(self):
-        return [t for t in self.model.vars if t not in self.fixed_vars]
-
-    @property
-    def ndim(self):
-        return self.model.bijection.ordering.dimensions
-
-    def check_params_dims(self, params):
+    def _check_params_dims(self, params):
         r = dict()
         for k, v in params.items():
             try:
@@ -618,30 +1036,24 @@ class StochasticProcess:
                 pass
         return r
 
-    def default_hypers(self):
-        x = np.array(self.inputs_values)
-        y = np.squeeze(np.array(self.outputs_values))
-        return {**self.location.default_hypers_dims(x, y), **self.kernel.default_hypers_dims(x, y),
-                **self.mapping.default_hypers_dims(x, y)}
-
-    def widget_plot(self, params):
+    def _widget_plot(self, params):
         self.params_widget = params
         self.plot(params = self.params_widget)
 
-    def widget_traces(self, traces, chain=0):
-        self._widget_traces = traces._straces[chain]
-        interact(self.widget_plot_trace, __manual=True, id_trace=[0, len(self._widget_traces) - 1])
+    def _widget_plot_trace(self, id_trace):
+        self._widget_plot(self._check_params_dims(self._widget_traces[id_trace]))
 
-    def widget_plot_trace(self, id_trace):
-        self.widget_plot(self.check_params_dims(self._widget_traces[id_trace]))
+    def _widget_plot_params(self, **params):
+        self._widget_plot(self._check_params_dims(params))
 
-    def widget_plot_params(self, **params):
-        self.widget_plot(self.check_params_dims(params))
-
-    def widget_plot_model(self, **params):
-        self.params_widget =self.check_params_dims(params)
+    def _widget_plot_model(self, **params):
+        self.params_widget = self._check_params_dims(params)
         self.plot_model(params=self.params_widget, indexs=None, kernel=False, mapping=True, marginals=True,
                         bivariate=False)
+
+    def widget_traces(self, traces, chain=0):
+        self._widget_traces = traces._straces[chain]
+        interact(self._widget_plot_trace, __manual=True, id_trace=[0, len(self._widget_traces) - 1])
 
     def widget_params(self, params=None):
         if params is None:
@@ -655,7 +1067,7 @@ class StochasticProcess:
                 intervals[k] = [2*v, 0]
             else:
                 intervals[k] = [-5.00, 5.00]
-        interact(self.widget_plot_params, __manual=True, **intervals)
+        interact(self._widget_plot_params, __manual=True, **intervals)
 
     def widget_model(self, params=None):
         if params is None:
@@ -669,377 +1081,4 @@ class StochasticProcess:
                 intervals[k] = [2*v, 0]
             else:
                 intervals[k] = [-5.00, 5.00]
-        interact(self.widget_plot_model, __manual=True, **intervals)
-
-    def get_params_process(self, process=None, params=None, current=None, fixed=False):
-        if process is None:
-            process = self
-        if params is None:
-            params = process.get_params_current()
-        if current is None:
-            current = self.get_params_current()
-        params_transform = {k.replace(process.name, self.name, 1): v for k, v in params.items()}
-        params_return = DictObj({k: v for k, v in params_transform.items() if k in current.keys()})
-        params_return.update({k: v for k, v in current.items() if k not in params_transform.keys()})
-        if fixed:
-            params_return.update(self.params_fixed)
-        return params_return
-
-    def get_params_random(self, mean=None, sigma=0.1, prop=True, fixed=True):
-        if mean is None:
-            mean = self.get_params_default()
-        for k, v in mean.items():
-            if prop:
-                mean[k] = v * (1 + sigma * np.random.randn(v.size).reshape(v.shape)).astype(th.config.floatX)
-            else:
-                mean[k] = v + sigma * np.random.randn(v.size).reshape(v.shape).astype(th.config.floatX)
-        if fixed:
-            mean.update(self.params_fixed)
-        return mean
-
-    def get_params_test(self, fixed=False):
-        test = clone(self.model.test_point)
-        if fixed:
-            test.update(self.params_fixed)
-        return test
-
-    def get_params_default(self, fixed=True):
-        if self.observed_index is None:
-            return self.get_params_test(fixed)
-        default = DictObj()
-        for k, v in trans_hypers(self.default_hypers()).items():
-            if k in self.model.vars:
-                default[k.name] = v
-        if fixed:
-            default.update(self.params_fixed)
-        return default
-
-    def get_params_current(self, fixed=True):
-        if self.params_current is None:
-            return self.get_params_default(fixed)
-        if fixed:
-            self.params_current.update(self.params_fixed)
-        return clone(self.params_current)
-
-    def get_params_widget(self, fixed=False):
-        if self.params_widget is None:
-            return self.get_params_default(fixed)
-        if fixed:
-            self.params_widget.update(self.params_fixed)
-        return clone(self.params_widget)
-
-    def get_params_sampling(self, params=None):
-        if params is None:
-            params = self.get_params_current()
-        return {k: v for k, v in params.items() if k not in self.params_fixed.keys()}
-
-    def get_params_datatrace(self, dt, loc):
-        return self.model.bijection.rmap(dt.loc[loc])
-
-    def optimize(self, fmin=None, vars=None, start=None, max_time=None, *args, **kwargs):
-        if fmin is None:
-            fmin = sp.optimize.fmin_bfgs
-        if vars is None:
-            vars = self.sampling_vars
-        if start is None:
-            start = self.get_params_default()
-        if max_time is None:
-            callback = None
-        else:
-            callback = MaxTime(max_time)
-
-        if 'fprime' in signature(fmin).parameters:
-            r = fmin(lambda x: nan_to_high(-self.logp_array(x)), self.model.bijection.map(start),
-                     fprime=lambda x: np.nan_to_num(-self.dlogp_array(x)), callback=callback, *args, **kwargs)
-        else:
-            r = fmin(lambda x: nan_to_high(-self.logp_array(x)), self.model.bijection.map(start), callback=callback, *args, **kwargs)
-        return self.model.bijection.rmap(r)
-
-    def find_MAP(self, start=None, points=1, plot=False, return_points=False, display=True, powell=True, max_time=None):
-        points_list = list()
-        if start is None:
-            start = self.get_params_current()
-        if type(start) is list:
-            i = 0
-            for s in start:
-                i += 1
-                points_list.append(('start'+str(i), self.logp_dict(s), s))
-        else:
-            points_list.append(('start', self.logp_dict(start), start))
-        n_starts = len(points_list)
-        if self.outputs.get_value() is None:
-            print('For find_MAP it is necessary to have observations')
-            return start
-        if display:
-            print('Starting function value (-logp): ' + str(-self.logp_dict(points_list[0][2])))
-        if plot:
-            plt.figure(0)
-            self.plot(params=points_list[0][2], title='start')
-            plt.show()
-        with self.model:
-            i = -1
-            points -= 1
-            while i < points:
-                i += 1
-                try:
-                    if powell:
-                        name, logp, start = points_list[i // 2]
-                    else:
-                        name, logp, start = points_list[i]
-                    if i % 2 == 0 or not powell:#
-                        if name.endswith('_bfgs'):
-                            if i > n_starts:
-                                points += 1
-                            continue
-                        name += '_bfgs'
-                        if display:
-                            print('\n' + name)
-                        new = self.optimize(fmin=sp.optimize.fmin_bfgs, vars=self.sampling_vars, start=start, max_time=max_time, disp=display)
-                    else:
-                        if name.endswith('_powell'):
-                            if i > n_starts:
-                                points += 1
-                            continue
-                        name += '_powell'
-                        if display:
-                            print('\n' + name)
-                        new = self.optimize(fmin=sp.optimize.fmin_powell, vars=self.sampling_vars, start=start, max_time=max_time, disp=display)
-                    points_list.append((name, self.logp_dict(new), new))
-                    if plot:
-                        plt.figure(i+1)
-                        self.plot(params=new, title=name)
-                        plt.show()
-                except Exception as error:
-                    print(error)
-                    pass
-
-        optimal = points_list[0]
-        for test in points_list:
-            if test[1] > optimal[1]:
-                optimal = test
-        name, logp, params = optimal
-        if display:
-            #print(params)
-            pass
-        if return_points is False:
-            return params
-        else:
-            return params, points_list
-
-    def find_MAP_old(self, start=None, points=1, plot=False, return_points=False, display=True, powell=True):
-        points_list = list()
-        if start is None:
-            start = self.get_params_current()
-        if type(start) is list:
-            i = 0
-            for s in start:
-                i += 1
-                points_list.append(('start'+str(i), self.model.logp(s), s))
-        else:
-            points_list.append(('start', self.model.logp(start), start))
-        n_starts = len(points_list)
-        if self.outputs.get_value() is None:
-            print('For find_MAP it is necessary to have observations')
-            return start
-        if display:
-            print('Starting function value (-logp): ' + str(-self.model.logp(points_list[0][2])))
-        if plot:
-            plt.figure(0)
-            self.plot(params=points_list[0][2], title='start')
-            plt.show()
-        with self.model:
-            i = -1
-            points -= 1
-            while i < points:
-                i += 1
-                try:
-                    if powell:
-                        name, logp, start = points_list[i // 2]
-                    else:
-                        name, logp, start = points_list[i]
-                    if i % 2 == 0 or not powell:#
-                        if name.endswith('_bfgs'):
-                            if i > n_starts:
-                                points += 1
-                            continue
-                        name += '_bfgs'
-                        if display:
-                            print('\n' + name)
-                        new = pm.find_MAP(fmin=sp.optimize.fmin_bfgs, vars=self.sampling_vars, start=start, disp=display)
-                    else:
-                        if name.endswith('_powell'):
-                            if i > n_starts:
-                                points += 1
-                            continue
-                        name += '_powell'
-                        if display:
-                            print('\n' + name)
-                        new = pm.find_MAP(fmin=sp.optimize.fmin_powell, vars=self.sampling_vars, start=start, disp=display)
-                    points_list.append((name, self.model.logp(new), new))
-                    if plot:
-                        plt.figure(i+1)
-                        self.plot(params=new, title=name)
-                        plt.show()
-                except:
-                    pass
-
-        optimal = points_list[0]
-        for test in points_list:
-            if test[1] > optimal[1]:
-                optimal = test
-        name, logp, params = optimal
-        if display:
-            #print(params)
-            pass
-        if return_points is False:
-            return params
-        else:
-            return params, points_list
-
-    def sample_hypers(self, start=None, samples=1000, chains=1, trace=None, method='Slice'):
-        if start is None:
-            start = self.get_params_current()
-        if self.outputs.get_value() is None:
-            print('For sample_hypers it is necessary to have observations')
-            return start
-        with self.model:
-            if len(self.fixed_vars) > 0:
-                step = [ConstantStep(vars=self.fixed_vars)]  # Fue eliminado por error en pymc3
-                if len(self.sampling_vars) > 0:
-                    if method == 'HMC':
-                        step += [pm.HamiltonianMC(vars=self.sampling_vars)]
-                    else:
-                        step += [RobustSlice(vars=self.sampling_vars)]  # Slice original se cuelga si parte del óptimo
-            else:
-                if method == 'HMC':
-
-                    step = pm.HamiltonianMC()
-                else:
-                    step = RobustSlice()
-            trace = pm.sample(samples, step=step, start=start, njobs=chains, trace=trace)
-
-        return trace
-
-    def ensemble_hypers(self, start=None, samples=1000, chains=None, ntemps=None, raw=False,
-                        burnin_tol=0.05, burnin_method='multi'):
-        if start is None:
-            start = self.find_MAP()
-        if isinstance(start, dict):
-            start = self.dict_to_array(start)
-        ndim = len(start)
-        if chains is None:
-            chains = 2*ndim
-        if ntemps is None:
-            sampler = emcee.EnsembleSampler(chains, ndim, self.logp_array)
-            noise = np.random.normal(loc=1, scale=0.1, size=(chains, ndim))
-            p0 = noise * np.ones((chains, 1)) * start
-        else:
-            sampler = emcee.PTSampler(ntemps, chains, ndim, self.logp_like, self.logp_prior)
-            noise = np.random.normal(loc=1, scale=0.1, size=(ntemps, chains, ndim))
-            p0 = noise * np.ones((ntemps, chains, 1)) * start
-
-        sys.stdout.flush()
-        for result in tqdm(sampler.sample(p0, iterations=samples), total=samples):
-            pass
-
-        lnprob, echain = sampler.lnprobability, sampler.chain
-        sampler.reset()
-        if ntemps is not None:
-            lnprob, echain = lnprob[0, :, :], echain[0, :, :]
-        if raw:
-            return echain, lnprob
-        else:
-            return chains_to_datatrace(self, echain, ll=lnprob, burnin_tol=burnin_tol, burnin_method=burnin_method)
-
-    def save_model(self, path=None, params=None):
-        if path is None:
-            path = self.file
-        if params is not None:
-            self.set_params(params)
-        try:
-            if os.path.isfile(path):
-                os.remove(path)
-            with self.model:
-                with open(path, 'wb') as f:
-                    pickle.dump(self, f, protocol=-1)
-            print('Saved model '+path)
-        except Exception as details:
-            print('Error saving model '+path, details)
-
-    def plot_space(self, space=None, independ=False ,observed=False):
-        if space is not None:
-            self.set_space(space)
-        if independ:
-            for i in range(self.space_values.shape[1]):
-                plt.figure(i)
-                plt.plot(self.space_index, self.space_values[:, i])
-        else:
-            plt.plot(self.space_index, self.space_values)
-        if self.observed_index is not None and observed:
-            if independ:
-                for i in range(self.space_values.shape[1]):
-                    plt.figure(i)
-                    plt.plot(self.observed_index, self.inputs_values[:, i], '.k')
-            else:
-                plt.plot(self.observed_index, self.inputs_values, '.k')
-
-    def plot_hidden(self, big=None):
-        if big is None:
-            big = config.plot_big
-        if big:
-            self.plot_hidden_big()
-        else:
-            self.plot_hidden_normal()
-
-    def plot_hidden_normal(self):
-        if self.hidden is not None:
-            plt.plot(self.space_index, self.hidden[0:len(self.space_index)],  label='Hidden Processes')
-
-    def plot_hidden_big(self):
-        if self.hidden is not None:
-            plt.plot(self.space_index, self.hidden[0:len(self.space_index)], linewidth=4, label='Hidden Processes')
-
-    def plot_observations(self, big=None):
-        if big is None:
-            big = config.plot_big
-        if big:
-            self.plot_observations_big()
-        else:
-            self.plot_observations_normal()
-
-    def plot_observations_normal(self):
-        if self.outputs_values is not None:
-            plt.plot(self.observed_index, self.outputs_values, '.k', ms=10)
-            plt.plot(self.observed_index, self.outputs_values, '.r', ms=6, label='Observations')
-
-    def plot_observations_big(self):
-        if self.outputs_values is not None:
-            plt.plot(self.observed_index, self.outputs_values, '.k', ms=20)
-            plt.plot(self.observed_index, self.outputs_values, '.r', ms=15, label='Observations')
-
-    def subprocess(self, subkernel):
-        pass
-
-    def get_point(self, point):
-        return {v.name: point[v.name] for v in self.model.vars}
-
-    def point_to_In(self, point):
-        r = list()
-        for k, v in point.items():
-            r.append(th.In(self.model[k], value=v))
-        return r
-
-    def eval_point(self, point):
-        r = dict()
-        for k, v in point.items():
-            r[self.model[k]] = v
-        return r
-
-    def eval_default(self):
-        return self.eval_point(self.get_params_default())
-
-    def eval_current(self):
-        return self.eval_point(self.get_params_current())
-
-    def eval_widget(self):
-        return self.eval_point(self.get_params_widget())
+        interact(self._widget_plot_model, __manual=True, **intervals)
