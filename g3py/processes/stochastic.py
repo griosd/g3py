@@ -747,7 +747,7 @@ class _StochasticProcess:
         return trace
 
     def ensemble_hypers(self, start=None, samples=1000, chains=None, ntemps=None, raw=False,
-                        burnin_tol=0.05, burnin_method='multi'):
+                        burnin_tol=0.01, burnin_method='multi'):
         if start is None:
             start = self.find_MAP()
         if isinstance(start, dict):
@@ -764,7 +764,7 @@ class _StochasticProcess:
             sampler = emcee.PTSampler(ntemps, chains, ndim, self.logp_fixed_like, self.logp_fixed_prior)
             noise = np.random.normal(loc=1, scale=0.1, size=(ntemps, chains, ndim))
             p0 = noise * np.ones((ntemps, chains, 1)) * start
-
+        p0 += (p0 == 0)*np.random.normal(loc=0, scale=0.01, size=p0.shape)
         sys.stdout.flush()
         for result in tqdm(sampler.sample(p0, iterations=samples), total=samples):
             pass

@@ -88,7 +88,7 @@ def chains_to_datatrace(sp, chains, ll=None, transforms=True, burnin_tol=None, b
     datatrace = pd.DataFrame()
     if burnin_tol is not None:
         if burnin_dims is None:
-            chains_to_burnin = chains
+            chains_to_burnin = chains[:, :, sp.sampling_dims]
         else:
             chains_to_burnin = chains[:, :, burnin_dims]
         nburn = burn_in_samples(chains_to_burnin, tol=burnin_tol, method=burnin_method)
@@ -131,7 +131,7 @@ def datatrace_to_chains(process, dt, flat=False, burnin=True):
         return chain.ix[:, :process.ndim].values.reshape(levshape[0], levshape[1], process.ndim)
 
 
-def plot_datatrace(datatrace, burnin=True, varnames=None, transform=lambda x: x, figsize=None,
+def plot_datatrace(datatrace, burnin = False, varnames=None, transform=lambda x: x, figsize=None,
                   lines=None, combined=False, plot_transformed=True, grid=True,
                   alpha=0.35, priors=None, prior_alpha=1, prior_style='--',
                   ax=None):
@@ -182,9 +182,13 @@ def plot_datatrace(datatrace, burnin=True, varnames=None, transform=lambda x: x,
     ax : matplotlib axes
 
     """
-    if burnin and hasattr(datatrace,'_burnin'):
+    nburnin = (~datatrace[datatrace._nchain == 0]._burnin).sum()
+    if burnin and hasattr(datatrace, '_burnin'):
         datatrace = datatrace[datatrace._burnin]
-    datatrace = datatrace.set_index(['_nchain'])
+        chain_iters = np.arange(nburnin, datatrace._niter.max()+1)
+    else:
+        chain_iters = np.arange(0, datatrace._niter.max()+1)
+    datatrace = datatrace.set_index(['_nchain']).drop(['_burnin'], axis=1)
     if combined:
         datatrace.index = datatrace.index * 0
     else:
@@ -219,22 +223,21 @@ def plot_datatrace(datatrace, burnin=True, varnames=None, transform=lambda x: x,
                 pm.plots.histplot_op(ax[i, 0], d, alpha=alpha)
             else:
                 pm.plots.kdeplot_op(ax[i, 0], d, prior, prior_alpha, prior_style)
-            ax[i, 0].set_title(str(v))
-            ax[i, 0].grid(grid)
-            ax[i, 1].set_title(str(v))
-            ax[i, 1].plot(d, alpha=alpha)
-
-            ax[i, 0].set_ylabel("Frequency")
-            ax[i, 1].set_ylabel("Sample value")
-
-            if lines:
-                try:
-                    ax[i, 0].axvline(x=lines[v], color="r", lw=1.5)
-                    ax[i, 1].axhline(y=lines[v], color="r",
-                                     lw=1.5, alpha=alpha)
-                except KeyError:
-                    pass
-            ax[i, 0].set_ylim(ymin=0)
+            ax[i, 1].plot(chain_iters, d, alpha=alpha)
+        ax[i, 1].axvline(x=nburnin, color="r", lw=1.5, alpha=alpha)
+        if lines:
+            try:
+                ax[i, 0].axvline(x=lines[v], color="r", lw=1.5)
+                ax[i, 1].axhline(y=lines[v], color="r",
+                                 lw=1.5, alpha=alpha)
+            except KeyError:
+                pass
+        ax[i, 0].set_title(str(v))
+        ax[i, 1].set_title(str(v))
+        ax[i, 0].set_ylabel("Frequency")
+        ax[i, 1].set_ylabel("Sample value")
+        ax[i, 0].grid(grid)
+        ax[i, 0].set_ylim(ymin=0)
     plt.tight_layout()
 
 
