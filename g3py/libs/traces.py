@@ -80,7 +80,8 @@ def burn_in_samples(chains, tol=0.1, method='multi'):
     return upper
 
 
-def chains_to_datatrace(sp, chains, ll=None, transforms=True, burnin_tol=None, burnin_method='multi', burnin_dims=None):
+def chains_to_datatrace(sp, chains, ll=None, transforms=True, burnin_tol=None, burnin_method='multi', burnin_dims=None,
+                        outlayer_percentile=None):
     columns = list()
     for v in sp.model.bijection.ordering.vmap:
         columns += pm.backends.tracetab.create_flat_names(v.var, v.shp)
@@ -101,6 +102,13 @@ def chains_to_datatrace(sp, chains, ll=None, transforms=True, burnin_tol=None, b
         if ll is not None:
             pdchain['_ll'] = ll[nchain]
         datatrace = datatrace.append(pdchain, ignore_index=True)
+
+    if outlayer_percentile is not None:
+        percentiles = datatrace.describe(percentiles=[outlayer_percentile, 1-outlayer_percentile])
+        lower = percentiles.iloc[-4]
+        upper = percentiles.iloc[-2]
+        datatrace.insert(n_vars + 2 + (burnin_tol is not None), '_outlayer', ~((datatrace.iloc[:, :sp.ndim] > upper.iloc[:sp.ndim]) |
+                                         (datatrace.iloc[:, :sp.ndim] < lower.iloc[:sp.ndim])).any(axis=1) )
     if transforms:
         ncolumn = n_vars
         varnames = sp.get_params_test().keys()
@@ -188,7 +196,7 @@ def plot_datatrace(datatrace, burnin = False, varnames=None, transform=lambda x:
         chain_iters = np.arange(nburnin, datatrace._niter.max()+1)
     else:
         chain_iters = np.arange(0, datatrace._niter.max()+1)
-    datatrace = datatrace.set_index(['_nchain']).drop(['_burnin'], axis=1)
+    datatrace = datatrace.set_index(['_nchain']).drop(['_burnin', '_outlayer'], axis=1)
     if combined:
         datatrace.index = datatrace.index * 0
     else:
@@ -287,47 +295,8 @@ def append_traces(mtraces):
     return base_mtrace
 
 
-def trace_to_datatrace(sp, trace):
-    dt = pm.trace_to_dataframe(trace, hide_transformed_vars=False)
-    likelihood_datatrace(sp, dt, trace)
-    return dt
-
-
-def likelihood_datatrace(sp, datatrace, trace):
-    ll = pd.Series(index=datatrace.index)
-    adll = pd.Series(index=datatrace.index)
-    niter = pd.Series(index=datatrace.index)
-
-    #flogp = sp.model.logp
-    #dflogp = sp.model.dlogp()
-
-    # Pasar de diccionario a arreglo
-    vars = pm.theanof.inputvars(sp.model.cont_vars)
-    start = sp.model.test_point
-    start = pm.model.Point(start, model=sp.model)
-    OrdVars = pm.blocking.ArrayOrdering(vars)
-    bij = pm.blocking.DictToArrayBijection(OrdVars, start)
-    logp = bij.mapf(sp.model.fastlogp)
-    dlogp = bij.mapf(sp.model.fastdlogp(vars))
-
-
-    n_traces = len(trace._straces)
-    for s in range(n_traces):
-        lenght_trace = len(trace._straces[s])
-        for i in range(lenght_trace):
-            niter[s*lenght_trace + i] = i
-            ll[s*lenght_trace + i] = logp(bij.map(trace._straces[s][i]))
-            adll[s*lenght_trace + i] = np.sum(np.abs(dlogp(bij.map(trace._straces[s][i]))))
-
-            #ll[s*lenght_trace + i] = flogp(trace._straces[s][i])
-            #adll[s*lenght_trace + i] = np.sum(np.abs(dflogp((trace._straces[s][i]))))
-    datatrace['_niter'] = niter
-    datatrace['_ll'] = ll
-    datatrace['_adll'] = adll
-
-
 def cluster_datatrace(dt, n_components=5, n_init=1):
-    excludes = '^((?!_nchain|_niter|_burnin|_log_|_logodds_|_interval_|_lowerbound_|_upperbound_|_sumto1_|_stickbreaking_|_circular_).)*$'
+    excludes = '^((?!_nchain|_niter|_burnin|_burnin|_log_|_logodds_|_interval_|_lowerbound_|_upperbound_|_sumto1_|_stickbreaking_|_circular_).)*$'
     datatrace_filter = dt.filter(regex=excludes)
     gm = mixture.BayesianGaussianMixture(n_components=n_components, covariance_type='full', max_iter=1000, n_init=n_init).fit(datatrace_filter)
     cluster_gm = gm.predict(datatrace_filter)
@@ -376,7 +345,7 @@ def find_candidates(dt, ll=1, l1=0, l2=0, rand=0):
     return pd.DataFrame(candidates).append(dt.sample(rand))
 
 
-def hist_trace(datatrace, items=None, like=None, regex=None, samples=None, bins=200, layout=(4,4), figsize=(20,20)):
+def hist_datatrace(datatrace, items=None, like=None, regex=None, samples=None, bins=200, layout=(4, 4), figsize=(20, 20)):
     marginal(datatrace, items=items, like=like, regex=regex, samples=samples).hist(bins=bins, layout=layout, figsize=figsize)
 
 
