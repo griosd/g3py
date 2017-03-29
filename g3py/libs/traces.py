@@ -59,9 +59,15 @@ def gelman_rubin(chains, method='multi'):
 
 
 def burn_in_samples(chains, tol=0.1, method='multi'):
-    score = gelman_rubin(chains, method)
+    try:
+        score = gelman_rubin(chains, method)
+    except:
+        try:
+            score = gelman_rubin(chains, 'uni')
+        except:
+            score = np.inf
     if score > tol:
-        return -1
+        return chains.shape[1]
     lower = 0
     upper = chains.shape[1]
     while lower + 1 < upper:
@@ -120,7 +126,7 @@ def datatrace_to_chains(process, dt, flat=False, burnin=True):
         return chain.ix[:, :process.ndim].values.reshape(levshape[0], levshape[1], process.ndim)
 
 
-def datatraceplot(datatrace, varnames=None, transform=lambda x: x, figsize=None,
+def datatraceplot(datatrace, burnin=True, varnames=None, transform=lambda x: x, figsize=None,
                   lines=None, combined=False, plot_transformed=True, grid=True,
                   alpha=0.35, priors=None, prior_alpha=1, prior_style='--',
                   ax=None):
@@ -171,6 +177,8 @@ def datatraceplot(datatrace, varnames=None, transform=lambda x: x, figsize=None,
     ax : matplotlib axes
 
     """
+    if burnin and hasattr(datatrace,'_burnin'):
+        datatrace = datatrace[datatrace._burnin]
     datatrace = datatrace.set_index(['_nchain'])
     if combined:
         datatrace.index = datatrace.index * 0
@@ -310,7 +318,7 @@ def likelihood_datatrace(sp, datatrace, trace):
     datatrace['_adll'] = adll
 
 
-def cluster_datatrace(dt, n_components=10, n_init=1):
+def cluster_datatrace(dt, n_components=5, n_init=1):
     excludes = '^((?!_nchain|_niter|_burnin|_log_|_logodds_|_interval_|_lowerbound_|_upperbound_|_sumto1_|_stickbreaking_|_circular_).)*$'
     datatrace_filter = dt.filter(regex=excludes)
     gm = mixture.BayesianGaussianMixture(n_components=n_components, covariance_type='full', max_iter=1000, n_init=n_init).fit(datatrace_filter)
@@ -335,23 +343,28 @@ def conditional(dt, lambda_df):
     return conditional_traces
 
 
-def find_candidates(dt, ll=1, adll=1, rand=1):
+def find_candidates(dt, ll=1, l1=0, l2=0, rand=0):
     # modes
+    dt = dt.drop_duplicates(subset=[k for k in dt.columns if not k.startswith('_')])
     candidates = list()
     if '_ll' in dt:
         for index, row in dt.nlargest(ll, '_ll').iterrows():
             row.name = "ll[" + str(row.name) + "]"
             candidates.append(row)
-    if '_adll' in dt:
-        for index, row in dt.nsmallest(adll, '_adll').iterrows():
-            row.name = "adll[" + str(row.name) + "]"
+    if '_l1' in dt:
+        for index, row in dt.nsmallest(l1, '_l1').iterrows():
+            row.name = "l1[" + str(row.name) + "]"
             candidates.append(row)
-    mean = dt.mean()
-    mean.name = 'mean'
-    candidates.append(mean)
-    median = dt.median()
-    median.name = 'median'
-    candidates.append(median)
+    if '_l2' in dt:
+        for index, row in dt.nsmallest(l1, '_l2').iterrows():
+            row.name = "l2[" + str(row.name) + "]"
+            candidates.append(row)
+    #mean = dt.mean()
+    #mean.name = 'mean'
+    #candidates.append(mean)
+    #median = dt.median()
+    #median.name = 'median'
+    #candidates.append(median)
     return pd.DataFrame(candidates).append(dt.sample(rand))
 
 
@@ -359,8 +372,12 @@ def hist_trace(datatrace, items=None, like=None, regex=None, samples=None, bins=
     marginal(datatrace, items=items, like=like, regex=regex, samples=samples).hist(bins=bins, layout=layout, figsize=figsize)
 
 
-def scatter_datatrace(dt, items=None, like=None, regex=None, samples=None, bins=200, figsize=(15, 10), cluster=None, cmap=cm.rainbow):
+def scatter_datatrace(dt, items=None, like=None, regex=None, samples=100000, bins=200, figsize=(15, 10), burnin=True, cluster=None, cmap=cm.rainbow):
+    if burnin and hasattr(dt, '_burnin'):
+        dt = dt[dt._burnin]
     df = marginal(dt, items=items, like=like, regex=regex, samples=samples)
+    if cluster is None and hasattr(dt, '_cluster'):
+        cluster = dt._cluster
     if cluster is None:
         pd.scatter_matrix(df, grid=True, hist_kwds={'normed': True, 'bins': bins}, figsize=figsize)
     else:
