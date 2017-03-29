@@ -14,11 +14,11 @@ class StudentTProcess(StochasticProcess):
         self.prior_freedom = None
         self.posterior_freedom = None
 
-    def define_distribution(self):
+    def _define_distribution(self):
         self.distribution = STPDist(self.name, mu=self.location(self.inputs), cov=tt_to_cov(self.kernel.cov(self.inputs)), mapping = Identity(),
                        freedom=self.freedom, stp=self, observed=self.outputs, testval=self.outputs, dtype=th.config.floatX)
 
-    def define_process(self):
+    def _define_process(self):
         # Prior
         self.prior_freedom = self.freedom()
         self.prior_mean = self.location_space
@@ -53,8 +53,6 @@ class StudentTProcess(StochasticProcess):
         self.posterior_noise_up = self.posterior_mean + sigma * self.posterior_noise
         self.posterior_noise_down = self.posterior_mean - sigma * self.posterior_noise
         self.posterior_sampler = self.posterior_mean + self.random_scalar * cholesky_robust(self.posterior_covariance).dot(self.random_th)
-
-
 
 
 class TransformedStudentTProcess(StochasticProcess):

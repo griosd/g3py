@@ -80,14 +80,18 @@ def burn_in_samples(chains, tol=0.1, method='multi'):
     return upper
 
 
-def chains_to_datatrace(sp, chains, ll=None, transforms=True, burnin_tol=None, burnin_method='multi'):
+def chains_to_datatrace(sp, chains, ll=None, transforms=True, burnin_tol=None, burnin_method='multi', burnin_dims=None):
     columns = list()
     for v in sp.model.bijection.ordering.vmap:
         columns += pm.backends.tracetab.create_flat_names(v.var, v.shp)
     n_vars = len(columns)
     datatrace = pd.DataFrame()
     if burnin_tol is not None:
-        nburn = burn_in_samples(chains, tol=burnin_tol, method=burnin_method)
+        if burnin_dims is None:
+            chains_to_burnin = chains
+        else:
+            chains_to_burnin = chains[:, :, burnin_dims]
+        nburn = burn_in_samples(chains_to_burnin, tol=burnin_tol, method=burnin_method)
     for nchain in range(len(chains)):
         pdchain = pd.DataFrame(chains[nchain, :, :], columns=columns)
         pdchain['_nchain'] = nchain
@@ -127,7 +131,7 @@ def datatrace_to_chains(process, dt, flat=False, burnin=True):
         return chain.ix[:, :process.ndim].values.reshape(levshape[0], levshape[1], process.ndim)
 
 
-def datatraceplot(datatrace, burnin=True, varnames=None, transform=lambda x: x, figsize=None,
+def plot_datatrace(datatrace, burnin=True, varnames=None, transform=lambda x: x, figsize=None,
                   lines=None, combined=False, plot_transformed=True, grid=True,
                   alpha=0.35, priors=None, prior_alpha=1, prior_style='--',
                   ax=None):
@@ -415,8 +419,13 @@ def effective_sample_min(process, alpha=0.05, error=0.05, p=None):
     return np.pi*(2**(2/p))*(sp.stats.chi2.ppf(1-alpha, p)) / (((p*sp.special.gamma(p/2))**(2/p))*(error**2))
 
 
-def effective_sample_size(process, dt, method='mIS', batch_size=None, flat=False, reshape=False, burnin=True):
+def effective_sample_size(process, dt, method='mIS', batch_size=None, fixed=True, flat=False, reshape=False, burnin=True):
     chains = datatrace_to_chains(process, dt, flat=flat, burnin=burnin)
+    if fixed:
+        if flat:
+            chains = chains[:, process.sampling_dims]
+        else:
+            chains = chains[:, :, process.sampling_dims]
     #print(chains.shape)
     dim_sample = 1
     #flat samples

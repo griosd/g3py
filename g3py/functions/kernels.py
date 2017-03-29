@@ -6,7 +6,8 @@ from g3py.functions.metrics import Delta, Minimum, Difference, One, ARD_Dot, ARD
 from g3py.libs.tensors import debug
 
 
-pi = np.float32(np.pi)
+pi = np.pi
+pi2 = np.pi**2
 
 
 class Kernel(Hypers):
@@ -276,7 +277,22 @@ class VAR(KernelDot):
         return self.var
 
     def cov(self, x1, x2=None):
-        return self.var
+        if x2 is None:
+            x2 = x1
+        return self.var*tt.ones([x1.shape[0], x2.shape[0]])
+
+
+class NIL(KernelDot):
+    def __init__(self, x=None, name=None, metric=One, var=1):
+        super().__init__(x, name, metric, var)
+
+    def __call__(self, x1, x2):
+        return 0
+
+    def cov(self, x1, x2=None):
+        if x2 is None:
+            x2 = x1
+        return tt.zeros([x1.shape[0], x2.shape[0]])
 
 
 class LIN(KernelDot):
@@ -399,17 +415,17 @@ class KernelPeriodic(KernelStationary):
             self.hypers += [self.freq]
 
     def default_hypers(self, x=None, y=None):
-        return {self.freq: 1/(x.max(axis=0)-x.min(axis=0)),
+        return {self.freq: 1 / (x.max(axis=0)-x.min(axis=0)),
                 self.rate: 1 / np.abs(x[1:] - x[:-1]).mean(axis=0),
                 **super().default_hypers(x, y)}
 
 
 class COS(KernelPeriodic):
     def __init__(self, x=None, name=None, metric=Difference, var=None, freq=None):
-        super().__init__(x, name, metric, var, freq, rate=1)
+        super().__init__(x, name, metric, var, freq, rate=1.0)
 
     def k(self, d):
-        return tt.prod(tt.cos(2 * pi * d * self.freq), axis=2)
+        return tt.prod(tt.cos(2 * pi * d * self.freq), axis=2, dtype=th.config.floatX)
 
 
 class SIN(KernelPeriodic):
@@ -419,6 +435,6 @@ class SIN(KernelPeriodic):
 
 class SM(KernelPeriodic):
     def k(self, d):
-        return tt.exp(-2 * pi ** 2 * tt.dot(d ** 2, self.rate ** 2)) * tt.prod(tt.cos(2 * pi * d * self.freq), axis=2)
+        return tt.exp(-2*pi2*tt.dot(d ** 2, self.rate ** 2)) * tt.prod(tt.cos(2 * pi * d * self.freq), axis=2, dtype=th.config.floatX)
 
 
