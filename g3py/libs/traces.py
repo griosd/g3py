@@ -62,8 +62,9 @@ def burn_in_samples(chains, tol=0.1, method='multi'):
     try:
         score = gelman_rubin(chains, method)
     except:
+        method = 'uni'
         try:
-            score = gelman_rubin(chains, 'uni')
+            score = gelman_rubin(chains, method)
         except:
             score = np.inf
     if score > tol:
@@ -72,7 +73,7 @@ def burn_in_samples(chains, tol=0.1, method='multi'):
     upper = chains.shape[1]
     while lower + 1 < upper:
         n = lower + (upper - lower) // 2
-        if gelman_rubin(chains[:, :n, :]) < tol:
+        if gelman_rubin(chains[:, :n, :], method) < tol:
             upper = n
         else:
             lower = n
