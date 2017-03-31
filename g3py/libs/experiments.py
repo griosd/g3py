@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 from datetime import datetime as dt
 from tqdm import tqdm
 
-from ..libs import random_obs, uniform_obs, likelihood_datatrace, save_pkl, load_pkl, marginal
+from ..libs import random_obs, uniform_obs, save_pkl, load_pkl, marginal #, likelihood_datatrace
 
 
 class Experiment:
