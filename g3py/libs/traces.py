@@ -71,17 +71,19 @@ def burn_in_samples(chains, tol=0.1, method='multi'):
         return chains.shape[1]
     lower = 0
     upper = chains.shape[1]
+    burnin = upper
     while lower + 1 < upper:
         n = lower + (upper - lower) // 2
         if gelman_rubin(chains[:, :n, :], method) < tol:
+            burnin = upper
             upper = n
         else:
             lower = n
-    return upper
+    return burnin
 
 
 def chains_to_datatrace(sp, chains, ll=None, transforms=True, burnin_tol=None, burnin_method='multi', burnin_dims=None,
-                        outlayer_percentile=None):
+                        outlayer_percentile=0.0005):
     columns = list()
     for v in sp.model.bijection.ordering.vmap:
         columns += pm.backends.tracetab.create_flat_names(v.var, v.shp)
@@ -127,7 +129,7 @@ def chains_to_datatrace(sp, chains, ll=None, transforms=True, burnin_tol=None, b
     return datatrace
 
 
-def datatrace_to_chains(process, dt, flat=False, burnin=True):
+def datatrace_to_chains(process, dt, flat=False, burnin=False):
     if burnin:
         chain = dt[dt._burnin]
     else:
