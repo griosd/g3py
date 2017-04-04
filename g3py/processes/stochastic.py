@@ -242,15 +242,21 @@ class _StochasticProcess:
         return self.model.logp_array(self.model.dict_to_array(params))
 
     def logp_fixed(self, params):
+        if len(params) > len(self.sampling_dims):
+            params = params[self.sampling_dims]
         self._fixed_array[self.sampling_dims] = params
         return self.model.logp_array(self._fixed_array)
 
-    def logp_fixed_prior(self, params):
-        self._fixed_array[self.sampling_dims] = params
+    def _logp_fixed(self, sampling_params):
+        self._fixed_array[self.sampling_dims] = sampling_params
+        return self.model.logp_array(self._fixed_array)
+
+    def _logp_fixed_prior(self, sampling_params):
+        self._fixed_array[self.sampling_dims] = sampling_params
         return self.logp_prior(self._fixed_array)
 
-    def logp_fixed_like(self, params):
-        self._fixed_array[self.sampling_dims] = params
+    def _logp_fixed_like(self, sampling_params):
+        self._fixed_array[self.sampling_dims] = sampling_params
         return self.model.logp_array(self._fixed_array) - self.logp_prior(self._fixed_array)
 
     def dlogp_fixed(self, params):
@@ -573,10 +579,10 @@ class _StochasticProcess:
             callback = MaxTime(max_time)
 
         if 'fprime' in signature(fmin).parameters:
-            r = fmin(lambda x: nan_to_high(-self.logp_fixed(x)), self.model.bijection.map(start)[self.sampling_dims],
+            r = fmin(lambda x: nan_to_high(-self._logp_fixed(x)), self.model.bijection.map(start)[self.sampling_dims],
                      fprime=lambda x: np.nan_to_num(-self.dlogp_fixed(x)), callback=callback, *args, **kwargs)
         else:
-            r = fmin(lambda x: nan_to_high(-self.logp_fixed(x)), self.model.bijection.map(start)[self.sampling_dims],
+            r = fmin(lambda x: nan_to_high(-self._logp_fixed(x)), self.model.bijection.map(start)[self.sampling_dims],
                      callback=callback, *args, **kwargs)
         self._fixed_array[self.sampling_dims] = r
         return self.model.bijection.rmap(self._fixed_array)
@@ -757,11 +763,11 @@ class _StochasticProcess:
         if chains is None:
             chains = 2*self.ndim
         if ntemps is None:
-            sampler = emcee.EnsembleSampler(chains, ndim, self.logp_fixed)
+            sampler = emcee.EnsembleSampler(chains, ndim, self._logp_fixed)
             noise = np.random.normal(loc=1, scale=0.1, size=(chains, ndim))
             p0 = noise * np.ones((chains, 1)) * start
         else:
-            sampler = emcee.PTSampler(ntemps, chains, ndim, self.logp_fixed_like, self.logp_fixed_prior)
+            sampler = emcee.PTSampler(ntemps, chains, ndim, self._logp_fixed_like, self._logp_fixed_prior)
             noise = np.random.normal(loc=1, scale=0.1, size=(ntemps, chains, ndim))
             p0 = noise * np.ones((ntemps, chains, 1)) * start
         p0 += (p0 == 0)*np.random.normal(loc=0, scale=0.01, size=p0.shape)
