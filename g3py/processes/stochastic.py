@@ -279,7 +279,7 @@ class _StochasticProcess:
         if fixed_params is None:
             fixed_params = DictObj()
         self.params_fixed = fixed_params
-        self._fixed_array = self.dict_to_array(self.get_params_test())
+        self._fixed_array = self.dict_to_array(self.get_params_default())
         dimensions = list(range(self.ndim))
         dims = list()
         for k in self.model.bijection.ordering.vmap:
@@ -530,7 +530,7 @@ class _StochasticProcess:
     def get_params_default(self, fixed=True):
         if self.observed_index is None:
             return self.get_params_test(fixed)
-        default = DictObj()
+        default = self.get_params_test(fixed)
         for k, v in trans_hypers(self.default_hypers()).items():
             if k in self.model.vars:
                 default[k.name] = v
