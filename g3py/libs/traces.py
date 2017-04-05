@@ -297,10 +297,12 @@ def append_traces(mtraces):
     return base_mtrace
 
 
-def cluster_datatrace(dt, n_components=5, n_init=1):
-    excludes = '^((?!_nchain|_niter|_burnin|_burnin|_log_|_logodds_|_interval_|_lowerbound_|_upperbound_|_sumto1_|_stickbreaking_|_circular_).)*$'
-    datatrace_filter = dt.filter(regex=excludes)
-    gm = mixture.BayesianGaussianMixture(n_components=n_components, covariance_type='full', max_iter=1000, n_init=n_init).fit(datatrace_filter)
+def cluster_datatrace(process, dt, n_components=5, n_init=1, max_iter=5000):
+    #excludes = '^((?!_nchain|_niter|_burnin|_outlayer|_cluster|_log_|_logodds_|_interval_|_lowerbound_|_upperbound_|_sumto1_|_stickbreaking_|_circular_).)*$'
+    #dt.filter(regex=excludes)
+    datatrace_filter = dt.iloc[:, :process.ndim]
+    gm = mixture.BayesianGaussianMixture(n_components=n_components, covariance_type='full', max_iter=max_iter,
+                                         n_init=n_init).fit(datatrace_filter)
     cluster_gm = gm.predict(datatrace_filter)
     dt['_cluster'] = cluster_gm
 

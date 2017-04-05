@@ -238,6 +238,9 @@ class _StochasticProcess:
     def dict_to_array(self, params):
         return self.model.dict_to_array(params)
 
+    def array_to_dict(self, params):
+        return self.model.bijection.rmap(params)
+
     def logp_dict(self, params):
         return self.model.logp_array(self.model.dict_to_array(params))
 
