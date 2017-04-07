@@ -7,7 +7,7 @@ import pymc3 as pm
 import seaborn as sb
 import matplotlib.pyplot as plt
 from matplotlib import cm
-from sklearn import cluster, mixture
+from sklearn import cluster, mixture, neighbors
 from pymc3 import traceplot
 from copy import copy
 
@@ -32,10 +32,10 @@ def load_datatrace(path='datatrace.pkl'):
     return pd.read_pickle(path)
 
 
-def gelman_rubin(chains, method='multi'):
+def gelman_rubin(chains, method='multi-sum'):
     # This method return the abs(gelman_rubin-1), so near to 0 is best
     nwalkers, nsamples, ndim = chains.shape
-    if method is 'multi':
+    if method in  ['multi-sum', 'multi-max']:
         B = nsamples * np.cov(np.mean(chains, axis=1).T)
         W = B * 0
         for chain in range(nwalkers):
@@ -43,7 +43,10 @@ def gelman_rubin(chains, method='multi'):
         W /= nwalkers
         Vhat = W * (nsamples - 1) / nsamples + B / nsamples
         eigvalues = np.linalg.eigvals((1 / nsamples) * np.linalg.solve(W, Vhat))  # np.matmul(np.linalg.inv(W), Vhat))
-        return np.abs((nsamples - 1) / nsamples + ((nwalkers + 1) / nwalkers) * np.sum(eigvalues) - 1) #TODO: check np.sum(eigvalues)/max
+        if method is 'multi-sum':
+            return np.abs((nsamples - 1) / nsamples + ((nwalkers + 1) / nwalkers) * np.sum(eigvalues) - 1)
+        else:
+            return np.abs((nsamples - 1) / nsamples + ((nwalkers + 1) / nwalkers) * np.max(eigvalues) - 1)
     else:
         Rhat = np.zeros(ndim)
         for i in range(ndim):
@@ -58,7 +61,7 @@ def gelman_rubin(chains, method='multi'):
         return np.max(np.abs(Rhat - 1))
 
 
-def burn_in_samples(chains, tol=0.1, method='multi'):
+def burn_in_samples(chains, tol=0.1, method='multi-sum'):
     try:
         score = gelman_rubin(chains, method)
     except:
@@ -82,13 +85,17 @@ def burn_in_samples(chains, tol=0.1, method='multi'):
     return burnin
 
 
-def chains_to_datatrace(sp, chains, ll=None, transforms=True, burnin_tol=None, burnin_method='multi', burnin_dims=None,
-                        outlayer_percentile=0.0005):
+def chains_to_datatrace(sp, chains, ll=None, transforms=True, burnin_tol=None, burnin_method='multi-sum', burnin_dims=None,
+                        outlayer_percentile=0.001):
     columns = list()
     for v in sp.model.bijection.ordering.vmap:
         columns += pm.backends.tracetab.create_flat_names(v.var, v.shp)
     n_vars = len(columns)
     datatrace = pd.DataFrame()
+    if len(chains.shape) == 2:
+        chains = chains[None, :, :]
+    if len(ll.shape) == 1:
+        ll = ll[None, :]
     if burnin_tol is not None:
         if burnin_dims is None:
             chains_to_burnin = chains[:, :, sp.sampling_dims]
@@ -106,11 +113,14 @@ def chains_to_datatrace(sp, chains, ll=None, transforms=True, burnin_tol=None, b
         datatrace = datatrace.append(pdchain, ignore_index=True)
 
     if outlayer_percentile is not None:
-        percentiles = datatrace.describe(percentiles=[outlayer_percentile, 1-outlayer_percentile])
+        if ll is not None:
+            percentiles = datatrace[np.isfinite(datatrace['_ll'])].describe(percentiles=[outlayer_percentile, 1 - outlayer_percentile])
+        else:
+            percentiles = datatrace.describe(percentiles=[outlayer_percentile, 1 - outlayer_percentile])
         lower = percentiles.iloc[-4]
         upper = percentiles.iloc[-2]
-        datatrace.insert(n_vars + 2 + (burnin_tol is not None), '_outlayer', ~((datatrace.iloc[:, :sp.ndim] > upper.iloc[:sp.ndim]) |
-                                         (datatrace.iloc[:, :sp.ndim] < lower.iloc[:sp.ndim])).any(axis=1) )
+        datatrace.insert(n_vars + 2 + (burnin_tol is not None), '_outlayer', ~(((datatrace.iloc[:, :sp.ndim] > upper.iloc[:sp.ndim]) |
+                                         (datatrace.iloc[:, :sp.ndim] < lower.iloc[:sp.ndim])).any(axis=1) | (datatrace._ll > upper._ll) | (datatrace._ll < lower._ll)  ) )
         if ll is not None:
             datatrace['_outlayer'] &= np.isfinite(datatrace['_ll'])
 
@@ -142,6 +152,29 @@ def datatrace_to_chains(process, dt, flat=False, burnin=False):
     else:
         levshape = chain.set_index([chain._nchain, chain._niter]).index.levshape
         return chain.ix[:, :process.ndim].values.reshape(levshape[0], levshape[1], process.ndim)
+
+
+def datatrace_to_kde(process, dt, kernel='tophat', bandwidth=0.02):
+    # con outlayers pero sin burn-in
+    kde = neighbors.kde.KernelDensity(kernel=kernel, bandwidth=bandwidth).fit(dt[dt._burnin].iloc[:, :process.ndim])
+    kde.min_ll = dt[dt._burnin]._ll.min()
+    return kde
+
+
+def kde_to_datatrace(process, kde, nsamples=1000):
+    samples = kde.sample(n_samples=1)
+    ll = process.logp_chain(samples)
+    samples, ll = samples[ll > kde.min_ll], ll[ll > kde.min_ll]
+
+    while len(samples) < nsamples:
+        new_samples = kde.sample(n_samples=nsamples-len(samples))
+        new_ll = process.logp_chain(new_samples)
+        new_samples, new_ll = new_samples[new_ll > kde.min_ll], new_ll[new_ll > kde.min_ll]
+        samples = np.concatenate([samples, new_samples])
+        ll = np.concatenate([ll, new_ll])
+    kde_dt = chains_to_datatrace(process, samples, ll=ll)
+    process._cluster(kde_dt)
+    return kde_dt
 
 
 def plot_datatrace(datatrace, burnin = False, outlayer = False, varnames=None, transform=lambda x: x, figsize=None,
@@ -300,18 +333,27 @@ def append_traces(mtraces):
     return base_mtrace
 
 
-def cluster_datatrace(process, dt, n_components=5, bayesian=True, n_init=1, max_iter=5000):
+def cluster_datatrace(process, dt, n_components=5, bayesian=True, burnin=True, n_init=1, max_iter=5000):
     #excludes = '^((?!_nchain|_niter|_burnin|_outlayer|_cluster|_log_|_logodds_|_interval_|_lowerbound_|_upperbound_|_sumto1_|_stickbreaking_|_circular_).)*$'
     #dt.filter(regex=excludes)
-    datatrace_filter = dt.iloc[:, :process.ndim]
+    if burnin:
+        datatrace_filter = dt[dt._burnin].iloc[:, :process.ndim]
+    else:
+        datatrace_filter = dt.iloc[:, :process.ndim]
     if bayesian:
         cluster_method = mixture.BayesianGaussianMixture
     else:
         cluster_method = mixture.GaussianMixture
     gm = cluster_method(n_components=n_components, covariance_type='full', max_iter=max_iter, n_init=n_init).fit(datatrace_filter)
     cluster_gm = gm.predict(datatrace_filter)
-    dt['_cluster'] = (cluster_gm == np.argsort(np.bincount(cluster_gm))[:, None]).T.dot(
-        sorted(np.unique(cluster_gm), reverse=True))
+    argsort = np.argsort(np.bincount(cluster_gm))
+    argsorted = sorted(np.unique(cluster_gm), reverse=True)
+
+    def _cluster(datatrace):
+        datatrace['_cluster'] = (gm.predict(datatrace.iloc[:, :process.ndim]) == argsort[:, None]).T.dot(argsorted)
+    _cluster(dt)
+    process._cluster = _cluster
+    return _cluster
 
 
 def marginal(dt, items=None, like=None, regex=None, samples=None):
@@ -360,9 +402,11 @@ def hist_datatrace(datatrace, items=None, like=None, regex=None, samples=None, b
     marginal(datatrace, items=items, like=like, regex=regex, samples=samples).hist(bins=bins, layout=layout, figsize=figsize)
 
 
-def scatter_datatrace(dt, items=None, like=None, regex=None, samples=100000, bins=200, figsize=(15, 10), burnin=True, cluster=None, cmap=cm.rainbow_r):
+def scatter_datatrace(dt, items=None, like=None, regex=None, samples=100000, bins=200, figsize=(15, 15), burnin=True, outlayer=False, cluster=None, cmap=cm.rainbow_r):
     if burnin and hasattr(dt, '_burnin'):
         dt = dt[dt._burnin]
+    if outlayer and hasattr(dt, '_outlayer'):
+        dt = dt[dt._outlayer]
     df = marginal(dt, items=items, like=like, regex=regex, samples=samples)
     if cluster is None and hasattr(dt, '_cluster'):
         cluster = dt._cluster

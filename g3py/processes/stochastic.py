@@ -229,6 +229,7 @@ class _StochasticProcess:
     def _compile_logprior(self):
         self.logp_prior = self.model.bijection.mapf(self.model.fn(tt.add(*map(tt.sum, [var.logpt for var in self.model.free_RVs] + self.model.potentials))))
 
+
     def logp_array(self, params):
         return self.model.logp_array(params)
 
@@ -243,6 +244,12 @@ class _StochasticProcess:
 
     def logp_dict(self, params):
         return self.model.logp_array(self.model.dict_to_array(params))
+
+    def logp_chain(self, chain):
+        out = np.empty(len(chain))
+        for i in range(len(out)):
+            out[i] = self.logp_array(chain[i])
+        return out
 
     def logp_fixed(self, params):
         if len(params) > len(self.sampling_dims):
@@ -774,6 +781,7 @@ class _StochasticProcess:
             noise = np.random.normal(loc=1, scale=0.1, size=(ntemps, chains, ndim))
             p0 = noise * np.ones((ntemps, chains, 1)) * start
         p0 += (p0 == 0)*np.random.normal(loc=0, scale=0.01, size=p0.shape)
+        print('Sampling {} variables, {} chains, {} times ({} temps)'.format(ndim, chains,samples,ntemps))
         sys.stdout.flush()
         for result in tqdm(sampler.sample(p0, iterations=samples), total=samples):
             pass

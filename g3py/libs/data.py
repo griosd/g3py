@@ -16,7 +16,7 @@ def data_co2():
     data = sm.datasets.co2.load_pandas().data
     print(sm.datasets.co2.NOTE)
     x = data.index.values[:]
-    y = data.values[:]
+    y = data.values[:,0]
     return x, y
 
 
