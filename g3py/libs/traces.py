@@ -43,7 +43,7 @@ def gelman_rubin(chains, method='multi'):
         W /= nwalkers
         Vhat = W * (nsamples - 1) / nsamples + B / nsamples
         eigvalues = np.linalg.eigvals((1 / nsamples) * np.linalg.solve(W, Vhat))  # np.matmul(np.linalg.inv(W), Vhat))
-        return np.abs((nsamples - 1) / nsamples + ((nwalkers + 1) / nwalkers) * np.max(eigvalues) - 1)
+        return np.abs((nsamples - 1) / nsamples + ((nwalkers + 1) / nwalkers) * np.sum(eigvalues) - 1) #TODO: check np.sum(eigvalues)/max
     else:
         Rhat = np.zeros(ndim)
         for i in range(ndim):
@@ -144,7 +144,7 @@ def datatrace_to_chains(process, dt, flat=False, burnin=False):
         return chain.ix[:, :process.ndim].values.reshape(levshape[0], levshape[1], process.ndim)
 
 
-def plot_datatrace(datatrace, burnin = False, varnames=None, transform=lambda x: x, figsize=None,
+def plot_datatrace(datatrace, burnin = False, outlayer = False, varnames=None, transform=lambda x: x, figsize=None,
                   lines=None, combined=False, plot_transformed=True, grid=True,
                   alpha=0.35, priors=None, prior_alpha=1, prior_style='--',
                   ax=None):
@@ -195,22 +195,21 @@ def plot_datatrace(datatrace, burnin = False, varnames=None, transform=lambda x:
     ax : matplotlib axes
 
     """
-    nburnin = (~datatrace[datatrace._nchain == 0]._burnin).sum()
+    nburnin = (~datatrace._burnin).idxmin()
     if burnin and hasattr(datatrace, '_burnin'):
         datatrace = datatrace[datatrace._burnin]
-        chain_iters = np.arange(nburnin, datatrace._niter.max()+1)
-    else:
-        chain_iters = np.arange(0, datatrace._niter.max()+1)
+    if outlayer and hasattr(datatrace, '_outlayer'):
+        datatrace = datatrace[datatrace._outlayer]
     datatrace = datatrace.set_index(['_nchain']).drop(['_burnin', '_outlayer'], axis=1)
     if combined:
         datatrace.index = datatrace.index * 0
-    else:
-        datatrace = datatrace.drop(['_niter'], axis=1)
+    #else:
+    #    datatrace = datatrace.drop(['_niter'], axis=1)
     if varnames is None:
         if plot_transformed:
-            varnames = [name for name in datatrace.columns]
+            varnames = [name for name in datatrace.columns if name != '_niter']
         else:
-            varnames = [name for name in datatrace.columns if not name.endswith('_')]
+            varnames = [name for name in datatrace.columns if name != '_niter' and (not name.endswith('_'))]
 
     n = len(varnames)
 
@@ -222,21 +221,21 @@ def plot_datatrace(datatrace, burnin = False, varnames=None, transform=lambda x:
     elif ax.shape != (n, 2):
         pm._log.warning('traceplot requires n*2 subplots')
         return None
-
     for i, v in enumerate(varnames):
         prior = None
         if priors is not None:
             prior = priors[i]
 
         for key in datatrace.index.unique():
-            d = datatrace.loc[key][v]
-            d = np.squeeze(transform(d))
+            dk = datatrace.loc[key]
+            dk = dk[np.isfinite(dk[v])]
+            d = np.squeeze(transform(dk[v]))
             d = pm.plots.make_2d(d)
             if d.dtype.kind == 'i':
                 pm.plots.histplot_op(ax[i, 0], d, alpha=alpha)
             else:
                 pm.plots.kdeplot_op(ax[i, 0], d, prior, prior_alpha, prior_style)
-            ax[i, 1].plot(chain_iters, d, alpha=alpha)
+            ax[i, 1].plot(dk._niter, d, alpha=alpha)
         ax[i, 1].axvline(x=nburnin, color="r", lw=1.5, alpha=alpha)
         if lines:
             try:
@@ -245,9 +244,10 @@ def plot_datatrace(datatrace, burnin = False, varnames=None, transform=lambda x:
                                  lw=1.5, alpha=alpha)
             except KeyError:
                 pass
-        ax[i, 0].set_title(str(v))
-        ax[i, 1].set_title(str(v))
-        ax[i, 0].set_ylabel("Frequency")
+        #ax[i, 0].set_title(str(v))
+        #ax[i, 1].set_title(str(v))
+        name_var = str(v)
+        ax[i, 0].set_ylabel(name_var[name_var.index('_')+1:])
         ax[i, 1].set_ylabel("Sample value")
         ax[i, 0].grid(grid)
         ax[i, 0].set_ylim(ymin=0)
@@ -371,6 +371,11 @@ def scatter_datatrace(dt, items=None, like=None, regex=None, samples=100000, bin
     else:
         pd.scatter_matrix(df, grid=True, hist_kwds={'normed': True, 'bins': bins}, figsize=figsize, c=cluster[df.index],
                           cmap=cmap)
+    #ax = plt.gca()
+    #ax.spines['top'].set_visible(True)
+    #ax.spines['bottom'].set_visible(True)
+    #ax.spines['left'].set_visible(True)
+    #ax.spines['right'].set_visible(True)
 
 
 def kde_datatrace(dt, items=None, size=6, n_levels=20, cmap="Blues_d"):

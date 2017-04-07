@@ -150,7 +150,7 @@ class LogShifted(Mapping):
 
 
 class BoxCoxShifted(Mapping):
-    def __init__(self, y=None, name=None, shift=None, power=None):
+    def __init__(self, y=None, name='BoxShift', shift=None, power=None):
         super().__init__(y, name)
         self.shift = shift
         self.power = power

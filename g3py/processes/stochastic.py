@@ -756,7 +756,7 @@ class _StochasticProcess:
         return trace
 
     def ensemble_hypers(self, start=None, samples=1000, chains=None, ntemps=None, raw=False,
-                        burnin_tol=0.01, burnin_method='multi', outlayer_percentile=0.0005):
+                        burnin_tol=0.02, burnin_method='multi', outlayer_percentile=0.0005):
         if start is None:
             start = self.find_MAP()
         if isinstance(start, dict):
