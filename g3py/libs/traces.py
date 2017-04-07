@@ -111,6 +111,9 @@ def chains_to_datatrace(sp, chains, ll=None, transforms=True, burnin_tol=None, b
         upper = percentiles.iloc[-2]
         datatrace.insert(n_vars + 2 + (burnin_tol is not None), '_outlayer', ~((datatrace.iloc[:, :sp.ndim] > upper.iloc[:sp.ndim]) |
                                          (datatrace.iloc[:, :sp.ndim] < lower.iloc[:sp.ndim])).any(axis=1) )
+        if ll is not None:
+            datatrace['_outlayer'] &= np.isfinite(datatrace['_ll'])
+
     if transforms:
         ncolumn = n_vars
         varnames = sp.get_params_test().keys()
@@ -297,14 +300,18 @@ def append_traces(mtraces):
     return base_mtrace
 
 
-def cluster_datatrace(process, dt, n_components=5, n_init=1, max_iter=5000):
+def cluster_datatrace(process, dt, n_components=5, bayesian=True, n_init=1, max_iter=5000):
     #excludes = '^((?!_nchain|_niter|_burnin|_outlayer|_cluster|_log_|_logodds_|_interval_|_lowerbound_|_upperbound_|_sumto1_|_stickbreaking_|_circular_).)*$'
     #dt.filter(regex=excludes)
     datatrace_filter = dt.iloc[:, :process.ndim]
-    gm = mixture.BayesianGaussianMixture(n_components=n_components, covariance_type='full', max_iter=max_iter,
-                                         n_init=n_init).fit(datatrace_filter)
+    if bayesian:
+        cluster_method = mixture.BayesianGaussianMixture
+    else:
+        cluster_method = mixture.GaussianMixture
+    gm = cluster_method(n_components=n_components, covariance_type='full', max_iter=max_iter, n_init=n_init).fit(datatrace_filter)
     cluster_gm = gm.predict(datatrace_filter)
-    dt['_cluster'] = cluster_gm
+    dt['_cluster'] = (cluster_gm == np.argsort(np.bincount(cluster_gm))[:, None]).T.dot(
+        sorted(np.unique(cluster_gm), reverse=True))
 
 
 def marginal(dt, items=None, like=None, regex=None, samples=None):
@@ -353,7 +360,7 @@ def hist_datatrace(datatrace, items=None, like=None, regex=None, samples=None, b
     marginal(datatrace, items=items, like=like, regex=regex, samples=samples).hist(bins=bins, layout=layout, figsize=figsize)
 
 
-def scatter_datatrace(dt, items=None, like=None, regex=None, samples=100000, bins=200, figsize=(15, 10), burnin=True, cluster=None, cmap=cm.rainbow):
+def scatter_datatrace(dt, items=None, like=None, regex=None, samples=100000, bins=200, figsize=(15, 10), burnin=True, cluster=None, cmap=cm.rainbow_r):
     if burnin and hasattr(dt, '_burnin'):
         dt = dt[dt._burnin]
     df = marginal(dt, items=items, like=like, regex=regex, samples=samples)
