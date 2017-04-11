@@ -804,14 +804,15 @@ class _StochasticProcess:
 
         lnprob, echain = sampler.lnprobability, sampler.chain
         sampler.reset()
+        if ntemps is not None:
+            lnprob, echain = lnprob[0, :, :], echain[0, :, :]
+        complete_chain = np.empty((echain.shape[0], echain.shape[1], self.ndim))
+        complete_chain[:, :, self.sampling_dims] = echain
+        complete_chain[:, :, self.fixed_dims] = self._fixed_array[self.fixed_dims]
         if raw:
-            return echain, lnprob
+            return complete_chain, lnprob
         else:
-            if ntemps is not None:
-                lnprob, echain = lnprob[0, :, :], echain[0, :, :]
-            complete_chain = np.empty((echain.shape[0], echain.shape[1], self.ndim))
-            complete_chain[:, :, self.sampling_dims] = echain
-            complete_chain[:, :, self.fixed_dims] = self._fixed_array[self.fixed_dims]
+
             return chains_to_datatrace(self, complete_chain, ll=lnprob, burnin_tol=burnin_tol,
                                        burnin_method=burnin_method, burnin_dims=self.sampling_dims,
                                        outlayer_percentile=outlayer_percentile)
