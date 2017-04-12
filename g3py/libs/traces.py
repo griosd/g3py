@@ -6,9 +6,8 @@ import pandas as pd
 import pymc3 as pm
 import seaborn as sb
 import matplotlib.pyplot as plt
+from sklearn import mixture, neighbors
 from matplotlib import cm
-from sklearn import cluster, mixture, neighbors
-from pymc3 import traceplot
 from copy import copy
 
 
@@ -35,7 +34,7 @@ def load_datatrace(path='datatrace.pkl'):
 def gelman_rubin(chains, method='multi-sum'):
     # This method return the abs(gelman_rubin-1), so near to 0 is best
     nwalkers, nsamples, ndim = chains.shape
-    if method in  ['multi-sum', 'multi-max']:
+    if method in ['multi-sum', 'multi-max']:
         B = nsamples * np.cov(np.mean(chains, axis=1).T)
         W = B * 0
         for chain in range(nwalkers):
@@ -94,7 +93,7 @@ def chains_to_datatrace(sp, chains, ll=None, transforms=True, burnin_tol=None, b
     datatrace = pd.DataFrame()
     if len(chains.shape) == 2:
         chains = chains[None, :, :]
-    if len(ll.shape) == 1:
+    if ll is not None and len(ll.shape) == 1:
         ll = ll[None, :]
     if burnin_tol is not None:
         if burnin_dims is None:
@@ -280,7 +279,7 @@ def plot_datatrace(datatrace, burnin = False, outlayer = False, varnames=None, t
         #ax[i, 0].set_title(str(v))
         #ax[i, 1].set_title(str(v))
         name_var = str(v)
-        ax[i, 0].set_ylabel(name_var[name_var.index('_')+1:])
+        ax[i, 0].set_ylabel(name_var[name_var.find('_')+1:])
         ax[i, 1].set_ylabel("Sample value")
         ax[i, 0].grid(grid)
         ax[i, 0].set_ylim(ymin=0)
@@ -373,28 +372,35 @@ def conditional(dt, lambda_df):
     return conditional_traces
 
 
-def find_candidates(dt, ll=1, l1=0, l2=0, rand=0):
+def find_candidates(dt, ll=1, l1=0, l2=0, mean=False, median=False, cluster=False, rand=0):
     # modes
-    dt = dt.drop_duplicates(subset=[k for k in dt.columns if not k.startswith('_')])
+    dt_full = dt.drop_duplicates(subset=[k for k in dt.columns if not k.startswith('_')])
     candidates = list()
-    if '_ll' in dt:
-        for index, row in dt.nlargest(ll, '_ll').iterrows():
-            row.name = "ll[" + str(row.name) + "]"
-            candidates.append(row)
-    if '_l1' in dt:
-        for index, row in dt.nsmallest(l1, '_l1').iterrows():
-            row.name = "l1[" + str(row.name) + "]"
-            candidates.append(row)
-    if '_l2' in dt:
-        for index, row in dt.nsmallest(l1, '_l2').iterrows():
-            row.name = "l2[" + str(row.name) + "]"
-            candidates.append(row)
-    #mean = dt.mean()
-    #mean.name = 'mean'
-    #candidates.append(mean)
-    #median = dt.median()
-    #median.name = 'median'
-    #candidates.append(median)
+    for c in (dt_full._cluster.unique() if cluster else [0]):
+        if cluster:
+            dt = dt_full[dt_full._cluster == c]
+        else:
+            dt = dt_full
+        if '_ll' in dt:
+            for index, row in dt.nlargest(ll, '_ll').iterrows():
+                row.name = "ll[" + str(row.name) + "]"
+                candidates.append(row)
+        if '_l1' in dt:
+            for index, row in dt.nsmallest(l1, '_l1').iterrows():
+                row.name = "l1[" + str(row.name) + "]"
+                candidates.append(row)
+        if '_l2' in dt:
+            for index, row in dt.nsmallest(l2, '_l2').iterrows():
+                row.name = "l2[" + str(row.name) + "]"
+                candidates.append(row)
+        if mean:
+            m = dt.mean()
+            m.name = 'mean'
+            candidates.append(m)
+        if median:
+            m = dt.median()
+            m.name = 'median'
+            candidates.append(m)
     return pd.DataFrame(candidates).append(dt.sample(rand))
 
 
@@ -402,7 +408,7 @@ def hist_datatrace(datatrace, items=None, like=None, regex=None, samples=None, b
     marginal(datatrace, items=items, like=like, regex=regex, samples=samples).hist(bins=bins, layout=layout, figsize=figsize)
 
 
-def scatter_datatrace(dt, items=None, like=None, regex=None, samples=100000, bins=200, figsize=(15, 15), burnin=True, outlayer=False, cluster=None, cmap=cm.rainbow_r):
+def scatter_datatrace(dt, items=None, like=None, regex=None, samples=100000, bins=200, figsize=(15, 15), burnin=True, outlayer=True, cluster=None, cmap=cm.rainbow_r):
     if burnin and hasattr(dt, '_burnin'):
         dt = dt[dt._burnin]
     if outlayer and hasattr(dt, '_outlayer'):

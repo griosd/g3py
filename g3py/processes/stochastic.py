@@ -801,7 +801,6 @@ class _StochasticProcess:
         sys.stdout.flush()
         for result in tqdm(sampler.sample(p0, iterations=samples), total=samples):
             pass
-
         lnprob, echain = sampler.lnprobability, sampler.chain
         sampler.reset()
         if ntemps is not None:
