@@ -84,7 +84,7 @@ def burn_in_samples(chains, tol=0.1, method='multi-sum'):
     return burnin
 
 
-def chains_to_datatrace(sp, chains, ll=None, transforms=True, burnin_tol=None, burnin_method='multi-sum', burnin_dims=None,
+def chains_to_datatrace(sp, chains, ll=None, transforms=True, burnin_tol=0.01, burnin_method='multi-sum', burnin_dims=None,
                         outlayer_percentile=0.001):
     columns = list()
     for v in sp.model.bijection.ordering.vmap:
@@ -142,7 +142,7 @@ def chains_to_datatrace(sp, chains, ll=None, transforms=True, burnin_tol=None, b
 
 
 def datatrace_to_chains(process, dt, flat=False, burnin=False):
-    if burnin:
+    if burnin and hasattr(dt,'_burnin'):
         chain = dt[dt._burnin]
     else:
         chain = dt
