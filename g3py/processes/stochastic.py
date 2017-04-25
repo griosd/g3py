@@ -111,9 +111,14 @@ class _StochasticProcess:
             self.kernel.check_hypers(self.name + '_')
             self.mapping.check_hypers(self.name + '_')
 
+            self.location.check_potential()
+            self.kernel.check_potential()
+            self.mapping.check_potential()
+
             if self.freedom is not None:
                 self.freedom.check_dims(None)
                 self.freedom.check_hypers(self.name + '_')
+                self.freedom.check_potential()
 
         print('Space Dimension: ', self.space_values.shape[1])
 

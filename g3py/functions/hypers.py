@@ -103,6 +103,7 @@ class Hypers:
         self.hypers = []
         self.shape = None
         self.dims = None
+        self.potential = None
         self.check_dims(x)
 
     def __str__(self):
@@ -141,6 +142,20 @@ class Hypers:
     def default_hypers_dims(self, x=None, y=None):
         return get_hypers_floatX(self.default_hypers(x[:, self.dims], y))
 
+    def set_potential(self, hypers='', reg='L1', c=1):
+        self.potential = (hypers, reg, c)
+
+    def check_potential(self):
+        if self.potential is None:
+            return
+        hypers, reg, c = self.potential
+        if reg == 'L1':
+            pot = -tt.sum([tt.abs_(k) for k in self.hypers if k.name.find(hypers) > 0])
+        elif reg == 'L2':
+            pot = -tt.sum(([k**2 for k in self.hypers if k.name.find(hypers) > 0]))
+        else:
+            pot = 0
+        return pm.Potential(self.name+'_'+hypers+'_'+reg, c * pot)
 
     @staticmethod
     def Null(name, shape=(), testval=zeros):

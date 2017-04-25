@@ -9,9 +9,9 @@ setup(name='g3py',
       license='MIT',
       packages=find_packages(),
       install_requires=[
-          'numpy', 'scipy', 'pandas', 'matplotlib', 'seaborn', 'theano>=0.9', 'pymc3', 'emcee', 'scikit-learn>=0.18', 'statsmodels'
+          'numpy', 'scipy', 'pandas', 'matplotlib', 'seaborn', 'theano>=0.9', 'pymc3', 'emcee', 'scikit-learn>=0.18', 'statsmodels', 'ipywidgets'
       ],
-      extras_require = {
+      extras_require={
               'load_data':  ['statsmodels']
       },
       tests_require=[
