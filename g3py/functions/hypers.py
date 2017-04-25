@@ -3,7 +3,7 @@ import pandas as pd
 import theano as th
 import theano.tensor as tt
 import pymc3 as pm
-from g3py.libs import DictObj
+from ..libs import DictObj
 
 
 class LogIdTransform(pm.distributions.transforms.ElemwiseTransform):
