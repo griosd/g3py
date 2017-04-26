@@ -173,6 +173,7 @@ def kde_to_datatrace(process, kde, nsamples=1000):
         ll = np.concatenate([ll, new_ll])
     kde_dt = chains_to_datatrace(process, samples, ll=ll)
     process._cluster(kde_dt)
+    kde_dt._burnin = True
     return kde_dt
 
 
@@ -263,10 +264,13 @@ def plot_datatrace(datatrace, burnin = False, outlayer = False, varnames=None, t
             dk = dk[np.isfinite(dk[v])]
             d = np.squeeze(transform(dk[v]))
             d = pm.plots.make_2d(d)
-            if d.dtype.kind == 'i':
-                pm.plots.histplot_op(ax[i, 0], d, alpha=alpha)
-            else:
-                pm.plots.kdeplot_op(ax[i, 0], d, prior, prior_alpha, prior_style)
+            try:
+                if d.dtype.kind == 'i':
+                    pm.plots.histplot_op(ax[i, 0], d, alpha=alpha)
+                else:
+                    pm.plots.kdeplot_op(ax[i, 0], d, prior, prior_alpha, prior_style)
+            except:
+                pass
             ax[i, 1].plot(dk._niter, d, alpha=alpha)
         ax[i, 1].axvline(x=nburnin, color="r", lw=1.5, alpha=alpha)
         if lines:

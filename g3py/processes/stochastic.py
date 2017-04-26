@@ -21,6 +21,7 @@ import theano.tensor.slinalg as sL
 import theano.tensor.slinalg as tsl
 import theano.tensor.nlinalg as tnl
 import emcee
+from numba import jit
 
 Model = pm.Model
 
@@ -127,7 +128,9 @@ class _StochasticProcess:
         self.params_current = None
         self.params_widget = None
         self.params_fixed = DictObj()
+        self._fixed_keys = []
         self._fixed_array = None
+        self._fixed_chain = None
         self.sampling_dims = None
         self.fixed_dims = None
 
@@ -234,7 +237,6 @@ class _StochasticProcess:
     def _compile_logprior(self):
         self.logp_prior = self.model.bijection.mapf(self.model.fn(tt.add(*map(tt.sum, [var.logpt for var in self.model.free_RVs] + self.model.potentials))))
 
-
     def logp_array(self, params):
         return self.model.logp_array(params)
 
@@ -253,7 +255,7 @@ class _StochasticProcess:
     def logp_chain(self, chain):
         out = np.empty(len(chain))
         for i in range(len(out)):
-            out[i] = self.logp_array(chain[i])
+            out[i] = self.model.logp_array(chain[i])
         return out
 
     def logp_fixed(self, params):
@@ -262,6 +264,7 @@ class _StochasticProcess:
         self._fixed_array[self.sampling_dims] = params
         return self.model.logp_array(self._fixed_array)
 
+    #@jit
     def _logp_fixed(self, sampling_params):
         self._fixed_array[self.sampling_dims] = sampling_params
         return self.model.logp_array(self._fixed_array)
@@ -274,9 +277,32 @@ class _StochasticProcess:
         self._fixed_array[self.sampling_dims] = sampling_params
         return self.model.logp_array(self._fixed_array) - self.logp_prior(self._fixed_array)
 
-    def dlogp_fixed(self, params):
-        self._fixed_array[self.sampling_dims] = params
+    #@jit
+    def _dlogp_fixed(self, sampling_params):
+        self._fixed_array[self.sampling_dims] = sampling_params
         return self.model.dlogp_array(self._fixed_array)[self.sampling_dims]
+
+    #@jit
+    def logp_fixed_chain(self, params):
+        if len(params) > len(self.sampling_dims):
+            params = params[self.sampling_dims]
+        return self._logp_fixed_chain(params)
+
+    #@jit
+    def _logp_fixed_chain(self, sampling_params):
+        self._fixed_chain[:, self.sampling_dims] = sampling_params
+        out = np.empty(len(self._fixed_chain))
+        for i in range(len(out)):
+            out[i] = self.model.logp_array(self._fixed_chain[i])
+        return out.mean()
+
+    #@jit
+    def _dlogp_fixed_chain(self, sampling_params):
+        self._fixed_chain[:, self.sampling_dims] = sampling_params
+        out = np.empty((len(self._fixed_chain), len(self.sampling_dims)))
+        for i in range(len(out)):
+            out[i, :] = self.model.dlogp_array(self._fixed_chain[i])[self.sampling_dims]
+        return out.mean(axis=0)
 
     def _define_distribution(self):
         pass
@@ -286,7 +312,7 @@ class _StochasticProcess:
 
     @property
     def fixed_vars(self):
-        return [t for t in self.model.vars if t.name in self.params_fixed.keys()]
+        return [t for t in self.model.vars if t.name in self._fixed_keys]
 
     @property
     def sampling_vars(self):
@@ -300,16 +326,28 @@ class _StochasticProcess:
         if fixed_params is None:
             fixed_params = DictObj()
         self.params_fixed = fixed_params
+        self._fixed_keys = self.params_fixed.keys()
         self._fixed_array = self.dict_to_array(self.get_params_default())
+        self._fixed_chain = None
+        self.calc_dimensions()
+
+    def fix_chain(self, fixed_keys=[], fixed_chain=None):
+        self.params_fixed = DictObj()
+        self._fixed_array = self.dict_to_array(self.get_params_test())
+        self._fixed_keys = fixed_keys
+        self._fixed_chain = fixed_chain
+        self.calc_dimensions()
+
+    def calc_dimensions(self):
         dimensions = list(range(self.ndim))
         dims = list()
         for k in self.model.bijection.ordering.vmap:
-            if k.var not in self.params_fixed.keys():
+            if k.var not in self._fixed_keys:
                 dims += dimensions[k.slc]
         self.sampling_dims = dims
         dims = list()
         for k in self.model.bijection.ordering.vmap:
-            if k.var in self.params_fixed.keys():
+            if k.var in self._fixed_keys:
                 dims += dimensions[k.slc]
         self.fixed_dims = dims
 
@@ -576,7 +614,7 @@ class _StochasticProcess:
     def get_params_sampling(self, params=None):
         if params is None:
             params = self.get_params_current()
-        return {k: v for k, v in params.items() if k not in self.params_fixed.keys()}
+        return {k: v for k, v in params.items() if k not in self._fixed_keys}
 
     def get_params_datatrace(self, dt, loc):
         return self.model.bijection.rmap(dt.loc[loc])
@@ -593,11 +631,18 @@ class _StochasticProcess:
         else:
             callback = MaxTime(max_time)
 
-        if 'fprime' in signature(fmin).parameters:
-            r = fmin(lambda x: nan_to_high(-self._logp_fixed(x)), self.model.bijection.map(start)[self.sampling_dims],
-                     fprime=lambda x: np.nan_to_num(-self.dlogp_fixed(x)), callback=callback, *args, **kwargs)
+        if self._fixed_chain is None:
+            lambda_f = self._logp_fixed
+            lambda_df = self._dlogp_fixed
         else:
-            r = fmin(lambda x: nan_to_high(-self._logp_fixed(x)), self.model.bijection.map(start)[self.sampling_dims],
+            lambda_f = self._logp_fixed_chain
+            lambda_df = self._dlogp_fixed_chain
+
+        if 'fprime' in signature(fmin).parameters:
+            r = fmin(lambda x: nan_to_high(-lambda_f(x)), self.model.bijection.map(start)[self.sampling_dims],
+                     fprime=lambda x: np.nan_to_num(-lambda_df(x)), callback=callback, *args, **kwargs)
+        else:
+            r = fmin(lambda x: nan_to_high(-lambda_f(x)), self.model.bijection.map(start)[self.sampling_dims],
                      callback=callback, *args, **kwargs)
         self._fixed_array[self.sampling_dims] = r
         return self.model.bijection.rmap(self._fixed_array)
@@ -606,19 +651,24 @@ class _StochasticProcess:
         points_list = list()
         if start is None:
             start = self.get_params_current()
+        if self._fixed_chain is None:
+            logp_eval = self.logp_array
+        else:
+            logp_eval = self.logp_fixed_chain
+
         if type(start) is list:
             i = 0
             for s in start:
                 i += 1
-                points_list.append(('start'+str(i), self.logp_dict(s), s))
+                points_list.append(('start'+str(i), logp_eval(self.dict_to_array(s)), s))
         else:
-            points_list.append(('start', self.logp_dict(start), start))
+            points_list.append(('start', logp_eval(self.dict_to_array(start)), start))
         n_starts = len(points_list)
         if self.outputs.get_value() is None:
             print('For find_MAP it is necessary to have observations')
             return start
         if display:
-            print('Starting function value (-logp): ' + str(-self.logp_dict(points_list[0][2])))
+            print('Starting function value (-logp): ' + str(-logp_eval(self.dict_to_array(points_list[0][2]))))
         if plot:
             plt.figure(0)
             self.plot(params=points_list[0][2], title='start')
@@ -651,7 +701,7 @@ class _StochasticProcess:
                         if display:
                             print('\n' + name)
                         new = self._optimize(fmin=sp.optimize.fmin_powell, vars=self.sampling_vars, start=start, max_time=max_time, disp=display)
-                    points_list.append((name, self.logp_dict(new), new))
+                    points_list.append((name, logp_eval(self.dict_to_array(new)), new))
                     if plot:
                         plt.figure(i+1)
                         self.plot(params=new, title=name)
@@ -767,6 +817,7 @@ class _StochasticProcess:
 
         return trace
 
+    @jit
     def ensemble_hypers(self, start=None, samples=1000, chains=None, ntemps=None, raw=False,
                         burnin_tol=0.001, burnin_method='multi-sum', outlayer_percentile=0.0005):
         if start is None:
