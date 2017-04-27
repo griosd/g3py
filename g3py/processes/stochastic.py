@@ -326,7 +326,7 @@ class _StochasticProcess:
         if fixed_params is None:
             fixed_params = DictObj()
         self.params_fixed = fixed_params
-        self._fixed_keys = self.params_fixed.keys()
+        self._fixed_keys = list(self.params_fixed.keys())
         self._fixed_array = self.dict_to_array(self.get_params_default())
         self._fixed_chain = None
         self.calc_dimensions()
@@ -817,7 +817,7 @@ class _StochasticProcess:
 
         return trace
 
-    @jit
+    #@jit
     def ensemble_hypers(self, start=None, samples=1000, chains=None, ntemps=None, raw=False,
                         burnin_tol=0.001, burnin_method='multi-sum', outlayer_percentile=0.0005):
         if start is None:
