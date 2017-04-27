@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 from sklearn import mixture, neighbors
 from matplotlib import cm
 from copy import copy
+from numba import jit
 
 
 def save_pkl(to_pkl, path='file.pkl'):
@@ -30,10 +31,12 @@ def save_datatrace(dt, path='datatrace.pkl'):
 def load_datatrace(path='datatrace.pkl'):
     return pd.read_pickle(path)
 
-
+@jit
 def gelman_rubin(chains, method='multi-sum'):
     # This method return the abs(gelman_rubin-1), so near to 0 is best
     nwalkers, nsamples, ndim = chains.shape
+    if nwalkers == 1:
+        return 0
     if method in ['multi-sum', 'multi-max']:
         B = nsamples * np.cov(np.mean(chains, axis=1).T)
         W = B * 0
@@ -408,8 +411,12 @@ def find_candidates(dt, ll=1, l1=0, l2=0, mean=False, median=False, cluster=Fals
     return pd.DataFrame(candidates).append(dt.sample(rand))
 
 
-def hist_datatrace(datatrace, items=None, like=None, regex=None, samples=None, bins=200, layout=(4, 4), figsize=(20, 20)):
-    marginal(datatrace, items=items, like=like, regex=regex, samples=samples).hist(bins=bins, layout=layout, figsize=figsize)
+def hist_datatrace(dt, items=None, like=None, regex=None, samples=None, bins=200, layout=(5, 5), figsize=(20, 20), burnin=True, outlayer=True):
+    if burnin and hasattr(dt, '_burnin'):
+        dt = dt[dt._burnin]
+    if outlayer and hasattr(dt, '_outlayer'):
+        dt = dt[dt._outlayer]
+    marginal(dt, items=items, like=like, regex=regex, samples=samples).hist(bins=bins, layout=layout, figsize=figsize)
 
 
 def scatter_datatrace(dt, items=None, like=None, regex=None, samples=100000, bins=200, figsize=(15, 15), burnin=True, outlayer=True, cluster=None, cmap=cm.rainbow_r):
