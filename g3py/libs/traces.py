@@ -173,7 +173,8 @@ def kde_to_datatrace(process, kde, nsamples=1000):
         samples = np.concatenate([samples, new_samples])
         ll = np.concatenate([ll, new_ll])
     kde_dt = chains_to_datatrace(process, samples, ll=ll)
-    process._cluster(kde_dt)
+    if hasattr(process, '_cluster'):
+        process._cluster(kde_dt)
     kde_dt._burnin = True
     return kde_dt
 
