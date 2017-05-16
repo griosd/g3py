@@ -136,10 +136,8 @@ def chains_to_datatrace(sp, chains, ll=None, transforms=True, burnin_tol=0.01, b
                 name = v
             if name not in varnames:
                 continue
-            dist = sp.model[name].distribution
-            if hasattr(dist, 'transform_used'):
-                trans = dist.transform_used
-                datatrace.insert(ncolumn, v.replace('_'+trans.name+'_', ''), trans.backward(datatrace[v]).eval())
+            if name in sp.compiles_trans:
+                datatrace.insert(ncolumn, v.replace('_'+sp.model[name].distribution.transform_used.name+'_', ''), sp.compiles_trans[name](datatrace[v]))
                 ncolumn += 1
     return datatrace
 

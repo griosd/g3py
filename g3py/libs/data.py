@@ -16,7 +16,7 @@ def data_co2():
     data = sm.datasets.co2.load_pandas().data
     print(sm.datasets.co2.NOTE)
     x = data.index.values[:]
-    y = data.values[:,0]
+    y = data.values[:, 0]
     return x, y
 
 
@@ -111,7 +111,7 @@ def load_csv(file, index_col=0):
     return pd.read_csv(file, index_col=index_col)
 
 
-def random_obs(x, y, p=0.2, s=1.0, include_min=False):
+def random_obs(x, y, p=0.2, s=1.0, include_min=False, plot=True):
     n = int(len(x)*s)
     obs_j = np.unique(np.sort(np.random.choice(range(n), int(n*p), replace=False)))
     if include_min:
@@ -125,10 +125,15 @@ def random_obs(x, y, p=0.2, s=1.0, include_min=False):
     x_test = x[test_j]
     y_test = y[test_j]
     print('Total: '+str(len(x)) +' | '+'Obs: '+str(len(obs_j)) + ' ('+str(100*len(obs_j)/len(x))+'%)')
+    if plot:
+        g3.plot(x, y)
+        g3.plot(x_obs, y_obs, '.k', ms=20)
+        g3.plot(x_obs, y_obs, '.r', ms=15, label='Observations')
+        g3.plot_text('Data', 'X', 'Y', legend=True)
     return obs_j, x_obs, y_obs, test_j, x_test, y_test
 
 
-def uniform_obs(x, y, p=0.2, s=1.0):
+def uniform_obs(x, y, p=0.2, s=1.0, plot=True):
     n = int(len(x) * s)
     obs_j = np.arange(0, n, int(1/p)).astype(np.int)
     test_j = np.array([v for v in np.arange(len(x)) if v not in obs_j])
@@ -137,4 +142,9 @@ def uniform_obs(x, y, p=0.2, s=1.0):
     x_test = x[test_j]
     y_test = y[test_j]
     print('Total: '+str(len(x)) +' | '+'Obs: '+str(len(obs_j)) + ' ('+str(100*len(obs_j)/len(x))+'%)')
+    if plot:
+        g3.plot(x, y)
+        g3.plot(x_obs, y_obs, '.k', ms=20)
+        g3.plot(x_obs, y_obs, '.r', ms=15, label='Observations')
+        g3.plot_text('Data', 'X', 'Y', legend=True)
     return obs_j, x_obs, y_obs, test_j, x_test, y_test

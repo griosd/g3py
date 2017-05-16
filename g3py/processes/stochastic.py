@@ -22,6 +22,7 @@ import theano.tensor.slinalg as tsl
 import theano.tensor.nlinalg as tnl
 import emcee
 from numba import jit
+from matplotlib import cm
 
 Model = pm.Model
 
@@ -44,7 +45,8 @@ class _StochasticProcess:
         model (pm.Model): Reference to the context pm.Model
     """
     def __init__(self, space=1, location: Mean=None, kernel: Kernel=None, mapping: Mapping=None, noise=True, freedom=None,
-                 name=None, inputs=None, outputs=None, hidden=None, description=None, file=None, recompile=False, precompile=False):
+                 name=None, inputs=None, outputs=None, hidden=None, description=None, file=None, recompile=False, precompile=False,
+                 multioutput=False):
         if file is not None and not recompile:
             try:
                 load = load_model(file)
@@ -58,10 +60,10 @@ class _StochasticProcess:
         else:
             self.name = name
         if description is None:
-            self.description = {'title': 'title',
+            self.description = {'title': '',
                                 'x': 'x',
                                 'y': 'y',
-                                'text': 'text'}
+                                'text': ''}
         else:
             self.description = description
         self.model = self._get_model()
@@ -124,6 +126,7 @@ class _StochasticProcess:
         print('Space Dimension: ', self.space_values.shape[1])
 
         # Hyper-parameters values
+        self._widget_samples = 0
         self._widget_traces = None
         self.params_current = None
         self.params_widget = None
@@ -187,20 +190,24 @@ class _StochasticProcess:
         self.distribution = None
 
         self.compiles = DictObj()
+        self.compiles_trans = DictObj()
         print('Init Definition')
         self._define_process()
         print('Definition OK')
 
         self._compile(precompile)
+        self._compile_transforms(precompile)
         print('Compilation OK')
 
         self.observed(inputs, outputs)
 
         self.logp_prior = None
-        self._compile_logprior()
 
-        #__, self.space_values, self.space_index = def_space(space_raw)
-        self.fix_params()
+        if not multioutput:
+            self._compile_logprior()
+            #__, self.space_values, self.space_index = def_space(space_raw)
+            self.fix_params()
+
         self.set_space(space_raw, self.hidden)
         if file is not None:
             self.file = file
@@ -277,18 +284,18 @@ class _StochasticProcess:
         self._fixed_array[self.sampling_dims] = sampling_params
         return self.model.logp_array(self._fixed_array) - self.logp_prior(self._fixed_array)
 
-    #@jit
+    @jit
     def _dlogp_fixed(self, sampling_params):
         self._fixed_array[self.sampling_dims] = sampling_params
         return self.model.dlogp_array(self._fixed_array)[self.sampling_dims]
 
-    #@jit
+    @jit
     def logp_fixed_chain(self, params):
         if len(params) > len(self.sampling_dims):
             params = params[self.sampling_dims]
         return self._logp_fixed_chain(params)
 
-    #@jit
+    @jit
     def _logp_fixed_chain(self, sampling_params):
         self._fixed_chain[:, self.sampling_dims] = sampling_params
         out = np.empty(len(self._fixed_chain))
@@ -296,7 +303,7 @@ class _StochasticProcess:
             out[i] = self.model.logp_array(self._fixed_chain[i])
         return out.mean()
 
-    #@jit
+    @jit
     def _dlogp_fixed_chain(self, sampling_params):
         self._fixed_chain[:, self.sampling_dims] = sampling_params
         out = np.empty((len(self._fixed_chain), len(self.sampling_dims)))
@@ -410,6 +417,13 @@ class _StochasticProcess:
             self.compiles['posterior_sampler'] = makefn([self.random_th] + params, self.posterior_sampler, precompile)
         except:
             self.compiles['posterior_sampler'] = makefn([self.random_scalar, self.random_th] + params, self.posterior_sampler, precompile)
+
+    def _compile_transforms(self, precompile=False):
+        params = [self.random_th]
+        for v in self.model.vars:
+            dist = v.distribution
+            if hasattr(dist, 'transform_used'):
+                self.compiles_trans[str(v)] = makefn(params, dist.transform_used.backward(self.random_th), precompile)
 
     def set_space(self, space, hidden=None, index=None):
         __, self.space_values, self.space_index = def_space(space)
@@ -817,7 +831,6 @@ class _StochasticProcess:
 
         return trace
 
-    #@jit
     def ensemble_hypers(self, start=None, samples=1000, chains=None, ntemps=None, raw=False,
                         burnin_tol=0.001, burnin_method='multi-sum', outlayer_percentile=0.0005):
         if start is None:
@@ -1004,7 +1017,8 @@ class StochasticProcess(_StochasticProcess):
             title = self.description['title']
         if data:
             self.plot_observations(big)
-        plot_text(title, self.description['x'], self.description['y'], loc=loc)
+        if loc is not None:
+            plot_text(title, self.description['x'], self.description['y'], loc=loc)
         if plot_space:
             show()
             self.plot_space()
@@ -1021,14 +1035,16 @@ class StochasticProcess(_StochasticProcess):
                 label='prior'
             else:
                 label='posterior'
+        if label is False:
+            label = None
         if title is None:
-            title = 'Marginal Distribution'
+            title = 'Marginal Distribution y_'+str(self.space_index[index])
         if swap:
             plt.plot(dist_plot, domain, label=label)
-            plot_text(title+' y_'+str(self.space_index[index]), 'Density', 'Domain y')
+            plot_text(title, 'Density', 'Domain y')
         else:
             plt.plot(domain, dist_plot,label=label)
-            plot_text(title+' y_'+str(self.space_index[index]), 'Domain y', 'Density')
+            plot_text(title, 'Domain y', 'Density')
 
     def plot_mapping(self, params=None, domain=None, inputs=None, outputs=None, neval=100, title=None, label='mapping'):
         if params is None:
@@ -1062,13 +1078,19 @@ class StochasticProcess(_StochasticProcess):
             plt.plot(self.space_index, ksi[int(len(ksi)*ind), :], label='k(x_'+str(int(len(ksi)*ind))+')')
         plot_text('Kernel', 'Space x', 'Kernel value k(x,v)')
 
-    def plot_concentration(self, params=None, space=None):
+    def plot_concentration(self, params=None, space=None, color=True, figsize=(6, 6)):
         if params is None:
             params = self.get_params_current()
         if space is None:
             space = self.space_values
-        plt.matshow(self.compiles['kernel_space'](space, **params))
-        plot_text('Concentration', 'Space x', 'Space x')
+        concentration_matrix = self.compiles['kernel_space'](space, **params)
+        if color:
+            plt.figure(None, figsize)
+            v = np.max(np.abs(concentration_matrix))
+            plt.imshow(concentration_matrix, cmap=cm.seismic, vmax=v, vmin=-v)
+        else:
+            plt.matshow(concentration_matrix)
+        plot_text('Concentration', 'Space x', 'Space x', legend=False)
 
     def plot_location(self, params=None, space=None):
         if params is None:
@@ -1129,7 +1151,7 @@ class StochasticProcess(_StochasticProcess):
 
     def _widget_plot(self, params):
         self.params_widget = params
-        self.plot(params = self.params_widget)
+        self.plot(params=self.params_widget, samples=self._widget_samples)
 
     def _widget_plot_trace(self, id_trace):
         self._widget_plot(self._check_params_dims(self._widget_traces[id_trace]))
@@ -1146,7 +1168,7 @@ class StochasticProcess(_StochasticProcess):
         self._widget_traces = traces._straces[chain]
         interact(self._widget_plot_trace, __manual=True, id_trace=[0, len(self._widget_traces) - 1])
 
-    def widget_params(self, params=None):
+    def widget_params(self, params=None, samples=0):
         if params is None:
             params = self.get_params_widget()
         intervals = dict()
@@ -1158,6 +1180,7 @@ class StochasticProcess(_StochasticProcess):
                 intervals[k] = [2*v, 0]
             else:
                 intervals[k] = [-5.00, 5.00]
+        self._widget_samples = samples
         interact(self._widget_plot_params, __manual=True, **intervals)
 
     def widget_model(self, params=None):
