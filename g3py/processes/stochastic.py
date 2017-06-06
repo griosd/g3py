@@ -831,7 +831,7 @@ class _StochasticProcess:
 
         return trace
 
-    def ensemble_hypers(self, start=None, samples=1000, chains=None, ntemps=None, raw=False,
+    def ensemble_hypers(self, start=None, samples=1000, chains=None, ntemps=None, raw=False, noise_mult=0.1, noise_sum=0.01,
                         burnin_tol=0.001, burnin_method='multi-sum', outlayer_percentile=0.0005):
         if start is None:
             start = self.find_MAP()
@@ -853,19 +853,19 @@ class _StochasticProcess:
             if start.shape == (chains, ndim):
                 p0 = start
             else:
-                noise = np.random.normal(loc=1, scale=0.1, size=(chains, ndim))
+                noise = np.random.normal(loc=1, scale=noise_mult, size=(chains, ndim))
                 p0 = noise * np.ones((chains, 1)) * start
         else:
             sampler = emcee.PTSampler(ntemps, chains, ndim, self._logp_fixed_like, self._logp_fixed_prior)
             if start.shape == (ntemps, chains, ndim):
                 p0 = start
             elif start.shape == (chains, ndim):
-                noise = np.random.normal(loc=1, scale=0.1, size=(ntemps, chains, ndim))
+                noise = np.random.normal(loc=1, scale=noise_mult, size=(ntemps, chains, ndim))
                 p0 = noise * np.ones((ntemps, 1, 1)) * start
             else:
-                noise = np.random.normal(loc=1, scale=0.1, size=(ntemps, chains, ndim))
+                noise = np.random.normal(loc=1, scale=noise_mult, size=(ntemps, chains, ndim))
                 p0 = noise * np.ones((ntemps, chains, 1)) * start
-        p0 += (p0 == 0)*np.random.normal(loc=0, scale=0.01, size=p0.shape)
+        p0 += (p0 == 0)*np.random.normal(loc=0, scale=noise_sum, size=p0.shape)
         print('Sampling {} variables, {} chains, {} times ({} temps)'.format(ndim, chains,samples,ntemps))
         sys.stdout.flush()
         for result in tqdm(sampler.sample(p0, iterations=samples), total=samples):
