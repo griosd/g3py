@@ -191,6 +191,7 @@ class _StochasticProcess:
 
         self.compiles = DictObj()
         self.compiles_trans = DictObj()
+        self.compiles_transf = DictObj()
         print('Init Definition')
         self._define_process()
         print('Definition OK')
@@ -424,6 +425,7 @@ class _StochasticProcess:
             dist = v.distribution
             if hasattr(dist, 'transform_used'):
                 self.compiles_trans[str(v)] = makefn(params, dist.transform_used.backward(self.random_th), precompile)
+                self.compiles_transf[str(v)] = makefn(params, dist.transform_used.forward(self.random_th), precompile)
 
     def set_space(self, space, hidden=None, index=None):
         __, self.space_values, self.space_index = def_space(space)
