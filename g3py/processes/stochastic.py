@@ -21,6 +21,8 @@ import theano.tensor.slinalg as sL
 import theano.tensor.slinalg as tsl
 import theano.tensor.nlinalg as tnl
 import emcee
+from numba import jit
+from matplotlib import cm
 
 Model = pm.Model
 
@@ -43,7 +45,8 @@ class _StochasticProcess:
         model (pm.Model): Reference to the context pm.Model
     """
     def __init__(self, space=1, location: Mean=None, kernel: Kernel=None, mapping: Mapping=None, noise=True, freedom=None,
-                 name=None, inputs=None, outputs=None, hidden=None, description=None, file=None, recompile=False, precompile=False):
+                 name=None, inputs=None, outputs=None, hidden=None, description=None, file=None, recompile=False, precompile=False,
+                 multioutput=False):
         if file is not None and not recompile:
             try:
                 load = load_model(file)
@@ -57,10 +60,10 @@ class _StochasticProcess:
         else:
             self.name = name
         if description is None:
-            self.description = {'title': 'title',
+            self.description = {'title': '',
                                 'x': 'x',
                                 'y': 'y',
-                                'text': 'text'}
+                                'text': ''}
         else:
             self.description = description
         self.model = self._get_model()
@@ -111,18 +114,26 @@ class _StochasticProcess:
             self.kernel.check_hypers(self.name + '_')
             self.mapping.check_hypers(self.name + '_')
 
+            self.location.check_potential()
+            self.kernel.check_potential()
+            self.mapping.check_potential()
+
             if self.freedom is not None:
                 self.freedom.check_dims(None)
                 self.freedom.check_hypers(self.name + '_')
+                self.freedom.check_potential()
 
         print('Space Dimension: ', self.space_values.shape[1])
 
         # Hyper-parameters values
+        self._widget_samples = 0
         self._widget_traces = None
         self.params_current = None
         self.params_widget = None
         self.params_fixed = DictObj()
+        self._fixed_keys = []
         self._fixed_array = None
+        self._fixed_chain = None
         self.sampling_dims = None
         self.fixed_dims = None
 
@@ -179,20 +190,25 @@ class _StochasticProcess:
         self.distribution = None
 
         self.compiles = DictObj()
+        self.compiles_trans = DictObj()
+        self.compiles_transf = DictObj()
         print('Init Definition')
         self._define_process()
         print('Definition OK')
 
         self._compile(precompile)
+        self._compile_transforms(precompile)
         print('Compilation OK')
 
         self.observed(inputs, outputs)
 
         self.logp_prior = None
-        self._compile_logprior()
 
-        #__, self.space_values, self.space_index = def_space(space_raw)
-        self.fix_params()
+        if not multioutput:
+            self._compile_logprior()
+            #__, self.space_values, self.space_index = def_space(space_raw)
+            self.fix_params()
+
         self.set_space(space_raw, self.hidden)
         if file is not None:
             self.file = file
@@ -238,24 +254,63 @@ class _StochasticProcess:
     def dict_to_array(self, params):
         return self.model.dict_to_array(params)
 
+    def array_to_dict(self, params):
+        return self.model.bijection.rmap(params)
+
     def logp_dict(self, params):
         return self.model.logp_array(self.model.dict_to_array(params))
 
+    def logp_chain(self, chain):
+        out = np.empty(len(chain))
+        for i in range(len(out)):
+            out[i] = self.model.logp_array(chain[i])
+        return out
+
     def logp_fixed(self, params):
+        if len(params) > len(self.sampling_dims):
+            params = params[self.sampling_dims]
         self._fixed_array[self.sampling_dims] = params
         return self.model.logp_array(self._fixed_array)
 
-    def logp_fixed_prior(self, params):
-        self._fixed_array[self.sampling_dims] = params
+    #@jit
+    def _logp_fixed(self, sampling_params):
+        self._fixed_array[self.sampling_dims] = sampling_params
+        return self.model.logp_array(self._fixed_array)
+
+    def _logp_fixed_prior(self, sampling_params):
+        self._fixed_array[self.sampling_dims] = sampling_params
         return self.logp_prior(self._fixed_array)
 
-    def logp_fixed_like(self, params):
-        self._fixed_array[self.sampling_dims] = params
+    def _logp_fixed_like(self, sampling_params):
+        self._fixed_array[self.sampling_dims] = sampling_params
         return self.model.logp_array(self._fixed_array) - self.logp_prior(self._fixed_array)
 
-    def dlogp_fixed(self, params):
-        self._fixed_array[self.sampling_dims] = params
+    @jit
+    def _dlogp_fixed(self, sampling_params):
+        self._fixed_array[self.sampling_dims] = sampling_params
         return self.model.dlogp_array(self._fixed_array)[self.sampling_dims]
+
+    @jit
+    def logp_fixed_chain(self, params):
+        if len(params) > len(self.sampling_dims):
+            params = params[self.sampling_dims]
+        return self._logp_fixed_chain(params)
+
+    @jit
+    def _logp_fixed_chain(self, sampling_params):
+        self._fixed_chain[:, self.sampling_dims] = sampling_params
+        out = np.empty(len(self._fixed_chain))
+        for i in range(len(out)):
+            out[i] = self.model.logp_array(self._fixed_chain[i])
+        return out.mean()
+
+    @jit
+    def _dlogp_fixed_chain(self, sampling_params):
+        self._fixed_chain[:, self.sampling_dims] = sampling_params
+        out = np.empty((len(self._fixed_chain), len(self.sampling_dims)))
+        for i in range(len(out)):
+            out[i, :] = self.model.dlogp_array(self._fixed_chain[i])[self.sampling_dims]
+        return out.mean(axis=0)
 
     def _define_distribution(self):
         pass
@@ -265,7 +320,7 @@ class _StochasticProcess:
 
     @property
     def fixed_vars(self):
-        return [t for t in self.model.vars if t.name in self.params_fixed.keys()]
+        return [t for t in self.model.vars if t.name in self._fixed_keys]
 
     @property
     def sampling_vars(self):
@@ -279,16 +334,28 @@ class _StochasticProcess:
         if fixed_params is None:
             fixed_params = DictObj()
         self.params_fixed = fixed_params
+        self._fixed_keys = list(self.params_fixed.keys())
         self._fixed_array = self.dict_to_array(self.get_params_default())
+        self._fixed_chain = None
+        self.calc_dimensions()
+
+    def fix_chain(self, fixed_keys=[], fixed_chain=None):
+        self.params_fixed = DictObj()
+        self._fixed_array = self.dict_to_array(self.get_params_test())
+        self._fixed_keys = fixed_keys
+        self._fixed_chain = fixed_chain
+        self.calc_dimensions()
+
+    def calc_dimensions(self):
         dimensions = list(range(self.ndim))
         dims = list()
         for k in self.model.bijection.ordering.vmap:
-            if k.var not in self.params_fixed.keys():
+            if k.var not in self._fixed_keys:
                 dims += dimensions[k.slc]
         self.sampling_dims = dims
         dims = list()
         for k in self.model.bijection.ordering.vmap:
-            if k.var in self.params_fixed.keys():
+            if k.var in self._fixed_keys:
                 dims += dimensions[k.slc]
         self.fixed_dims = dims
 
@@ -351,6 +418,14 @@ class _StochasticProcess:
             self.compiles['posterior_sampler'] = makefn([self.random_th] + params, self.posterior_sampler, precompile)
         except:
             self.compiles['posterior_sampler'] = makefn([self.random_scalar, self.random_th] + params, self.posterior_sampler, precompile)
+
+    def _compile_transforms(self, precompile=False):
+        params = [self.random_th]
+        for v in self.model.vars:
+            dist = v.distribution
+            if hasattr(dist, 'transform_used'):
+                self.compiles_trans[str(v)] = makefn(params, dist.transform_used.backward(self.random_th), precompile)
+                self.compiles_transf[str(v)] = makefn(params, dist.transform_used.forward(self.random_th), precompile)
 
     def set_space(self, space, hidden=None, index=None):
         __, self.space_values, self.space_index = def_space(space)
@@ -530,7 +605,7 @@ class _StochasticProcess:
     def get_params_default(self, fixed=True):
         if self.observed_index is None:
             return self.get_params_test(fixed)
-        default = DictObj()
+        default = self.get_params_test(fixed)
         for k, v in trans_hypers(self.default_hypers()).items():
             if k in self.model.vars:
                 default[k.name] = v
@@ -555,7 +630,7 @@ class _StochasticProcess:
     def get_params_sampling(self, params=None):
         if params is None:
             params = self.get_params_current()
-        return {k: v for k, v in params.items() if k not in self.params_fixed.keys()}
+        return {k: v for k, v in params.items() if k not in self._fixed_keys}
 
     def get_params_datatrace(self, dt, loc):
         return self.model.bijection.rmap(dt.loc[loc])
@@ -572,11 +647,18 @@ class _StochasticProcess:
         else:
             callback = MaxTime(max_time)
 
-        if 'fprime' in signature(fmin).parameters:
-            r = fmin(lambda x: nan_to_high(-self.logp_fixed(x)), self.model.bijection.map(start)[self.sampling_dims],
-                     fprime=lambda x: np.nan_to_num(-self.dlogp_fixed(x)), callback=callback, *args, **kwargs)
+        if self._fixed_chain is None:
+            lambda_f = self._logp_fixed
+            lambda_df = self._dlogp_fixed
         else:
-            r = fmin(lambda x: nan_to_high(-self.logp_fixed(x)), self.model.bijection.map(start)[self.sampling_dims],
+            lambda_f = self._logp_fixed_chain
+            lambda_df = self._dlogp_fixed_chain
+
+        if 'fprime' in signature(fmin).parameters:
+            r = fmin(lambda x: nan_to_high(-lambda_f(x)), self.model.bijection.map(start)[self.sampling_dims],
+                     fprime=lambda x: np.nan_to_num(-lambda_df(x)), callback=callback, *args, **kwargs)
+        else:
+            r = fmin(lambda x: nan_to_high(-lambda_f(x)), self.model.bijection.map(start)[self.sampling_dims],
                      callback=callback, *args, **kwargs)
         self._fixed_array[self.sampling_dims] = r
         return self.model.bijection.rmap(self._fixed_array)
@@ -585,19 +667,24 @@ class _StochasticProcess:
         points_list = list()
         if start is None:
             start = self.get_params_current()
+        if self._fixed_chain is None:
+            logp_eval = self.logp_array
+        else:
+            logp_eval = self.logp_fixed_chain
+
         if type(start) is list:
             i = 0
             for s in start:
                 i += 1
-                points_list.append(('start'+str(i), self.logp_dict(s), s))
+                points_list.append(('start'+str(i), logp_eval(self.dict_to_array(s)), s))
         else:
-            points_list.append(('start', self.logp_dict(start), start))
+            points_list.append(('start', logp_eval(self.dict_to_array(start)), start))
         n_starts = len(points_list)
         if self.outputs.get_value() is None:
             print('For find_MAP it is necessary to have observations')
             return start
         if display:
-            print('Starting function value (-logp): ' + str(-self.logp_dict(points_list[0][2])))
+            print('Starting function value (-logp): ' + str(-logp_eval(self.dict_to_array(points_list[0][2]))))
         if plot:
             plt.figure(0)
             self.plot(params=points_list[0][2], title='start')
@@ -630,7 +717,7 @@ class _StochasticProcess:
                         if display:
                             print('\n' + name)
                         new = self._optimize(fmin=sp.optimize.fmin_powell, vars=self.sampling_vars, start=start, max_time=max_time, disp=display)
-                    points_list.append((name, self.logp_dict(new), new))
+                    points_list.append((name, logp_eval(self.dict_to_array(new)), new))
                     if plot:
                         plt.figure(i+1)
                         self.plot(params=new, title=name)
@@ -746,39 +833,56 @@ class _StochasticProcess:
 
         return trace
 
-    def ensemble_hypers(self, start=None, samples=1000, chains=None, ntemps=None, raw=False,
-                        burnin_tol=0.01, burnin_method='multi', outlayer_percentile=0.0005):
+    def ensemble_hypers(self, start=None, samples=1000, chains=None, ntemps=None, raw=False, noise_mult=0.1, noise_sum=0.01,
+                        burnin_tol=0.001, burnin_method='multi-sum', outlayer_percentile=0.0005):
         if start is None:
             start = self.find_MAP()
         if isinstance(start, dict):
             start = self.dict_to_array(start)
-        start = start[self.sampling_dims]
         ndim = len(self.sampling_dims)
         if chains is None:
             chains = 2*self.ndim
+
+        if len(start.shape) == 1:
+            start = start[self.sampling_dims]
+        elif len(start.shape) == 2:
+            start = start[:, self.sampling_dims]
+        elif len(start.shape) == 3:
+            start = start[:, 0, self.sampling_dims]
+
         if ntemps is None:
-            sampler = emcee.EnsembleSampler(chains, ndim, self.logp_fixed)
-            noise = np.random.normal(loc=1, scale=0.1, size=(chains, ndim))
-            p0 = noise * np.ones((chains, 1)) * start
+            sampler = emcee.EnsembleSampler(chains, ndim, self._logp_fixed)
+            if start.shape == (chains, ndim):
+                p0 = start
+            else:
+                noise = np.random.normal(loc=1, scale=noise_mult, size=(chains, ndim))
+                p0 = noise * np.ones((chains, 1)) * start
         else:
-            sampler = emcee.PTSampler(ntemps, chains, ndim, self.logp_fixed_like, self.logp_fixed_prior)
-            noise = np.random.normal(loc=1, scale=0.1, size=(ntemps, chains, ndim))
-            p0 = noise * np.ones((ntemps, chains, 1)) * start
-        p0 += (p0 == 0)*np.random.normal(loc=0, scale=0.01, size=p0.shape)
+            sampler = emcee.PTSampler(ntemps, chains, ndim, self._logp_fixed_like, self._logp_fixed_prior)
+            if start.shape == (ntemps, chains, ndim):
+                p0 = start
+            elif start.shape == (chains, ndim):
+                noise = np.random.normal(loc=1, scale=noise_mult, size=(ntemps, chains, ndim))
+                p0 = noise * np.ones((ntemps, 1, 1)) * start
+            else:
+                noise = np.random.normal(loc=1, scale=noise_mult, size=(ntemps, chains, ndim))
+                p0 = noise * np.ones((ntemps, chains, 1)) * start
+        p0 += (p0 == 0)*np.random.normal(loc=0, scale=noise_sum, size=p0.shape)
+        print('Sampling {} variables, {} chains, {} times ({} temps)'.format(ndim, chains,samples,ntemps))
         sys.stdout.flush()
         for result in tqdm(sampler.sample(p0, iterations=samples), total=samples):
             pass
-
         lnprob, echain = sampler.lnprobability, sampler.chain
         sampler.reset()
+        if ntemps is not None:
+            lnprob, echain = lnprob[0, :, :], echain[0, :, :]
+        complete_chain = np.empty((echain.shape[0], echain.shape[1], self.ndim))
+        complete_chain[:, :, self.sampling_dims] = echain
+        complete_chain[:, :, self.fixed_dims] = self._fixed_array[self.fixed_dims]
         if raw:
-            return echain, lnprob
+            return complete_chain, lnprob
         else:
-            if ntemps is not None:
-                lnprob, echain = lnprob[0, :, :], echain[0, :, :]
-            complete_chain = np.empty((echain.shape[0], echain.shape[1], self.ndim))
-            complete_chain[:, :, self.sampling_dims] = echain
-            complete_chain[:, :, self.fixed_dims] = self._fixed_array[self.fixed_dims]
+
             return chains_to_datatrace(self, complete_chain, ll=lnprob, burnin_tol=burnin_tol,
                                        burnin_method=burnin_method, burnin_dims=self.sampling_dims,
                                        outlayer_percentile=outlayer_percentile)
@@ -915,7 +1019,8 @@ class StochasticProcess(_StochasticProcess):
             title = self.description['title']
         if data:
             self.plot_observations(big)
-        plot_text(title, self.description['x'], self.description['y'], loc=loc)
+        if loc is not None:
+            plot_text(title, self.description['x'], self.description['y'], loc=loc)
         if plot_space:
             show()
             self.plot_space()
@@ -932,14 +1037,16 @@ class StochasticProcess(_StochasticProcess):
                 label='prior'
             else:
                 label='posterior'
+        if label is False:
+            label = None
         if title is None:
-            title = 'Marginal Distribution'
+            title = 'Marginal Distribution y_'+str(self.space_index[index])
         if swap:
             plt.plot(dist_plot, domain, label=label)
-            plot_text(title+' y_'+str(self.space_index[index]), 'Density', 'Domain y')
+            plot_text(title, 'Density', 'Domain y')
         else:
             plt.plot(domain, dist_plot,label=label)
-            plot_text(title+' y_'+str(self.space_index[index]), 'Domain y', 'Density')
+            plot_text(title, 'Domain y', 'Density')
 
     def plot_mapping(self, params=None, domain=None, inputs=None, outputs=None, neval=100, title=None, label='mapping'):
         if params is None:
@@ -973,13 +1080,19 @@ class StochasticProcess(_StochasticProcess):
             plt.plot(self.space_index, ksi[int(len(ksi)*ind), :], label='k(x_'+str(int(len(ksi)*ind))+')')
         plot_text('Kernel', 'Space x', 'Kernel value k(x,v)')
 
-    def plot_concentration(self, params=None, space=None):
+    def plot_concentration(self, params=None, space=None, color=True, figsize=(6, 6)):
         if params is None:
             params = self.get_params_current()
         if space is None:
             space = self.space_values
-        plt.matshow(self.compiles['kernel_space'](space, **params))
-        plot_text('Concentration', 'Space x', 'Space x')
+        concentration_matrix = self.compiles['kernel_space'](space, **params)
+        if color:
+            plt.figure(None, figsize)
+            v = np.max(np.abs(concentration_matrix))
+            plt.imshow(concentration_matrix, cmap=cm.seismic, vmax=v, vmin=-v)
+        else:
+            plt.matshow(concentration_matrix)
+        plot_text('Concentration', 'Space x', 'Space x', legend=False)
 
     def plot_location(self, params=None, space=None):
         if params is None:
@@ -1040,7 +1153,7 @@ class StochasticProcess(_StochasticProcess):
 
     def _widget_plot(self, params):
         self.params_widget = params
-        self.plot(params = self.params_widget)
+        self.plot(params=self.params_widget, samples=self._widget_samples)
 
     def _widget_plot_trace(self, id_trace):
         self._widget_plot(self._check_params_dims(self._widget_traces[id_trace]))
@@ -1057,7 +1170,7 @@ class StochasticProcess(_StochasticProcess):
         self._widget_traces = traces._straces[chain]
         interact(self._widget_plot_trace, __manual=True, id_trace=[0, len(self._widget_traces) - 1])
 
-    def widget_params(self, params=None):
+    def widget_params(self, params=None, samples=0):
         if params is None:
             params = self.get_params_widget()
         intervals = dict()
@@ -1069,6 +1182,7 @@ class StochasticProcess(_StochasticProcess):
                 intervals[k] = [2*v, 0]
             else:
                 intervals[k] = [-5.00, 5.00]
+        self._widget_samples = samples
         interact(self._widget_plot_params, __manual=True, **intervals)
 
     def widget_model(self, params=None):

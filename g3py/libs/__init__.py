@@ -6,7 +6,6 @@ from .experiments import *
 from theano.ifelse import ifelse
 import warnings
 
-
 def clone(c):
     return copy(c)
 

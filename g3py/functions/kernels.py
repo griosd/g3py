@@ -115,6 +115,7 @@ class KernelOperation(Kernel):
         self.k = _k
         self.element = _element
         self.hypers = []
+        self.potential = None
         self.op = 'op'
 
     def check_hypers(self, parent=''):
@@ -126,6 +127,10 @@ class KernelOperation(Kernel):
 
     def default_hypers_dims(self, x=None, y=None):
         return self.k.default_hypers_dims(x, y)
+
+    def check_potential(self):
+        super().check_potential()
+        self.k.check_potential()
 
     @property
     def name(self):
@@ -140,6 +145,8 @@ class KernelComposition(Kernel):
     def __init__(self, _k1: Kernel, _k2: Kernel):
         self.k1 = _k1
         self.k2 = _k2
+        self.hypers = []
+        self.potential = None
         self.op = 'op'
 
     def check_hypers(self, parent=''):
@@ -153,6 +160,11 @@ class KernelComposition(Kernel):
 
     def default_hypers_dims(self, x=None, y=None):
         return {**self.k1.default_hypers_dims(x, y), **self.k2.default_hypers_dims(x, y)}
+
+    def check_potential(self):
+        super().check_potential()
+        self.k1.check_potential()
+        self.k2.check_potential()
 
     @property
     def name(self):
