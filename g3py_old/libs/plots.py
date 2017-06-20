@@ -1,10 +1,9 @@
-import numpy as np
-import matplotlib.pyplot as plt
-from matplotlib import cm
-from mpl_toolkits.mplot3d import axes3d
-import seaborn as sb
 import IPython.display as display
-from .. import config
+import matplotlib.pyplot as plt
+import numpy as np
+import seaborn as sb
+from g3py import config
+from matplotlib import cm
 
 
 def style_seaborn():

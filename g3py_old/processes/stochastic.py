@@ -1,28 +1,25 @@
 import _pickle as pickle
-import os, sys
-import time
-import datetime
+import os
+import sys
+from inspect import signature
+
+import emcee
 import numpy as np
 import pymc3 as pm
 import scipy as sp
 import theano as th
+from g3py import config
+from ipywidgets import interact
+from matplotlib import cm
+from matplotlib import pyplot as plt
+from numba import jit
+from scipy import optimize
+from theano import tensor as tt
+from tqdm import tqdm
+
 from ..functions import Mean, Kernel, Mapping, KernelSum, WN, tt_to_num, def_space, trans_hypers
 from ..libs import tt_to_cov, makefn, plot_text, clone, DictObj, plot_2d, grid2d, show, nan_to_high, MaxTime, chains_to_datatrace
-from ..models import ConstantStep, RobustSlice
-from .. import config
-from ipywidgets import interact
-from matplotlib import pyplot as plt
-from theano import tensor as tt
-from scipy import optimize
-from inspect import signature
-from tqdm import tqdm
-import theano.tensor.nlinalg as nL
-import theano.tensor.slinalg as sL
-import theano.tensor.slinalg as tsl
-import theano.tensor.nlinalg as tnl
-import emcee
-from numba import jit
-from matplotlib import cm
+from ..models import RobustSlice
 
 Model = pm.Model
 
