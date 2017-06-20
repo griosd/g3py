@@ -156,6 +156,8 @@ def datatrace_to_chains(process, dt, flat=False, burnin=False):
 
 def datatrace_to_kde(process, dt, kernel='tophat', bandwidth=0.02):
     # con outlayers pero sin burn-in
+    if hasattr(dt, '_ll'):
+        dt = dt[np.isfinite(dt['_ll'])]
     kde = neighbors.kde.KernelDensity(kernel=kernel, bandwidth=bandwidth).fit(dt[dt._burnin].iloc[:, :process.ndim])
     kde.min_ll = dt[dt._burnin]._ll.min()
     return kde
