@@ -4,3 +4,4 @@ from .studentT import *
 
 GP = GaussianProcess
 TGP = TransformedGaussianProcess
+TP = StudentTProcess
