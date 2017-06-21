@@ -154,13 +154,14 @@ def datatrace_to_chains(process, dt, flat=False, burnin=False):
         return chain.ix[:, :process.ndim].values.reshape(levshape[0], levshape[1], process.ndim)
 
 
-def datatrace_to_kde(process, dt, kernel='tophat', bandwidth=0.02, min_ll=-1e6):
+def datatrace_to_kde(process, dt, kernel='tophat', bandwidth=0.02, min_ll=-1e10):
     # con outlayers pero sin burn-in
+    dt = dt[dt._burnin]
     if hasattr(dt, '_ll'):
         dt = dt[np.isfinite(dt['_ll'])]
         dt = dt[dt._ll > min_ll]
-    kde = neighbors.kde.KernelDensity(kernel=kernel, bandwidth=bandwidth).fit(dt[dt._burnin].iloc[:, :process.ndim])
-    kde.min_ll = dt[dt._burnin]._ll.min()
+    kde = neighbors.kde.KernelDensity(kernel=kernel, bandwidth=bandwidth).fit(dt.iloc[:, :process.ndim])
+    kde.min_ll = min_ll
     return kde
 
 
