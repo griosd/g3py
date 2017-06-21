@@ -21,19 +21,6 @@ from ..functions import Mean, Kernel, Mapping, KernelSum, WN, tt_to_num, def_spa
 from ..libs import tt_to_cov, makefn, plot_text, clone, DictObj, plot_2d, grid2d, show, nan_to_high, MaxTime, chains_to_datatrace
 from ..models import RobustSlice
 
-Model = pm.Model
-
-
-def load_model(path):
-    # with pm.Model():
-    with open(path, 'rb') as f:
-        #try:
-        r = pickle.load(f)
-        print('Loaded model ' + path)
-        return r
-        #except:
-        #    print('Error loading model '+path)
-
 
 class _StochasticProcess:
     """Abstract class used to define a StochasticProcess.

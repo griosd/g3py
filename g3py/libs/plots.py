@@ -6,6 +6,14 @@ from g3py import config
 from matplotlib import cm
 
 
+def plot(*args, **kwargs):
+    plt.plot(*args, **kwargs)
+
+
+def show(*args, **kwargs):
+    plt.show(*args, **kwargs)
+
+
 def style_seaborn():
     plt.style.use('classic')
     sb.set(style='darkgrid', color_codes=False)
@@ -53,14 +61,6 @@ def style_widget():
                 .widget-label { min-width: 30ex !important; }
                 .widget-hslider { min-width:100%}
             </style>'''))
-
-
-def plot(*args, **kwargs):
-    plt.plot(*args, **kwargs)
-
-
-def show(*args, **kwargs):
-    plt.show(*args, **kwargs)
 
 
 def plot_text(title="title", x="xlabel", y="ylabel", ncol=3, loc=8, axis=None, legend=True):

@@ -11,7 +11,7 @@ from tqdm import tqdm
 from ..libs import random_obs, uniform_obs, save_pkl, load_pkl, marginal
 
 
-class Experiment:
+class CrossValidation:
     def __init__(self, models=None, file=None, load=True):
         self.file = file
         if self.file is not None and load:
