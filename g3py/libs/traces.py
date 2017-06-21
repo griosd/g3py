@@ -173,7 +173,6 @@ def kde_to_datatrace(process, kde, nsamples=1000):
     while len(samples) < nsamples:
         new_samples = kde.sample(n_samples=nsamples-len(samples))
         new_ll = process.logp_chain(new_samples)
-        print(new_ll, kde.min_ll, new_samples)
         new_samples, new_ll = new_samples[new_ll > kde.min_ll], new_ll[new_ll > kde.min_ll]
         samples = np.concatenate([samples, new_samples])
         ll = np.concatenate([ll, new_ll])
