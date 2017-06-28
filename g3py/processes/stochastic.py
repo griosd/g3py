@@ -18,14 +18,14 @@ from matplotlib import cm
 
 
 class StochasticProcess:#TheanoBlackBox
-
-    def __init__(self, name='SP', space=None, index=None, inputs=None, outputs=None, hidden=None, distribution=None, description=None):
+    def __init__(self, name='SP', space=None, orden=None, index=None, inputs=None, outputs=None, hidden=None, distribution=None, description=None):
         self.name = name
         self.th_space = space
         self.th_index = index
         self.th_inputs = inputs
         self.th_outputs = outputs
         self.th_hidden = hidden
+        self.th_order = orden
 
         if self.th_order is None:
             self.th_order = tt.vector(self.name + '_order', dtype=th.config.floatX)
@@ -49,16 +49,150 @@ class StochasticProcess:#TheanoBlackBox
 
         if self.th_outputs is None:
             self.th_outputs = tt.vector(self.name + '_outputs', dtype=th.config.floatX)
-            self.th_space.tag.test_value = np.array([0.0, 1.0], dtype=th.config.floatX)
+            self.th_outputs.tag.test_value = np.array([0.0, 1.0], dtype=th.config.floatX)
 
         self.distribution = distribution
         self.description = description
         if GraphicalModel.active is None:
             GraphicalModel.active = GraphicalModel('GM_'+self.name, description=description)
-        self.model = GraphicalModel.active
+        self.active = GraphicalModel.active
 
     def _define_process(self, distribution = None):
         self.distribution = distribution
+
+    def set_space(self, space, hidden=None, order=None):
+        self.th_space = space
+        self.th_hidden = hidden
+        self.th_order = order
+
+    def observed(self, inputs=None, outputs=None, index=None):
+        if inputs is None or outputs is None or len(inputs) == 0 or len(inputs) == 0:
+            self.inputs_values, self.outputs_values, self.observed_index = None, None, index
+            self.th_inputs.set_value(self.inputs_values, borrow=True)
+            self.th_outputs.set_value(self.outputs_values, borrow=True)
+            return
+
+        __, self.th_inputs_values, self.observed_index = def_space(inputs)
+        if index is not None:
+            self.observed_index = index
+        __, self.outputs_values, __ = def_space(outputs, squeeze=True)
+        self.th_inputs.set_value(self.inputs_values, borrow=True)
+        self.th_outputs.set_value(self.outputs_values, borrow=True)
+        if self.distribution is None:
+            with self.model:
+                self._define_distribution()
+
+    def scores(self, params=None, space=None, hidden=None, inputs=None, outputs=None, logp=True, bias=True, variance=False, median=False):
+        if hidden is None:
+            hidden = self.hidden
+        pred = self.predict(params=params, space=space, inputs=inputs, outputs=outputs, var=variance, median=median, distribution=logp)
+        scores = DictObj()
+        if bias:
+            scores['_BiasL1'] = np.mean(np.abs(pred.mean - hidden))
+            scores['_BiasL2'] = np.mean((pred.mean - hidden)**2)
+        if variance:
+            scores['_MSE'] = np.mean((pred.mean - hidden) ** 2 + pred.variance)
+            scores['_RMSE'] = np.sqrt(scores['_MSE'])
+        if median:
+            scores['_MedianL1'] = np.mean(np.abs(pred.median - hidden))
+            scores['_MedianL2'] = np.mean((pred.median - hidden)**2)
+        if logp:
+            #scores['_NLL'] = - pred.logp(hidden) / len(hidden)
+            scores['_NLPD'] = - pred.logpred(hidden) / len(hidden)
+        return scores
+
+
+    def prior(self, params=None, space=None, mean=True, var=True, cov=False, median=False, quantiles=False, noise=False, samples=0, distribution=False):
+        if params is None:
+            params = self.get_params_current()
+        if space is None:
+            space = self.space_values
+        values = DictObj()
+        if mean:
+            values['mean'] = self.compiles['prior_mean'](space, **params)
+        if var:
+            values['variance'] = self.compiles['prior_variance'](space, **params)
+            values['std'] = self.compiles['prior_std'](space, **params)
+        if cov:
+            values['covariance'] = self.compiles['prior_covariance'](space, **params)
+        if median:
+            values['median'] = self.compiles['prior_median'](space, **params)
+        if quantiles:
+            values['quantile_up'] = self.compiles['prior_quantile_up'](space, **params)
+            values['quantile_down'] = self.compiles['prior_quantile_down'](space, **params)
+        if noise:
+            values['noise'] = self.compiles['prior_noise'](space, **params)
+            values['noise_up'] = self.compiles['prior_noise_up'](space, **params)
+            values['noise_down'] = self.compiles['prior_noise_down'](space, **params)
+        # TODO: if samples is with another distribution
+        if samples > 0:
+            S = np.empty((len(space), samples))
+            rand = np.random.randn(len(space), samples)
+            for i in range(samples):
+                S[:, i] = self.compiles['prior_sampler'](rand[:, i], space, **params)
+                values['samples'] = S
+        if distribution:
+            values['logp'] = lambda x: self.compiles['prior_logp'](x, space, **params)
+            values['logpred'] = lambda x: self.compiles['prior_logpred'](x, space, **params)
+            values['distribution'] = lambda x: self.compiles['prior_distribution'](x, space, **params)
+        return values
+
+    def posterior(self, params=None, space=None, inputs=None, outputs=None, mean=True, var=True, cov=False, median=False, quantiles=False, noise=False, samples=0, distribution=False):
+        if params is None:
+            params = self.get_params_current()
+        if space is None:
+            space = self.space_values
+        if inputs is None:
+            inputs = self.inputs_values
+        if outputs is None:
+            outputs = self.outputs_values
+        values = DictObj()
+        if mean:
+            values['mean'] = self.compiles['posterior_mean'](space, inputs, outputs, **params)
+        if var:
+            values['variance'] = self.compiles['posterior_variance'](space, inputs, outputs, **params)
+            values['std'] = self.compiles['posterior_std'](space, inputs, outputs, **params)
+        if cov:
+            values['covariance'] = self.compiles['posterior_covariance'](space, inputs, outputs, **params)
+        if median:
+            values['median'] = self.compiles['posterior_median'](space, inputs, outputs, **params)
+        if quantiles:
+            values['quantile_up'] = self.compiles['posterior_quantile_up'](space, inputs, outputs, **params)
+            values['quantile_down'] = self.compiles['posterior_quantile_down'](space, inputs, outputs, **params)
+        if noise:
+            values['noise'] = self.compiles['posterior_noise'](space, inputs, outputs, **params)
+            values['noise_up'] = self.compiles['posterior_noise_up'](space, inputs, outputs, **params)
+            values['noise_down'] = self.compiles['posterior_noise_down'](space, inputs, outputs, **params)
+        # TODO: if samples is with another distribution
+        if samples > 0:
+            S = np.empty((len(space), samples))
+            rand = np.random.randn(len(space), samples)
+            for i in range(samples):
+                S[:, i] = self.compiles['posterior_sampler'](rand[:, i], space, inputs, outputs, **params)
+            values['samples'] = S
+        if distribution:
+            values['logp'] = lambda x: self.compiles['posterior_logp'](x, space, inputs, outputs, **params)
+            values['logpred'] = lambda x: self.compiles['posterior_logpred'](x, space, inputs, outputs, **params)
+            values['distribution'] = lambda x: self.compiles['posterior_distribution'](x, space, inputs, outputs, **params)
+        return values
+
+    def sample(self, params=None, space=None, inputs=None, outputs=None, samples=1, prior=False):
+        S = self.predict(params=params, space=space, inputs=inputs, outputs=outputs, mean=False, var=False, cov=False, median=False, quantiles=False, noise=False, samples=samples, prior=False)
+        return S['samples']
+
+    def predict(self, params=None, space=None, inputs=None, outputs=None, mean=True, var=True, cov=False, median=False, quantiles=False, noise=False, samples=0, distribution=False, prior=False):
+        if params is None:
+            params = self.get_params_current()
+        if space is None:
+            space = self.space_values
+        if inputs is None:
+            inputs = self.inputs_values
+        if outputs is None:
+            outputs = self.outputs_values
+        if prior or self.observed_index is None:
+            return self.prior(params=params, space=space, mean=mean, var=var, cov=cov, median=median, quantiles=quantiles, noise=noise, samples=samples, distribution=distribution)
+        else:
+            return self.posterior(params=params, space=space, inputs=inputs, outputs=outputs, mean=mean, var=var, cov=cov, median=median, quantiles=quantiles, noise=noise, samples=samples, distribution=distribution)
 
     def default_hypers(self):
         pass
@@ -104,18 +238,18 @@ class StochasticProcess:#TheanoBlackBox
         if space is not None:
             self.set_space(space)
         if independ:
-            for i in range(self.space_values.shape[1]):
+            for i in range(self.th_space.shape[1]):
                 figure(i)
-                plot(self.th_order, self.space_values[:, i])
+                plot(self.th_order, self.th_space[:, i])
         else:
-            plot(self.th_order, self.space_values)
+            plot(self.th_order, self.th_space)
         if self.th_index is not None and observed:
             if independ:
-                for i in range(self.space_values.shape[1]):
+                for i in range(self.th_space.shape[1]):
                     figure(i)
-                    plot(self.th_index, self.inputs_values[:, i], '.k')
+                    plot(self.th_index, self.th_inputs[:, i], '.k')
             else:
-                plot(self.th_index, self.inputs_values, '.k')
+                plot(self.th_index, self.th_inputs, '.k')
 
     def plot_hidden(self, big=None):
         if big is None:
@@ -203,33 +337,6 @@ class StochasticProcess:#TheanoBlackBox
             title = 'Distribution2D'
         plot_text(title, 'Domain y_'+str(self.th_order[indexs[0]]), 'Domain y_'+str(self.th_order[indexs[1]]), legend=False)
 
-    def plot_model(self, params=None, indexs=None, kernel=True, mapping=True, marginals=True, bivariate=True):
-        if indexs is None:
-            indexs = [self.th_index[len(self.th_index)//2], self.th_index[len(self.th_index)//2]+1]
-
-        if kernel:
-            plt.subplot(121)
-            self.plot_kernel(params=params)
-        if mapping:
-            plt.subplot(122)
-            self.plot_mapping(params=params)
-        show()
-
-        if marginals:
-            plt.subplot(121)
-            self.plot_distribution(index=indexs[0], params=params, space=self.space_values[indexs[0]:indexs[0]+1, :], prior=True)
-            self.plot_distribution(index=indexs[0], params=params, space=self.space_values[indexs[0]:indexs[0]+1, :])
-            plt.subplot(122)
-            self.plot_distribution(index=indexs[1], params=params, space=self.space_values[indexs[1]:indexs[1]+1, :], prior=True)
-            self.plot_distribution(index=indexs[1], params=params, space=self.space_values[indexs[1]:indexs[1]+1, :])
-            show()
-        if bivariate:
-            self.plot_distribution2D(indexs=indexs, params=params, space=self.space_values[indexs, :])
-            show()
-
-    def plot_kernel2D(self):
-        pass
-
     def _check_params_dims(self, params):
         r = dict()
         for k, v in params.items():
@@ -299,7 +406,7 @@ class EllipticalProcess(StochasticProcess):
 
         if noise:
             self.kernel_f = kernel
-            self.kernel = KernelSum(self.kernel_f, WN(self.space_values, 'Noise'))
+            self.kernel = KernelSum(self.kernel_f, WN(self.th_space, 'Noise'))
         else:
             self.kernel_f = kernel
             self.kernel = self.kernel_f
@@ -413,7 +520,7 @@ class EllipticalProcess(StochasticProcess):
         if params is None:
             params = self.get_params_current()
         if space is None:
-            space = self.space_values
+            space = self.th_space
         if inputs is None:
             inputs = self.inputs_values
         ksi = self.compiles['kernel_space_inputs'](space, inputs, **params).T
@@ -421,11 +528,14 @@ class EllipticalProcess(StochasticProcess):
             plt.plot(self.th_order, ksi[int(len(ksi)*ind), :], label='k(x_'+str(int(len(ksi)*ind))+')')
         plot_text('Kernel', 'Space x', 'Kernel value k(x,v)')
 
+    def plot_kernel2D(self):
+        pass
+
     def plot_concentration(self, params=None, space=None, color=True, figsize=(6, 6)):
         if params is None:
             params = self.get_params_current()
         if space is None:
-            space = self.space_values
+            space = self.th_space
         concentration_matrix = self.compiles['kernel_space'](space, **params)
         if color:
             plt.figure(None, figsize)
@@ -439,9 +549,33 @@ class EllipticalProcess(StochasticProcess):
         if params is None:
             params = self.get_params_current()
         if space is None:
-            space = self.space_values
+            space = self.th_space
         plt.plot(self.th_order, self.compiles['location_space'](space, **params), label='location')
         plot_text('Location', 'Space x', 'Location value m(x)')
+
+    def plot_model(self, params=None, indexs=None, kernel=True, mapping=True, marginals=True, bivariate=True):
+        if indexs is None:
+            indexs = [self.th_index[len(self.th_index)//2], self.th_index[len(self.th_index)//2]+1]
+
+        if kernel:
+            plt.subplot(121)
+            self.plot_kernel(params=params)
+        if mapping:
+            plt.subplot(122)
+            self.plot_mapping(params=params)
+        show()
+
+        if marginals:
+            plt.subplot(121)
+            self.plot_distribution(index=indexs[0], params=params, space=self.th_space[indexs[0]:indexs[0]+1, :], prior=True)
+            self.plot_distribution(index=indexs[0], params=params, space=self.th_space[indexs[0]:indexs[0]+1, :])
+            plt.subplot(122)
+            self.plot_distribution(index=indexs[1], params=params, space=self.th_space[indexs[1]:indexs[1]+1, :], prior=True)
+            self.plot_distribution(index=indexs[1], params=params, space=self.th_space[indexs[1]:indexs[1]+1, :])
+            show()
+        if bivariate:
+            self.plot_distribution2D(indexs=indexs, params=params, space=self.th_space[indexs, :])
+            show()
 
 
 class CopulaProcess(StochasticProcess):

@@ -4,6 +4,12 @@ from . import config
 from .version import __version__
 from .bayesian.models import *
 from .libs import *
+from .processes import *
+from .processes.hypers import *
+from .processes.hypers.means import *
+from .processes.hypers.metrics import *
+from .processes.hypers.kernels import *
+from .processes.hypers.mappings import *
 
 
 def version(file=None):
