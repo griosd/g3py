@@ -1,8 +1,7 @@
 import numpy as np
-import theano as th
 import theano.tensor as tt
-from g3py.functions.hypers import Hypers, ones
-from g3py.libs.tensors import tt_to_num, debug
+from . import Hypers, ones
+from ...libs.tensors import tt_to_num
 
 
 class Metric(Hypers):

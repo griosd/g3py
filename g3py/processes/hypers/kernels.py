@@ -1,9 +1,9 @@
 import numpy as np
 import theano as th
 import theano.tensor as tt
-from g3py.functions.hypers import Hypers
-from g3py.functions.metrics import Delta, Minimum, Difference, One, ARD_Dot, ARD_DotBias, ARD_L1, ARD_L2, DeltaEq, DeltaEq2
-from g3py.libs.tensors import debug
+from . import Hypers
+from .metrics import Delta, Minimum, Difference, One, ARD_Dot, ARD_DotBias, ARD_L1, ARD_L2, DeltaEq, DeltaEq2
+from ...libs.tensors import debug
 
 
 pi = np.pi

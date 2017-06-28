@@ -1,7 +1,7 @@
-from .stochastic import *
-from .gaussian import *
-from .studentT import *
-from .copula import *
+from .stochastic import StochasticProcess
+from .gaussian import GaussianProcess
+from .studentT import StudentTProcess
+from .copula import TransformedGaussianProcess, TransformedGaussianProcess, CopulaGaussianProcess, CopulaStudentTProcess
 
 GP = GaussianProcess
 STP = StudentTProcess

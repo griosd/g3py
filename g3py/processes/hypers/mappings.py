@@ -2,8 +2,8 @@ import numpy as np
 import theano as th
 import theano.tensor as tt
 import theano.sandbox.linalg as sT
-from g3py.functions.hypers import Hypers, ones, zeros
-from g3py.libs.tensors import tt_to_num, inf_to_num, debug, inverse_function
+from .import Hypers, ones, zeros
+from ...libs.tensors import tt_to_num, inf_to_num, debug, inverse_function
 
 
 class Mapping(Hypers):

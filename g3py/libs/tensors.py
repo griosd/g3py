@@ -1,14 +1,9 @@
-import copy
 import numpy as np
 import scipy as sp
 import theano as th
 import theano.tensor as tt
-import theano.tensor.slinalg as sT
+import theano.tensor.slinalg as tsl
 from IPython.display import Image
-from pymc3.memoize import memoize
-from theano.compile.ops import as_op
-
-th.config.on_unused_input = 'ignore'
 
 
 def debug(x, name='', force=False):
@@ -31,10 +26,6 @@ class makefn:
         if self.compiled is None:
             self.compiled = th.function(self.th_vars, self.fn, allow_input_downcast=True, on_unused_input='ignore')
         return self.compiled(*args, **kwargs)
-
-#@memoize
-#def makefn(th_vars, fn):
-#    return th.function(th_vars, fn, allow_input_downcast=True, on_unused_input='ignore')
 
 
 def show_graph(f, name='temp.png'):
@@ -189,8 +180,8 @@ class CholeskyRobust(th.gof.Op):
 cholesky_robust = CholeskyRobust()
 
 try:
-    solve_lower_triangular = sT.solve_lower_triangular
-    solve_upper_triangular = sT.solve_upper_triangular
+    solve_lower_triangular = tsl.solve_lower_triangular
+    solve_upper_triangular = tsl.solve_upper_triangular
 except:
-    solve_lower_triangular = sT.Solve(A_structure='lower_triangular', lower=True)
-    solve_upper_triangular = sT.Solve(A_structure='upper_triangular', lower=False)
+    solve_lower_triangular = tsl.Solve(A_structure='lower_triangular', lower=True)
+    solve_upper_triangular = tsl.Solve(A_structure='upper_triangular', lower=False)

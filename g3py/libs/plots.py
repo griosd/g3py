@@ -5,14 +5,9 @@ import seaborn as sb
 from g3py import config
 from matplotlib import cm
 
-
-def plot(*args, **kwargs):
-    plt.plot(*args, **kwargs)
-
-
-def show(*args, **kwargs):
-    plt.show(*args, **kwargs)
-
+figure = plt.figure
+plot = plt.plot
+show = plt.show
 
 def style_seaborn():
     plt.style.use('classic')

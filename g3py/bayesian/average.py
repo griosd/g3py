@@ -12,6 +12,61 @@ from numba import jit
 # CREATE
 
 
+def sample_hypers(process, start=None, samples=1000, chains=None, ntemps=None, raw=False, noise_mult=0.1, noise_sum=0.01,
+                  burnin_tol=0.001, burnin_method='multi-sum', outlayer_percentile=0.0005):
+    if start is None:
+        start = process.find_MAP()
+    if isinstance(start, dict):
+        start = process.dict_to_array(start)
+    ndim = len(process.sampling_dims)
+    if chains is None:
+        chains = 2 * process.ndim
+
+    if len(start.shape) == 1:
+        start = start[process.sampling_dims]
+    elif len(start.shape) == 2:
+        start = start[:, process.sampling_dims]
+    elif len(start.shape) == 3:
+        start = start[:, 0, process.sampling_dims]
+
+    if ntemps is None:
+        sampler = emcee.EnsembleSampler(chains, ndim, process._logp_fixed)
+        if start.shape == (chains, ndim):
+            p0 = start
+        else:
+            noise = np.random.normal(loc=1, scale=noise_mult, size=(chains, ndim))
+            p0 = noise * np.ones((chains, 1)) * start
+    else:
+        sampler = emcee.PTSampler(ntemps, chains, ndim, process._logp_fixed_like, process._logp_fixed_prior)
+        if start.shape == (ntemps, chains, ndim):
+            p0 = start
+        elif start.shape == (chains, ndim):
+            noise = np.random.normal(loc=1, scale=noise_mult, size=(ntemps, chains, ndim))
+            p0 = noise * np.ones((ntemps, 1, 1)) * start
+        else:
+            noise = np.random.normal(loc=1, scale=noise_mult, size=(ntemps, chains, ndim))
+            p0 = noise * np.ones((ntemps, chains, 1)) * start
+    p0 += (p0 == 0) * np.random.normal(loc=0, scale=noise_sum, size=p0.shape)
+    print('Sampling {} variables, {} chains, {} times ({} temps)'.format(ndim, chains, samples, ntemps))
+    sys.stdout.flush()
+    for result in tqdm(sampler.sample(p0, iterations=samples), total=samples):
+        pass
+    lnprob, echain = sampler.lnprobability, sampler.chain
+    sampler.reset()
+    if ntemps is not None:
+        lnprob, echain = lnprob[0, :, :], echain[0, :, :]
+    complete_chain = np.empty((echain.shape[0], echain.shape[1], process.ndim))
+    complete_chain[:, :, process.sampling_dims] = echain
+    complete_chain[:, :, process.fixed_dims] = process._fixed_array[process.fixed_dims]
+    if raw:
+        return complete_chain, lnprob
+    else:
+
+        return chains_to_datatrace(process, complete_chain, ll=lnprob, burnin_tol=burnin_tol,
+                                   burnin_method=burnin_method, burnin_dims=process.sampling_dims,
+                                   outlayer_percentile=outlayer_percentile)
+
+
 def chains_to_datatrace(process, chains, ll=None, transforms=True, burnin_tol=0.01, burnin_method='multi-sum', burnin_dims=None,
                         outlayer_percentile=0.001):
     columns = list()

@@ -3,17 +3,14 @@ from .gaussian import GaussianProcess
 from .studentT import StudentTProcess
 
 
-class CopulaGaussianProcess(EllipticalProcess, CopulaProcess, GaussianProcess):
+class CopulaGaussianProcess(CopulaProcess):
     pass
 
 
-class CopulaStudentTProcess(EllipticalProcess, CopulaProcess, StudentTProcess):
+class CopulaStudentTProcess(CopulaProcess):
     pass
 
 
-class TransformedGaussianProcess(EllipticalProcess, CopulaProcess, GaussianProcess):
-    pass
 
-
-class TransformedStudentTProcess(EllipticalProcess, CopulaProcess, StudentTProcess):
+class TransformedStudentTProcess(CopulaProcess):
     pass

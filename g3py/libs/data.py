@@ -2,6 +2,7 @@ import g3py as g3
 import numpy as np
 import pandas as pd
 import statsmodels.api as sm
+from .plots import plot as g3plot, plot_text
 
 
 def data_sunspots():
@@ -124,10 +125,10 @@ def random_obs(x, y, p=0.2, s=1.0, include_min=False, plot=True):
     y_test = y[test_j]
     print('Total: '+str(len(x)) +' | '+'Obs: '+str(len(obs_j)) + ' ('+str(100*len(obs_j)/len(x))+'%)')
     if plot:
-        g3.plot(x, y)
-        g3.plot(x_obs, y_obs, '.k', ms=20)
-        g3.plot(x_obs, y_obs, '.r', ms=15, label='Observations')
-        g3.plot_text('Data', 'X', 'Y', legend=True)
+        g3plot(x, y)
+        g3plot(x_obs, y_obs, '.k', ms=20)
+        g3plot(x_obs, y_obs, '.r', ms=15, label='Observations')
+        plot_text('Data', 'X', 'Y', legend=True)
     return obs_j, x_obs, y_obs, test_j, x_test, y_test
 
 
@@ -141,8 +142,8 @@ def uniform_obs(x, y, p=0.2, s=1.0, plot=True):
     y_test = y[test_j]
     print('Total: '+str(len(x)) +' | '+'Obs: '+str(len(obs_j)) + ' ('+str(100*len(obs_j)/len(x))+'%)')
     if plot:
-        g3.plot(x, y)
-        g3.plot(x_obs, y_obs, '.k', ms=20)
-        g3.plot(x_obs, y_obs, '.r', ms=15, label='Observations')
-        g3.plot_text('Data', 'X', 'Y', legend=True)
+        g3plot(x, y)
+        g3plot(x_obs, y_obs, '.k', ms=20)
+        g3plot(x_obs, y_obs, '.r', ms=15, label='Observations')
+        plot_text('Data', 'X', 'Y', legend=True)
     return obs_j, x_obs, y_obs, test_j, x_test, y_test

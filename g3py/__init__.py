@@ -1,21 +1,9 @@
-from .processes import *
-#from processes.gaussian import *
-#from processes.studentT import *
-from .functions import *
-#from functions.kernels import *
-#from functions.mappings import *
-#from functions.means import *
-#from functions.metrics import *
-from .libs import *
-#from libs.plots import *
-#from libs.tensors import *
-#from libs.traces import *
-
-from .models import *
-#from .sandbox.tgp import *
+import datetime
+import sys
 from . import config
-
 from .version import __version__
+from .bayesian.models import *
+from .libs import *
 
 
 def version(file=None):
@@ -24,6 +12,7 @@ def version(file=None):
     import matplotlib
     import emcee
     import sklearn
+    import numpy as np, scipy as sp, pandas as pd, seaborn as sb, theano as th, pymc3 as pm
     print('last execute', datetime.datetime.now(), file=file)
     print('python', sys.version.replace('\n', ' '), file=file)
     print('g3py', __version__, file=file)

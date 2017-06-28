@@ -1,6 +1,6 @@
 import theano as th
 import theano.tensor as tt
-from g3py.functions.hypers import Hypers
+from . import Hypers
 
 
 class Mean(Hypers):
