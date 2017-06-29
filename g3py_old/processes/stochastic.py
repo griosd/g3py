@@ -148,9 +148,6 @@ class _StochasticProcess:
         self.fixed_dims = None
 
 
-
-
-
         self.compiles = DictObj()
         self.compiles_trans = DictObj()
         self.compiles_transf = DictObj()
@@ -173,84 +170,7 @@ class _StochasticProcess:
 
         self.set_space(space_raw, self.hidden)
 
-    def _compile_logprior(self):
-        self.logp_prior = self.model.bijection.mapf(self.model.fn(tt.add(*map(tt.sum, [var.logpt for var in self.model.free_RVs] + self.model.potentials))))
 
-    def logp_array(self, params):
-        return self.model.logp_array(params)
-
-    def dlogp_array(self, params):
-        return self.model.dlogp_array(params)
-
-    def dict_to_array(self, params):
-        return self.model.dict_to_array(params)
-
-    def array_to_dict(self, params):
-        return self.model.bijection.rmap(params)
-
-    def logp_dict(self, params):
-        return self.model.logp_array(self.model.dict_to_array(params))
-
-    def logp_chain(self, chain):
-        out = np.empty(len(chain))
-        for i in range(len(out)):
-            out[i] = self.model.logp_array(chain[i])
-        return out
-
-    def logp_fixed(self, params):
-        if len(params) > len(self.sampling_dims):
-            params = params[self.sampling_dims]
-        self._fixed_array[self.sampling_dims] = params
-        return self.model.logp_array(self._fixed_array)
-
-    #@jit
-    def _logp_fixed(self, sampling_params):
-        self._fixed_array[self.sampling_dims] = sampling_params
-        return self.model.logp_array(self._fixed_array)
-
-    def _logp_fixed_prior(self, sampling_params):
-        self._fixed_array[self.sampling_dims] = sampling_params
-        return self.logp_prior(self._fixed_array)
-
-    def _logp_fixed_like(self, sampling_params):
-        self._fixed_array[self.sampling_dims] = sampling_params
-        return self.model.logp_array(self._fixed_array) - self.logp_prior(self._fixed_array)
-
-    @jit
-    def _dlogp_fixed(self, sampling_params):
-        self._fixed_array[self.sampling_dims] = sampling_params
-        return self.model.dlogp_array(self._fixed_array)[self.sampling_dims]
-
-    @jit
-    def logp_fixed_chain(self, params):
-        if len(params) > len(self.sampling_dims):
-            params = params[self.sampling_dims]
-        return self._logp_fixed_chain(params)
-
-    @jit
-    def _logp_fixed_chain(self, sampling_params):
-        self._fixed_chain[:, self.sampling_dims] = sampling_params
-        out = np.empty(len(self._fixed_chain))
-        for i in range(len(out)):
-            out[i] = self.model.logp_array(self._fixed_chain[i])
-        return out.mean()
-
-    @jit
-    def _dlogp_fixed_chain(self, sampling_params):
-        self._fixed_chain[:, self.sampling_dims] = sampling_params
-        out = np.empty((len(self._fixed_chain), len(self.sampling_dims)))
-        for i in range(len(out)):
-            out[i, :] = self.model.dlogp_array(self._fixed_chain[i])[self.sampling_dims]
-        return out.mean(axis=0)
-
-    def fix_params(self, fixed_params=None):
-        if fixed_params is None:
-            fixed_params = DictObj()
-        self.params_fixed = fixed_params
-        self._fixed_keys = list(self.params_fixed.keys())
-        self._fixed_array = self.dict_to_array(self.get_params_default())
-        self._fixed_chain = None
-        self.calc_dimensions()
 
     def _compile(self, precompile=False):
         params = [self.space_th] + self.model.vars
@@ -319,6 +239,65 @@ class _StochasticProcess:
             if hasattr(dist, 'transform_used'):
                 self.compiles_trans[str(v)] = makefn(params, dist.transform_used.backward(self.random_th), precompile)
                 self.compiles_transf[str(v)] = makefn(params, dist.transform_used.forward(self.random_th), precompile)
+
+    def _compile_logprior(self):
+        self.logp_prior = self.model.bijection.mapf(self.model.fn(tt.add(*map(tt.sum, [var.logpt for var in self.model.free_RVs] + self.model.potentials))))
+
+
+    def dlogp_array(self, params):
+        return self.model.dlogp_array(params)
+
+    def logp_chain(self, chain):
+        out = np.empty(len(chain))
+        for i in range(len(out)):
+            out[i] = self.model.logp_array(chain[i])
+        return out
+
+    def logp_fixed(self, params):
+        if len(params) > len(self.sampling_dims):
+            params = params[self.sampling_dims]
+        self._fixed_array[self.sampling_dims] = params
+        return self.model.logp_array(self._fixed_array)
+
+    #@jit
+    def _logp_fixed(self, sampling_params):
+        self._fixed_array[self.sampling_dims] = sampling_params
+        return self.model.logp_array(self._fixed_array)
+
+    def _logp_fixed_prior(self, sampling_params):
+        self._fixed_array[self.sampling_dims] = sampling_params
+        return self.logp_prior(self._fixed_array)
+
+    def _logp_fixed_like(self, sampling_params):
+        self._fixed_array[self.sampling_dims] = sampling_params
+        return self.model.logp_array(self._fixed_array) - self.logp_prior(self._fixed_array)
+
+    @jit
+    def _dlogp_fixed(self, sampling_params):
+        self._fixed_array[self.sampling_dims] = sampling_params
+        return self.model.dlogp_array(self._fixed_array)[self.sampling_dims]
+
+    @jit
+    def logp_fixed_chain(self, params):
+        if len(params) > len(self.sampling_dims):
+            params = params[self.sampling_dims]
+        return self._logp_fixed_chain(params)
+
+    @jit
+    def _logp_fixed_chain(self, sampling_params):
+        self._fixed_chain[:, self.sampling_dims] = sampling_params
+        out = np.empty(len(self._fixed_chain))
+        for i in range(len(out)):
+            out[i] = self.model.logp_array(self._fixed_chain[i])
+        return out.mean()
+
+    @jit
+    def _dlogp_fixed_chain(self, sampling_params):
+        self._fixed_chain[:, self.sampling_dims] = sampling_params
+        out = np.empty((len(self._fixed_chain), len(self.sampling_dims)))
+        for i in range(len(out)):
+            out[i, :] = self.model.dlogp_array(self._fixed_chain[i])[self.sampling_dims]
+        return out.mean(axis=0)
 
 
 class GaussianProcess(StochasticProcess):
