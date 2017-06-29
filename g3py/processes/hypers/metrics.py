@@ -9,7 +9,6 @@ class Metric(Hypers):
         return tt.abs_(x1 - x2)
 
     def gram(self, x1, x2):
-        print(x1, self.dims, x1[:, self.dims], x1[:, self.dims].dimshuffle([0, 'x', 1]))
         #try:
         return (self(x1[:, self.dims].dimshuffle([0, 'x', 1]), x2[:, self.dims].dimshuffle(['x', 0, 1])))
         #except ValueError:

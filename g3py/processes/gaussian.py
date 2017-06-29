@@ -130,7 +130,7 @@ class TransformedGaussianDistribution(pm.Continuous):
         return ifelse(cond1, np.float32(-1e30), ifelse(cond2, np.float32(-1e30), ifelse(cond3, np.float32(-1e30), r)))
 
     def logp(self, value):
-        return debug(self.logp_cho(value, self.mu, self.cho, self.mapping), 'tgp_logp_cho')
+        return self.logp_cho(value, self.mu, self.cho, self.mapping)
 
     @property
     def cho(self):

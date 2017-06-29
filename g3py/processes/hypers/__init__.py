@@ -8,6 +8,25 @@ import theano.tensor as tt
 import pymc3 as pm
 from ...libs import DictObj
 
+def modelcontext(model=None):
+    return pm.modelcontext(model)
+
+def get_hypers_floatX(params):
+    paramsX = DictObj()
+    for k, v in params.items():
+        paramsX[k] = np.float32(v)
+    return paramsX
+
+def zeros(shape):
+    return np.zeros(shape, dtype=th.config.floatX)
+
+
+def ones(shape):
+    return np.ones(shape, dtype=th.config.floatX)
+
+def cvalues(shape, val):
+    return np.float32(np.ones(shape, dtype=th.config.floatX) *val)
+
 
 class Hypers:
     def __init__(self, x=None, name=None):
@@ -39,7 +58,6 @@ class Hypers:
                 else:
                     self.shape = 1
             else:
-                print(x.shape)
                 if len(x.shape.eval()) > 1:
                     self.shape = x.shape.eval()[1]
                 else:
@@ -73,6 +91,35 @@ class Hypers:
             pot = 0
         return pm.Potential(self.name+'_'+hypers+'_'+reg, c * pot)
 
+    @staticmethod
+    def Null(name, shape=(), testval=zeros):
+        with modelcontext():
+            return pm.NoDistribution(name, shape=shape, testval=testval(shape), dtype=th.config.floatX)
+    @staticmethod
+    def Flat(name, shape=(), testval=zeros):
+        with modelcontext():
+            return pm.Flat(name, shape=shape, testval=testval(shape), dtype=th.config.floatX)
+    @staticmethod
+    def ExpFlat(name, shape=(), testval=ones):
+        with modelcontext():
+            return pm.Flat(name, transform=pm.distributions.transforms.log, shape=shape, testval=testval(shape), dtype=th.config.floatX)
+    @staticmethod
+    def FlatExp(name, shape=(), testval=ones):
+        with modelcontext():
+            return pm.Flat(name, transform=non_transform_log, shape=shape, testval=testval(shape), dtype=th.config.floatX)
+    @staticmethod
+    def FlatPos(name, shape=(), testval=ones):
+        with modelcontext():
+            return PositiveFlat(name, shape=shape, testval=testval(shape), dtype=th.config.floatX)
+    @staticmethod
+    def FlatExpId(name, shape=(), testval=ones):
+        with modelcontext():
+            return pm.Flat(name, transform=LogIdTransform(), shape=shape, testval=testval(shape), dtype=th.config.floatX)
+    @staticmethod
+    def Exponential(name, lam=ones, shape=(), testval=ones):
+        with modelcontext():
+            return pm.Exponential(name, shape=shape, lam=lam(shape), testval=testval(shape), dtype=th.config.floatX)
+
 
 class Freedom(Hypers):
     def __init__(self, x=None, name=None, degree=None, bound=2):
@@ -91,24 +138,6 @@ class Freedom(Hypers):
 
     def __call__(self, x=None):
         return self.bound + self.degree
-
-
-def get_hypers_floatX(params):
-    paramsX = DictObj()
-    for k, v in params.items():
-        paramsX[k] = np.float32(v)
-    return paramsX
-
-
-def zeros(shape):
-    return np.zeros(shape, dtype=th.config.floatX)
-
-
-def ones(shape):
-    return np.ones(shape, dtype=th.config.floatX)
-
-def cvalues(shape, val):
-    return np.float32(np.ones(shape, dtype=th.config.floatX) *val)
 
 
 class PositiveFlat(pm.Continuous):

@@ -22,8 +22,9 @@ class StochasticProcess:#TheanoBlackBox
     def __new__(cls, *args, **kwargs):
         instance = super().__new__(cls)
         instance.__init__(*args, **kwargs)
-        instance._check_hypers()
-        instance._define_process()
+        with instance.active.model:
+            instance._check_hypers()
+            instance._define_process()
         instance._compile()
         return instance
 
@@ -484,8 +485,6 @@ class EllipticalProcess(StochasticProcess):
         self.mapping_outputs = tt_to_num(self.mapping.inv(self.th_outputs))
         #self.mapping_th = tt_to_num(self.mapping(self.random_th))
         #self.mapping_inv_th = tt_to_num(self.mapping.inv(self.random_th))
-
-        print(self.th_space, self.th_inputs)
 
         self.prior_location_space = self.location(self.th_space)
         self.prior_location_inputs = self.location(self.th_inputs)
