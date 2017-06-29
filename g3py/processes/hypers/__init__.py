@@ -19,7 +19,7 @@ class Hypers:
         self.shape = None
         self.dims = None
         self.potential = None
-        self.check_dims(x)
+        #self.check_dims(x)
 
     def __str__(self):
         if len(self.hypers) is 0:
@@ -39,8 +39,9 @@ class Hypers:
                 else:
                     self.shape = 1
             else:
-                if len(x.shape) > 1:
-                    self.shape = x.shape[1]
+                print(x.shape)
+                if len(x.shape.eval()) > 1:
+                    self.shape = x.shape.eval()[1]
                 else:
                     self.shape = 1
                 self.dims = slice(0, self.shape)

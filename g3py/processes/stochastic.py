@@ -18,7 +18,17 @@ from matplotlib import cm
 
 
 class StochasticProcess:#TheanoBlackBox
-    def __init__(self, name='SP', space=None, orden=None, index=None, inputs=None, outputs=None, hidden=None, distribution=None, description=None):
+
+    def __new__(cls, *args, **kwargs):
+        instance = super().__new__(cls)
+        instance.__init__(*args, **kwargs)
+        instance._check_hypers()
+        instance._define_process()
+        instance._compile()
+        return instance
+
+    def __init__(self, name='SP', space=None, orden=None, index=None, inputs=None, outputs=None, hidden=None,
+                 distribution=None, description=None, active=True, precompile=False):
         self.name = name
         self.th_space = space
         self.th_index = index
@@ -27,38 +37,79 @@ class StochasticProcess:#TheanoBlackBox
         self.th_hidden = hidden
         self.th_order = orden
 
-        if self.th_order is None:
-            self.th_order = tt.vector(self.name + '_order', dtype=th.config.floatX)
-            self.th_order.tag.test_value = np.array([0.0, 1.0], dtype=th.config.floatX)
+        if False:
+            if self.th_order is None:
+                self.th_order = tt.vector(self.name + '_order', dtype=th.config.floatX)
+                self.th_order.tag.test_value = np.array([0.0, 1.0], dtype=th.config.floatX)
 
-        if self.th_space is None:
-            self.th_space = tt.matrix(self.name + '_space', dtype=th.config.floatX)
-            self.th_space.tag.test_value = np.array([[0.0, 1.0], [1.0, 0.0]], dtype=th.config.floatX)
+            if self.th_space is None:
+                self.th_space = tt.matrix(self.name + '_space', dtype=th.config.floatX)
+                self.th_space.tag.test_value = np.array([[0.0, 1.0], [1.0, 0.0]], dtype=th.config.floatX)
 
-        if self.th_hidden is None:
-            self.th_hidden = tt.vector(self.name + '_hidden', dtype=th.config.floatX)
-            self.th_hidden.tag.test_value = np.array([0.0, 1.0], dtype=th.config.floatX)
+            if self.th_hidden is None:
+                self.th_hidden = tt.vector(self.name + '_hidden', dtype=th.config.floatX)
+                self.th_hidden.tag.test_value = np.array([0.0, 1.0], dtype=th.config.floatX)
 
-        if self.th_index is None:
-            self.th_index = tt.vector(self.name + '_index', dtype=th.config.floatX)
-            self.th_index.tag.test_value = np.array([0.0, 1.0], dtype=th.config.floatX)
+            if self.th_index is None:
+                self.th_index = tt.vector(self.name + '_index', dtype=th.config.floatX)
+                self.th_index.tag.test_value = np.array([0.0, 1.0], dtype=th.config.floatX)
 
-        if self.th_inputs is None:
-            self.th_inputs = tt.matrix(self.name + '_inputs', dtype=th.config.floatX)
-            self.th_inputs.tag.test_value = np.array([[0.0, 0.0], [1.0, 1.0]], dtype=th.config.floatX)
+            if self.th_inputs is None:
+                self.th_inputs = tt.matrix(self.name + '_inputs', dtype=th.config.floatX)
+                self.th_inputs.tag.test_value = np.array([[0.0, 0.0], [1.0, 1.0]], dtype=th.config.floatX)
 
-        if self.th_outputs is None:
-            self.th_outputs = tt.vector(self.name + '_outputs', dtype=th.config.floatX)
-            self.th_outputs.tag.test_value = np.array([0.0, 1.0], dtype=th.config.floatX)
+            if self.th_outputs is None:
+                self.th_outputs = tt.vector(self.name + '_outputs', dtype=th.config.floatX)
+                self.th_outputs.tag.test_value = np.array([0.0, 1.0], dtype=th.config.floatX)
+        else:
+            if self.th_order is None:
+                self.th_order = th.shared(np.array([0.0, 1.0], dtype=th.config.floatX),
+                                          name=self.name + '_order', borrow=False)
+
+            if self.th_space is None:
+                self.th_space = th.shared(np.array([[0.0, 1.0], [1.0, 0.0]], dtype=th.config.floatX),
+                                          name=self.name + '_space', borrow=False)
+
+            if self.th_hidden is None:
+                self.th_hidden = th.shared(np.array([0.0, 1.0], dtype=th.config.floatX),
+                                           name=self.name + '_hidden', borrow=False)
+
+            if self.th_index is None:
+                self.th_index = th.shared(np.array([0.0, 1.0], dtype=th.config.floatX),
+                                          name=self.name + '_index', borrow=False)
+
+            if self.th_inputs is None:
+                self.th_inputs = th.shared(np.array([[0.0, 0.0], [1.0, 1.0]], dtype=th.config.floatX),
+                                           name=self.name + '_inputs', borrow=False)
+
+            if self.th_outputs is None:
+                self.th_outputs = th.shared(np.array([0.0, 1.0], dtype=th.config.floatX),
+                                            name=self.name + '_outputs', borrow=False)
 
         self.distribution = distribution
         self.description = description
-        if GraphicalModel.active is None:
-            GraphicalModel.active = GraphicalModel('GM_'+self.name, description=description)
-        self.active = GraphicalModel.active
+        if self.description is None:
+            self.description = {'title': self.name,
+                                'x': 'x',
+                                'y': 'y'}
+        if active is True:
+            if GraphicalModel.active is None:
+                GraphicalModel.active = GraphicalModel('GM_' + self.name, description=description)
+            self.active = GraphicalModel.active
+        elif active is False:
+            self.active = GraphicalModel('GM_' + self.name, description=description)
+        else:
+            self.active = active
+        self.precompile = precompile
 
-    def _define_process(self, distribution = None):
-        self.distribution = distribution
+    def _check_hypers(self):
+        pass
+
+    def _define_process(self):
+        pass
+
+    def _compile(self):
+        pass
 
     def set_space(self, space, hidden=None, order=None):
         self.th_space = space
@@ -101,10 +152,9 @@ class StochasticProcess:#TheanoBlackBox
             scores['_NLPD'] = - pred.logpred(hidden) / len(hidden)
         return scores
 
-
     def prior(self, params=None, space=None, mean=True, var=True, cov=False, median=False, quantiles=False, noise=False, samples=0, distribution=False):
         if params is None:
-            params = self.get_params_current()
+            params = self.a()
         if space is None:
             space = self.space_values
         values = DictObj()
@@ -411,14 +461,32 @@ class EllipticalProcess(StochasticProcess):
             self.kernel_f = kernel
             self.kernel = self.kernel_f
 
-    def default_hypers(self):
-        x = np.array(self.inputs_values)
-        y = np.squeeze(np.array(self.outputs_values))
-        return {**self.location.default_hypers_dims(x, y), **self.kernel.default_hypers_dims(x, y),
-                **self.mapping.default_hypers_dims(x, y)}
+    def _check_hypers(self):
+        self.location.check_dims(self.th_inputs)
+        self.kernel.check_dims(self.th_inputs)
+        self.mapping.check_dims(self.th_inputs)
+
+        self.location.check_hypers(self.name + '_')
+        self.kernel.check_hypers(self.name + '_')
+        self.mapping.check_hypers(self.name + '_')
+
+        self.location.check_potential()
+        self.kernel.check_potential()
+        self.mapping.check_potential()
+
+        if self.degree is not None:
+            self.degree.check_dims(None)
+            self.degree.check_hypers(self.name + '_')
+            self.degree.check_potential()
 
     def _define_process(self):
         # Basic Tensors
+        self.mapping_outputs = tt_to_num(self.mapping.inv(self.th_outputs))
+        #self.mapping_th = tt_to_num(self.mapping(self.random_th))
+        #self.mapping_inv_th = tt_to_num(self.mapping.inv(self.random_th))
+
+        print(self.th_space, self.th_inputs)
+
         self.prior_location_space = self.location(self.th_space)
         self.prior_location_inputs = self.location(self.th_inputs)
 
@@ -433,7 +501,7 @@ class EllipticalProcess(StochasticProcess):
         self.cross_kernel_space_inputs = tt_to_num(self.kernel.cov(self.th_space, self.th_inputs))
         self.cross_kernel_f_space_inputs = tt_to_num(self.kernel_f.cov(self.th_space, self.th_inputs))
 
-        self.posterior_location_space = self.prior_mean + self.cross_kernel_f_space_inputs.dot(
+        self.posterior_location_space = self.prior_location_space + self.cross_kernel_f_space_inputs.dot(
             tsl.solve(self.prior_kernel_inputs, self.mapping_outputs - self.prior_location_inputs))
 
         self.posterior_kernel_space = self.prior_kernel_space - self.cross_kernel_space_inputs.dot(
@@ -444,9 +512,11 @@ class EllipticalProcess(StochasticProcess):
             tsl.solve(self.prior_kernel_inputs, self.cross_kernel_f_space_inputs.T))
         self.posterior_cholesky_f_space = cholesky_robust(self.posterior_kernel_f_space)
 
-        self.mapping_outputs = tt_to_num(self.mapping.inv(self.th_outputs))
-        #self.mapping_th = tt_to_num(self.mapping(self.random_th))
-        #self.mapping_inv_th = tt_to_num(self.mapping.inv(self.random_th))
+    def default_hypers(self):
+        x = np.array(self.inputs_values)
+        y = np.squeeze(np.array(self.outputs_values))
+        return {**self.location.default_hypers_dims(x, y), **self.kernel.default_hypers_dims(x, y),
+                **self.mapping.default_hypers_dims(x, y)}
 
     def location(self, prior=False):
         if prior:
@@ -478,23 +548,7 @@ class EllipticalProcess(StochasticProcess):
             else:
                 return self.posterior_cholesky_f_space
 
-    def _check_process(self):
-        self.location.check_dims(self.th_inputs)
-        self.kernel.check_dims(self.th_inputs)
-        self.mapping.check_dims(self.th_inputs)
 
-        self.location.check_hypers(self.name + '_')
-        self.kernel.check_hypers(self.name + '_')
-        self.mapping.check_hypers(self.name + '_')
-
-        self.location.check_potential()
-        self.kernel.check_potential()
-        self.mapping.check_potential()
-
-        if self.degree is not None:
-            self.degree.check_dims(None)
-            self.degree.check_hypers(self.name + '_')
-            self.degree.check_potential()
 
     def plot_mapping(self, params=None, domain=None, inputs=None, outputs=None, neval=100, title=None, label='mapping'):
         if params is None:

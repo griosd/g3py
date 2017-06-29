@@ -5,6 +5,7 @@ import numpy as np
 import theano as th
 import theano.tensor as tt
 import pymc3 as pm
+from ..libs import clone
 from ..libs.tensors import makefn, tt_to_num
 from ..libs.plots import plot
 
@@ -19,7 +20,8 @@ class GraphicalModel:
         model (pm.Model): Reference to the context pm.Model
     """
     active = None
-    def __init__(self, name=None, description=None, file=None, reset=False, precompile=False):
+
+    def __init__(self, name=None, description=None, file=None, reset=False):
         if file is not None and not reset:
             try:
                 self.reset(file)
@@ -134,6 +136,15 @@ class GraphicalModel:
                 dims += dimensions[k.slc]
         self.fixed_dims = dims
 
+    def fix_params(self, fixed_params=None):
+        if fixed_params is None:
+            fixed_params = DictObj()
+        self.params_fixed = fixed_params
+        self._fixed_keys = list(self.params_fixed.keys())
+        self._fixed_array = self.dict_to_array(self.get_params_default())
+        self._fixed_chain = None
+        self.calc_dimensions()
+
     @property
     def fixed_vars(self):
         return [t for t in self.model.vars if t.name in self._fixed_keys]
@@ -145,6 +156,18 @@ class GraphicalModel:
     @property
     def ndim(self):
         return self.model.bijection.ordering.dimensions
+
+    def array_to_dict(self, params):
+        return self.model.bijection.rmap(params)
+
+    def dict_to_array(self, params):
+        return self.model.dict_to_array(params)
+
+    def logp_dict(self, params):
+        return self.model.logp_array(self.model.dict_to_array(params))
+
+    def logp_array(self, params):
+        return self.model.logp_array(params)
 
     def get_params_model(self, process=None, params=None, current=None, fixed=False):
         if process is None:
@@ -234,7 +257,6 @@ class GraphicalModel:
 
     def eval_widget(self):
         return self.eval_point(self.get_params_widget())
-
 
 
 class BlackBox(object):

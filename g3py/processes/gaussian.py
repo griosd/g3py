@@ -21,7 +21,7 @@ class GaussianProcess(EllipticalProcess):
                                                             observed=self.th_outputs, testval=self.th_outputs,
                                                             dtype=th.config.floatX)
 
-    def mean(self, prior=False, noise=False,):
+    def median(self, prior=False, noise=False):
         debug('median')
         if prior:
             latent = self.prior_location_space
@@ -29,7 +29,16 @@ class GaussianProcess(EllipticalProcess):
             latent = self.posterior_location_space
         return self.mapping(latent)
 
+    def mean(self, prior=False, noise=False):
+        debug('mean')
+        if prior:
+            latent = self.prior_location_space
+        else:
+            latent = self.posterior_location_space
+        return self.mapping(latent)
+
     def variance(self, prior=False, noise=False):
+        debug('variance')
         if prior:
             if noise:
                 return tnl.extract_diag(self.prior_kernel_space)
