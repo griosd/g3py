@@ -1,8 +1,6 @@
 import pymc3 as pm
 
 
-def modelcontext(model=None):
-    return pm.modelcontext(model)
 
 def trans_hypers(hypers):
     trans = DictObj()
@@ -66,38 +64,6 @@ def def_space(space=None, name=None, squeeze=False):
             space_th = th.shared(space_x.values, name, borrow=True)
     return space_th, space_x, space_t.astype(np.int32)
 
-
-
-    @staticmethod
-    def Null(name, shape=(), testval=zeros):
-        with modelcontext():
-            return pm.NoDistribution(name, shape=shape, testval=testval(shape), dtype=th.config.floatX)
-    @staticmethod
-    def Flat(name, shape=(), testval=zeros):
-        with modelcontext():
-            return pm.Flat(name, shape=shape, testval=testval(shape), dtype=th.config.floatX)
-    @staticmethod
-    def ExpFlat(name, shape=(), testval=ones):
-        with modelcontext():
-            return pm.Flat(name, transform=pm.distributions.transforms.log, shape=shape, testval=testval(shape), dtype=th.config.floatX)
-    @staticmethod
-    def FlatExp(name, shape=(), testval=ones):
-        with modelcontext():
-            return pm.Flat(name, transform=non_transform_log, shape=shape, testval=testval(shape), dtype=th.config.floatX)
-    @staticmethod
-    def FlatPos(name, shape=(), testval=ones):
-        with modelcontext():
-            return PositiveFlat(name, shape=shape, testval=testval(shape), dtype=th.config.floatX)
-    @staticmethod
-    def FlatExpId(name, shape=(), testval=ones):
-        with modelcontext():
-            return pm.Flat(name, transform=LogIdTransform(), shape=shape, testval=testval(shape), dtype=th.config.floatX)
-    @staticmethod
-    def Exponential(name, lam=ones, shape=(), testval=ones):
-        with modelcontext():
-            return pm.Exponential(name, shape=shape, lam=lam(shape), testval=testval(shape), dtype=th.config.floatX)
-
-
 class _StochasticProcess:
     """Abstract class used to define a StochasticProcess.
 
@@ -136,10 +102,6 @@ class _StochasticProcess:
         print('Space Dimension: ', self.space_values.shape[1])
 
         # Hyper-parameters values
-        self._widget_samples = 0
-        self._widget_traces = None
-        self.params_current = None
-        self.params_widget = None
         self.params_fixed = DictObj()
         self._fixed_keys = []
         self._fixed_array = None
@@ -170,67 +132,6 @@ class _StochasticProcess:
 
         self.set_space(space_raw, self.hidden)
 
-
-
-    def _compile(self, precompile=False):
-        params = [self.space_th] + self.model.vars
-        self.compiles['location_space'] = makefn(params, self.location_space, precompile)
-        self.compiles['kernel_space'] = makefn(params, self.kernel_space, precompile)
-        self.compiles['kernel_f_space'] = makefn(params, self.kernel_f_space, precompile)
-
-        params = [self.inputs_th] + self.model.vars
-        self.compiles['location_inputs'] = makefn(params, self.location_inputs, precompile)
-        self.compiles['kernel_inputs'] = makefn(params, self.kernel_inputs, precompile)
-        self.compiles['kernel_f_inputs'] = makefn(params, self.kernel_f_inputs, precompile)
-
-        params = [self.space_th, self.inputs_th] + self.model.vars
-        self.compiles['kernel_space_inputs'] = makefn(params, self.kernel_space_inputs, precompile)
-        self.compiles['kernel_f_space_inputs'] = makefn(params, self.kernel_f_space_inputs, precompile)
-
-        params = self.model.vars
-        self.compiles['mapping_outputs'] = makefn(params, self.mapping_outputs, precompile)
-        self.compiles['mapping_th'] = makefn([self.random_th] + params, self.mapping_th, precompile)
-        self.compiles['mapping_inv_th'] = makefn([self.random_th] + params, self.mapping_inv_th, precompile)
-
-        params = [self.space_th] + self.model.vars
-        self.compiles['prior_mean'] = makefn(params, self.prior_mean, precompile)
-        self.compiles['prior_covariance'] = makefn(params, self.prior_covariance, precompile)
-        self.compiles['prior_cholesky'] = makefn(params, self.prior_cholesky, precompile)
-        self.compiles['prior_variance'] = makefn(params, self.prior_variance, precompile)
-        self.compiles['prior_std'] = makefn(params, self.prior_std, precompile)
-        self.compiles['prior_noise'] = makefn(params, self.prior_noise, precompile)
-        self.compiles['prior_median'] = makefn(params, self.prior_median, precompile)
-        self.compiles['prior_quantile_up'] = makefn(params, self.prior_quantile_up, precompile)
-        self.compiles['prior_quantile_down'] = makefn(params, self.prior_quantile_down, precompile)
-        self.compiles['prior_noise_up'] = makefn(params, self.prior_noise_up, precompile)
-        self.compiles['prior_noise_down'] = makefn(params, self.prior_noise_down, precompile)
-        self.compiles['prior_logp'] = makefn([self.random_th] + params, self.prior_logp, precompile)
-        self.compiles['prior_logpred'] = makefn([self.random_th] + params, self.prior_logpred, precompile)
-        self.compiles['prior_distribution'] = makefn([self.random_th] + params, self.prior_distribution, precompile)
-        try:
-            self.compiles['prior_sampler'] = makefn([self.random_th] + params, self.prior_sampler, precompile)
-        except:
-            self.compiles['prior_sampler'] = makefn([self.random_scalar, self.random_th] + params, self.prior_sampler, precompile)
-
-        params = [self.space_th, self.inputs_th, self.outputs_th] + self.model.vars
-        self.compiles['posterior_mean'] = makefn(params, self.posterior_mean, precompile)
-        self.compiles['posterior_covariance'] = makefn(params, self.posterior_covariance, precompile)
-        self.compiles['posterior_cholesky'] = makefn(params, self.posterior_cholesky, precompile)
-        self.compiles['posterior_variance'] = makefn(params, self.posterior_variance, precompile)
-        self.compiles['posterior_std'] = makefn(params, self.posterior_std, precompile)
-        self.compiles['posterior_noise'] = makefn(params, self.posterior_noise, precompile)
-        self.compiles['posterior_median'] = makefn(params, self.posterior_median, precompile)
-        self.compiles['posterior_quantile_up'] = makefn(params, self.posterior_quantile_up, precompile)
-        self.compiles['posterior_quantile_down'] = makefn(params, self.posterior_quantile_down, precompile)
-        self.compiles['posterior_noise_up'] = makefn(params, self.posterior_noise_up, precompile)
-        self.compiles['posterior_noise_down'] = makefn(params, self.posterior_noise_down, precompile)
-        self.compiles['posterior_logp'] = makefn([self.random_th] + params, self.posterior_logp, precompile)
-        self.compiles['posterior_logpred'] = makefn([self.random_th] + params, self.posterior_logpred, precompile)
-        self.compiles['posterior_distribution'] = makefn([self.random_th] + params, self.posterior_distribution, precompile)
-        try:
-            self.compiles['posterior_sampler'] = makefn([self.random_th] + params, self.posterior_sampler, precompile)
-        except:
-            self.compiles['posterior_sampler'] = makefn([self.random_scalar, self.random_th] + params, self.posterior_sampler, precompile)
 
     def _compile_transforms(self, precompile=False):
         params = [self.random_th]
@@ -289,7 +190,7 @@ class _StochasticProcess:
         out = np.empty(len(self._fixed_chain))
         for i in range(len(out)):
             out[i] = self.model.logp_array(self._fixed_chain[i])
-        return out.mean()
+        return out._mean()
 
     @jit
     def _dlogp_fixed_chain(self, sampling_params):
@@ -297,7 +198,7 @@ class _StochasticProcess:
         out = np.empty((len(self._fixed_chain), len(self.sampling_dims)))
         for i in range(len(out)):
             out[i, :] = self.model.dlogp_array(self._fixed_chain[i])[self.sampling_dims]
-        return out.mean(axis=0)
+        return out._mean(axis=0)
 
 
 class GaussianProcess(StochasticProcess):
