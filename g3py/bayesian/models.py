@@ -7,8 +7,10 @@ import theano.tensor as tt
 import pymc3 as pm
 from ..libs import clone
 from ..libs.tensors import makefn, tt_to_num
-from ..libs.plots import plot
-
+from ..libs.plots import figure, plot, show, plot_text, grid2d, plot_2d
+from .. import config
+from ipywidgets import interact
+import matplotlib.pyplot as plt
 
 Model = pm.Model
 
@@ -257,6 +259,189 @@ class GraphicalModel:
 
     def eval_widget(self):
         return self.eval_point(self.get_params_widget())
+
+
+class PlotModel:
+    def __init__(self, description = None):
+        self.description = description
+        if self.description is None:
+            self.description = {'title': self.name,
+                                'x': 'x',
+                                'y': 'y'}
+        self._widget_samples = 0
+        self._widget_traces = None
+        self.params_widget = None
+        self.params_current = None
+
+    def describe(self, title=None, x=None, y=None, text=None):
+        if title is not None:
+            self.description['title'] = title
+        if title is not None:
+            self.description['x'] = x
+        if title is not None:
+            self.description['y'] = y
+        if title is not None:
+            self.description['text'] = text
+
+    def plot_space(self, space=None, independ=False, observed=False):
+        if space is not None:
+            self.set_space(space)
+        if independ:
+            for i in range(self.th_space.shape[1]):
+                figure(i)
+                plot(self.th_order, self.th_space[:, i])
+        else:
+            plot(self.th_order, self.th_space)
+        if self.th_index is not None and observed:
+            if independ:
+                for i in range(self.th_space.shape[1]):
+                    figure(i)
+                    plot(self.th_index, self.th_inputs[:, i], '.k')
+            else:
+                plot(self.th_index, self.th_inputs, '.k')
+
+    def plot_hidden(self, big=None):
+        if big is None:
+            big = config.plot_big
+        if big and self.hidden is not None:
+            plot(self.th_order, self.hidden[0:len(self.th_order)], linewidth=4, label='Hidden Processes')
+        elif self.hidden is not None:
+            plot(self.th_order, self.hidden[0:len(self.th_order)],  label='Hidden Processes')
+
+    def plot_observations(self, big=None):
+        if big is None:
+            big = config.plot_big
+        if big and self.th_outputs is not None:
+            plot(self.th_index, self.th_outputs, '.k', ms=20)
+            plot(self.th_index, self.th_outputs, '.r', ms=15, label='Observations')
+        elif self.th_outputs is not None:
+            plot(self.th_index, self.th_outputs, '.k', ms=10)
+            plot(self.th_index, self.th_outputs, '.r', ms=6, label='Observations')
+
+    def plot(self, params=None, space=None, inputs=None, outputs=None, mean=True, var=False, cov=False, median=False, quantiles=True, noise=True, samples=0, prior=False,
+             data=True, big=None, plot_space=False, title=None, loc=1):
+        values = self.predict(params=params, space=space, inputs=inputs, outputs=outputs, mean=mean, var=var, cov=cov, median=median, quantiles=quantiles, noise=noise, samples=samples, prior=prior)
+        if space is not None:
+            self.set_space(space)
+        if data:
+            self.plot_hidden(big)
+        if mean:
+            plot(self.th_order, values['mean'], label='Mean')
+        if var:
+            plot(self.th_order, values['mean'] + 2.0 * values['std'], '--k', alpha=0.2, label='4.0 std')
+            plot(self.th_order, values['mean'] - 2.0 * values['std'], '--k', alpha=0.2)
+        if cov:
+            pass
+        if median:
+            plot(self.th_order, values['median'], label='Median')
+        if quantiles:
+            plt.fill_between(self.th_order, values['quantile_up'], values['quantile_down'], alpha=0.1, label='95%')
+        if noise:
+            plt.fill_between(self.th_order, values['noise_up'], values['noise_down'], alpha=0.1, label='noise')
+        if samples > 0:
+            plot(self.th_order, values['samples'], alpha=0.4)
+        if title is None:
+            title = self.description['title']
+        if data:
+            self.plot_observations(big)
+        if loc is not None:
+            plot_text(title, self.description['x'], self.description['y'], loc=loc)
+        if plot_space:
+            show()
+            self.plot_space()
+            plot_text('Space X', 'Index', 'Value', legend=False)
+
+    def plot_distribution(self, index=0, params=None, space=None, inputs=None, outputs=None, mean=True, var=True, cov=False, median=False, quantiles=False, noise=False, prior=False, sigma=4, neval=100, title=None, swap=False, label=None):
+        pred = self.predict(params=params, space=space, inputs=inputs, outputs=outputs, mean=mean, var=var, cov=cov, median=median, quantiles=quantiles, noise=noise, distribution=True, prior=prior)
+        domain = np.linspace(pred._mean - sigma * pred.std, pred._mean + sigma * pred.std, neval)
+        dist_plot = np.zeros(len(domain))
+        for i in range(len(domain)):
+            dist_plot[i] = pred.distribution(domain[i:i + 1])
+        if label is None:
+            if prior:
+                label='prior'
+            else:
+                label='posterior'
+        if label is False:
+            label = None
+        if title is None:
+            title = 'Marginal Distribution y_'+str(self.th_order[index])
+        if swap:
+            plot(dist_plot, domain, label=label)
+            plot_text(title, 'Density', 'Domain y')
+        else:
+            plot(domain, dist_plot,label=label)
+            plot_text(title, 'Domain y', 'Density')
+
+    def plot_distribution2D(self, indexs=[0, 1], params=None, space=None, inputs=None, outputs=None, mean=True, var=True, cov=False, median=False, quantiles=False, noise=False, prior=False, sigma_1=2, sigma_2=2, neval=33, title=None):
+        pred = self.predict(params=params, space=space, inputs=inputs, outputs=outputs, mean=mean, var=var, cov=cov, median=median, quantiles=quantiles, noise=noise, distribution=True, prior=prior)
+        dist1 = np.linspace(pred._mean[0] - sigma_1 * pred.std[0], pred._mean[0] + sigma_1 * pred.std[0], neval)
+        dist2 = np.linspace(pred._mean[1] - sigma_2 * pred.std[1], pred._mean[1] + sigma_2 * pred.std[1], neval)
+        xy, x2d, y2d = grid2d(dist1, dist2)
+        dist_plot = np.zeros(len(xy))
+        for i in range(len(xy)):
+            dist_plot[i] = pred.distribution(xy[i])
+        plot_2d(dist_plot, x2d, y2d)
+        if title is None:
+            title = 'Distribution2D'
+        plot_text(title, 'Domain y_'+str(self.th_order[indexs[0]]), 'Domain y_'+str(self.th_order[indexs[1]]), legend=False)
+
+    def _check_params_dims(self, params):
+        r = dict()
+        for k, v in params.items():
+            try:
+                r[k] = np.array(v, dtype=th.config.floatX).reshape(self.model[k].tag.test_value.shape)
+            except KeyError:
+                pass
+        return r
+
+    def _widget_plot(self, params):
+        self.params_widget = params
+        self.plot(params=self.params_widget, samples=self._widget_samples)
+
+    def _widget_plot_trace(self, id_trace):
+        self._widget_plot(self._check_params_dims(self._widget_traces[id_trace]))
+
+    def _widget_plot_params(self, **params):
+        self._widget_plot(self._check_params_dims(params))
+
+    def _widget_plot_model(self, **params):
+        self.params_widget = self._check_params_dims(params)
+        self.plot_model(params=self.params_widget, indexs=None, kernel=False, mapping=True, marginals=True,
+                        bivariate=False)
+
+    def widget_traces(self, traces, chain=0):
+        self._widget_traces = traces._straces[chain]
+        interact(self._widget_plot_trace, __manual=True, id_trace=[0, len(self._widget_traces) - 1])
+
+    def widget_params(self, params=None, samples=0):
+        if params is None:
+            params = self.get_params_widget()
+        intervals = dict()
+        for k, v in params.items():
+            v = np.squeeze(v)
+            if v > 0.1:
+                intervals[k] = [0, 2*v]
+            elif v < -0.1:
+                intervals[k] = [2*v, 0]
+            else:
+                intervals[k] = [-5.00, 5.00]
+        self._widget_samples = samples
+        interact(self._widget_plot_params, __manual=True, **intervals)
+
+    def widget_model(self, params=None):
+        if params is None:
+            params = self.get_params_widget()
+        intervals = dict()
+        for k, v in params.items():
+            v = np.squeeze(v)
+            if v > 0.1:
+                intervals[k] = [0, 2*v]
+            elif v < -0.1:
+                intervals[k] = [2*v, 0]
+            else:
+                intervals[k] = [-5.00, 5.00]
+        interact(self._widget_plot_model, __manual=True, **intervals)
 
 
 class BlackBox(object):

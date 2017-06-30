@@ -24,27 +24,27 @@ class StudentTProcess(GaussianProcess):
 
     def freedom(self, prior=False):
         if prior:
-            return self.degree
+            return self.f_degree
         else:
-            return self.degree + self.th_inputs.shape[1]
+            return self.f_degree + self.th_inputs.shape[1]
 
-    def variance(self, prior=False, noise=False):
+    def _variance(self, prior=False, noise=False):
         beta = (self.mapping_outputs - self.location_inputs).T.dot(
-            tsl.solve(self.kernel_inputs, self.mapping_outputs - self.location))
+            tsl.solve(self.kernel_inputs, self.mapping_outputs - self.f_location))
         coeff = (self.freedom(prior=prior) + beta - 2) / (self.freedom(prior=prior) - 2)
-        return super().variance(prior=prior, noise=noise) * coeff
+        return super()._variance(prior=prior, noise=noise) * coeff
 
-    def quantiler(self, q=0.975, prior=False, noise=False):
+    def _quantiler(self, q=0.975, prior=False, noise=False):
         debug('quantiler')
         p = stats.t.ppf(q, df=self.freedom(prior=prior))
-        return self.mapping(self.mean(prior=prior, noise=noise) + p * self.std(prior=prior, noise=noise))
+        return self.f_mapping(self._mean(prior=prior, noise=noise) + p * self.std(prior=prior, noise=noise))
 
-    def sampler(self, nsamples=1, prior=False, noise=False):
+    def _sampler(self, samples=1, prior=False, noise=False):
         debug('sampler')
-        rand = np.random.randn(len(self.th_space), nsamples) * stats.invgamma.rvs(df=self.freedom(prior=prior)/2,
-                                                                                  loc=(self.freedom(prior=prior)-1)/2,
-                                                                                  size=nsamples)
-        return self.mapping(self.mean(prior=prior, noise=noise) + self.cholesky(prior=prior, noise=noise).dot(rand))
+        rand = np.random.randn(len(self.th_space), samples) * stats.invgamma.rvs(df=self.freedom(prior=prior) / 2,
+                                                                                 loc=(self.freedom(prior=prior)-1)/2,
+                                                                                 size=samples)
+        return self.f_mapping(self._mean(prior=prior, noise=noise) + self._cholesky(prior=prior, noise=noise).dot(rand))
 
 
 class TransformedStudentTDistribution(pm.Continuous):
