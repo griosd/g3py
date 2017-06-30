@@ -27,35 +27,28 @@ class StochasticProcess(PlotModel):#TheanoBlackBox
         instance._compile_methods()
         return instance
 
-    def __init__(self, name='SP', space=None, orden=None, index=None, inputs=None, outputs=None, hidden=None,
+    def __init__(self, name='SP', space=None, order=None, inputs=None, outputs=None, hidden=None, index=None,
                  distribution=None, active=True, precompile=False, *args, **kwargs):
 
+        ndim = 1
+        if space is not None:
+            if hasattr(space,'shape'):
+                if len(space.shape) > 1:
+                    ndim = space.shape[1]
+            else:
+                ndim = int(space)
+        self.nspace = ndim
         self.name = name
-        self.th_space = space
-        self.th_index = index
-        self.th_inputs = inputs
-        self.th_outputs = outputs
-        self.th_hidden = hidden
-        self.th_order = orden
 
-        if self.th_order is None:
-            self.th_order = th.shared(np.array([0.0, 1.0], dtype=th.config.floatX),
-                                      name=self.name + '_order', borrow=False)
-        if self.th_space is None:
-            self.th_space = th.shared(np.array([[0.0, 1.0], [1.0, 0.0]], dtype=th.config.floatX),
-                                      name=self.name + '_space', borrow=False)
-        if self.th_hidden is None:
-            self.th_hidden = th.shared(np.array([0.0, 1.0], dtype=th.config.floatX),
-                                       name=self.name + '_hidden', borrow=False)
-        if self.th_index is None:
-            self.th_index = th.shared(np.array([0.0, 1.0], dtype=th.config.floatX),
-                                      name=self.name + '_index', borrow=False)
-        if self.th_inputs is None:
-            self.th_inputs = th.shared(np.array([[0.0, 0.0], [1.0, 1.0]], dtype=th.config.floatX),
-                                       name=self.name + '_inputs', borrow=False)
-        if self.th_outputs is None:
-            self.th_outputs = th.shared(np.array([0.0, 1.0], dtype=th.config.floatX),
-                                        name=self.name + '_outputs', borrow=False)
+        self.th_order = th.shared(np.array([0.0, 1.0], dtype=th.config.floatX), name=self.name + '_order', borrow=False, allow_downcast=True)
+        self.th_space = th.shared(np.array([[0.0, 1.0]]*self.nspace, dtype=th.config.floatX).T, name=self.name + '_space', borrow=False, allow_downcast=True)
+        self.th_hidden = th.shared(np.array([0.0, 1.0], dtype=th.config.floatX), name=self.name + '_hidden', borrow=False, allow_downcast=True)
+
+        self.th_index = th.shared(np.array([0.0, 1.0], dtype=th.config.floatX), name=self.name + '_index', borrow=False, allow_downcast=True)
+        self.th_inputs = th.shared(np.array([[0.0, 1.0]]*self.nspace, dtype=th.config.floatX).T, name=self.name + '_inputs', borrow=False, allow_downcast=True)
+        self.th_outputs = th.shared(np.array([0.0, 1.0], dtype=th.config.floatX), name=self.name + '_outputs', borrow=False, allow_downcast=True)
+
+        self.set_space(space=space, hidden=hidden, order=order, inputs=inputs, outputs=outputs, index=index)
 
         self.distribution = distribution
         if active is True:
@@ -189,17 +182,39 @@ class StochasticProcess(PlotModel):#TheanoBlackBox
 
     def set_space(self, space=None, hidden=None, order=None, inputs=None, outputs=None, index=None):
         if space is not None:
+            if len(space.shape) < 2:
+                space = space.reshape(len(space), 1)
             self.th_space.set_value(space)
         if hidden is not None:
+            if len(hidden.shape) > 1:
+                hidden = hidden.reshape(len(hidden))
             self.th_hidden.set_value(hidden)
         if order is not None:
+            if len(order.shape) > 1:
+                order = order.reshape(len(order))
             self.th_order.set_value(order)
+        elif self.nspace == 1:
+            self.th_order.set_value(self.space.reshape(len(self.space)))
+
         if inputs is not None:
+            if len(inputs.shape) < 2:
+                inputs = inputs.reshape(len(inputs), 1)
             self.th_inputs.set_value(inputs)
         if outputs is not None:
+            if len(outputs.shape) > 1:
+                outputs = outputs.reshape(len(outputs))
             self.th_outputs.set_value(outputs)
         if index is not None:
+            if len(index.shape) > 1:
+                index = index.reshape(len(index))
             self.th_index.set_value(index)
+        elif self.nspace == 1:
+            self.th_index.set_value(self.inputs.reshape(len(self.inputs)))
+        #check dims
+        if len(self.order) != len(self.space):
+            self.th_order.set_value(np.arange(len(self.space)))
+        if len(self.index) != len(self.inputs):
+            self.th_index.set_value(np.arange(len(self.inputs)))
 
     def observed(self, inputs=None, outputs=None, index=None):
         self.set_space(inputs=inputs, outputs=outputs, index=index)
@@ -273,9 +288,10 @@ class EllipticalProcess(StochasticProcess):
             self.f_kernel_noise = self.f_kernel
 
     def _check_hypers(self):
-        self.f_location.check_dims(self.th_inputs)
-        self.f_kernel_noise.check_dims(self.th_inputs)
-        self.f_mapping.check_dims(self.th_inputs)
+
+        self.f_location.check_dims(self.inputs)
+        self.f_kernel_noise.check_dims(self.inputs)
+        self.f_mapping.check_dims(self.inputs)
 
         self.f_location.check_hypers(self.name + '_')
         self.f_kernel_noise.check_hypers(self.name + '_')

@@ -57,6 +57,12 @@ class Hypers:
                     self.shape = domain.shape[1]
                 else:
                     self.shape = 1
+            elif type(x) is np.ndarray:
+                if len(x.shape) > 1:
+                    self.shape = x.shape[1]
+                else:
+                    self.shape = 1
+                self.dims = slice(0, self.shape)
             else:
                 if len(x.shape.eval()) > 1:
                     self.shape = x.shape.eval()[1]

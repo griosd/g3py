@@ -262,7 +262,8 @@ class GraphicalModel:
 
 
 class PlotModel:
-    def __init__(self, description = None):
+    def __init__(self, name='', description = None):
+        self.name = name
         self.description = description
         if self.description is None:
             self.description = {'title': self.name,
@@ -272,6 +273,10 @@ class PlotModel:
         self._widget_traces = None
         self.params_widget = None
         self.params_current = None
+
+
+    def predict(self):
+        pass
 
     def describe(self, title=None, x=None, y=None, text=None):
         if title is not None:
@@ -283,63 +288,59 @@ class PlotModel:
         if title is not None:
             self.description['text'] = text
 
-    def plot_space(self, space=None, independ=False, observed=False):
-        if space is not None:
-            self.set_space(space)
+    def plot_space(self, independ=False, observed=False):
         if independ:
-            for i in range(self.th_space.shape[1]):
+            for i in range(self.space.shape[1]):
                 figure(i)
-                plot(self.th_order, self.th_space[:, i])
+                plot(self.order, self.space[:, i])
         else:
-            plot(self.th_order, self.th_space)
-        if self.th_index is not None and observed:
+            plot(self.order, self.space)
+        if self.index is not None and observed:
             if independ:
-                for i in range(self.th_space.shape[1]):
+                for i in range(self.space.shape[1]):
                     figure(i)
-                    plot(self.th_index, self.th_inputs[:, i], '.k')
+                    plot(self.index, self.inputs[:, i], '.k')
             else:
-                plot(self.th_index, self.th_inputs, '.k')
+                plot(self.index, self.inputs, '.k')
 
     def plot_hidden(self, big=None):
         if big is None:
             big = config.plot_big
         if big and self.hidden is not None:
-            plot(self.th_order, self.hidden[0:len(self.th_order)], linewidth=4, label='Hidden Processes')
+            plot(self.order, self.hidden, linewidth=4, label='Hidden Processes')
         elif self.hidden is not None:
-            plot(self.th_order, self.hidden[0:len(self.th_order)],  label='Hidden Processes')
+            plot(self.order, self.hidden,  label='Hidden Processes')
 
     def plot_observations(self, big=None):
         if big is None:
             big = config.plot_big
-        if big and self.th_outputs is not None:
-            plot(self.th_index, self.th_outputs, '.k', ms=20)
-            plot(self.th_index, self.th_outputs, '.r', ms=15, label='Observations')
-        elif self.th_outputs is not None:
-            plot(self.th_index, self.th_outputs, '.k', ms=10)
-            plot(self.th_index, self.th_outputs, '.r', ms=6, label='Observations')
+        if big and self.outputs is not None:
+            plot(self.index, self.outputs, '.k', ms=20)
+            plot(self.index, self.outputs, '.r', ms=15, label='Observations')
+        elif self.outputs is not None:
+            plot(self.index, self.outputs, '.k', ms=10)
+            plot(self.index, self.outputs, '.r', ms=6, label='Observations')
 
     def plot(self, params=None, space=None, inputs=None, outputs=None, mean=True, var=False, cov=False, median=False, quantiles=True, noise=True, samples=0, prior=False,
              data=True, big=None, plot_space=False, title=None, loc=1):
         values = self.predict(params=params, space=space, inputs=inputs, outputs=outputs, mean=mean, var=var, cov=cov, median=median, quantiles=quantiles, noise=noise, samples=samples, prior=prior)
-        if space is not None:
-            self.set_space(space)
         if data:
             self.plot_hidden(big)
         if mean:
-            plot(self.th_order, values['mean'], label='Mean')
+            plot(self.order, values['mean'], label='Mean')
         if var:
-            plot(self.th_order, values['mean'] + 2.0 * values['std'], '--k', alpha=0.2, label='4.0 std')
-            plot(self.th_order, values['mean'] - 2.0 * values['std'], '--k', alpha=0.2)
+            plot(self.order, values['mean'] + 2.0 * values['std'], '--k', alpha=0.2, label='4.0 std')
+            plot(self.order, values['mean'] - 2.0 * values['std'], '--k', alpha=0.2)
         if cov:
             pass
         if median:
-            plot(self.th_order, values['median'], label='Median')
+            plot(self.order, values['median'], label='Median')
         if quantiles:
-            plt.fill_between(self.th_order, values['quantile_up'], values['quantile_down'], alpha=0.1, label='95%')
+            plt.fill_between(self.order, values['quantile_up'], values['quantile_down'], alpha=0.1, label='95%')
         if noise:
-            plt.fill_between(self.th_order, values['noise_up'], values['noise_down'], alpha=0.1, label='noise')
+            plt.fill_between(self.order, values['noise_up'], values['noise_down'], alpha=0.1, label='noise')
         if samples > 0:
-            plot(self.th_order, values['samples'], alpha=0.4)
+            plot(self.order, values['samples'], alpha=0.4)
         if title is None:
             title = self.description['title']
         if data:
