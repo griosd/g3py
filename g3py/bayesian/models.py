@@ -15,6 +15,32 @@ import matplotlib.pyplot as plt
 Model = pm.Model
 
 
+def get_model():
+    try:
+        model = pm.Model.get_context()
+    except:
+        model = pm.Model()
+
+    def dlogp(self, vars=None):
+        """Nan Robust dlogp"""
+        return self.model.fn(tt_to_num(pm.gradient(self.logpt, vars)))
+
+    def fastdlogp(self, vars=None):
+        """Nan Robust fastdlogp"""
+        return self.model.fastfn(tt_to_num(pm.gradient(self.logpt, vars)))
+
+    def fastd2logp(self, vars=None):
+        """Nan Robust fastd2logp"""
+        return self.model.fastfn(tt_to_num(-pm.jacobian(tt_to_num(pm.gradient(self.logpt, vars), vars))))
+
+    import types
+    model.dlogp = types.MethodType(dlogp, model)
+    model.fastdlogp = types.MethodType(fastdlogp, model)
+    model.fastd2logp = types.MethodType(fastd2logp, model)
+
+    return model
+
+
 class GraphicalModel:
     """Abstract class used to define a GraphicalModel.
 
@@ -40,7 +66,7 @@ class GraphicalModel:
             self.description = ''
         else:
             self.description = description
-        self.model = self.get_model()
+        self.model = get_model()
 
         # Model Average
         self.current_sample = None
@@ -48,7 +74,7 @@ class GraphicalModel:
         self.fixed_sample = None
         self.sampling_dims = None
         self.fixed_dims = None
-        self.calc_dimensions()
+        #self.calc_dimensions() BUG de PYMC3
 
         if file is not None:
             self.file = file
@@ -92,31 +118,6 @@ class GraphicalModel:
         except Exception as details:
             print('Error saving model '+path, details)
 
-    def get_model(self):
-        try:
-            model = pm.Model.get_context()
-        except:
-            model = pm.Model()
-
-        def dlogp(self, vars=None):
-            """Nan Robust dlogp"""
-            return self.model.fn(tt_to_num(pm.gradient(self.logpt, vars)))
-
-        def fastdlogp(self, vars=None):
-            """Nan Robust fastdlogp"""
-            return self.model.fastfn(tt_to_num(pm.gradient(self.logpt, vars)))
-
-        def fastd2logp(self, vars=None):
-            """Nan Robust fastd2logp"""
-            return self.model.fastfn(tt_to_num(-pm.jacobian(tt_to_num(pm.gradient(self.logpt, vars), vars))))
-
-        import types
-        model.dlogp = types.MethodType(dlogp, model)
-        model.fastdlogp = types.MethodType(fastdlogp, model)
-        model.fastd2logp = types.MethodType(fastd2logp, model)
-
-        return model
-
     def set_sample(self, sample):
         self.current_sample = sample
 
@@ -124,6 +125,10 @@ class GraphicalModel:
         self.fixed_keys = keys
         self.fixed_sample = sample
         self.calc_dimensions()
+
+    @property
+    def bijection(self):
+        return pm.DictToArrayBijection(pm.ArrayOrdering(pm.inputvars(self.model.cont_vars)), self.model.test_point)
 
     def calc_dimensions(self):
         dimensions = list(range(self.ndim))
@@ -262,9 +267,10 @@ class GraphicalModel:
 
 
 class PlotModel:
-    def __init__(self, name='', description = None):
+    def __init__(self, name=None, description = None):
         #print('PlotModel__init__')
-        self.name = name
+        if name is not None:
+            self.name = name
         self.description = description
         if self.description is None:
             self.description = {'title': self.name,

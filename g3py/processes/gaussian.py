@@ -42,8 +42,8 @@ class GaussianProcess(EllipticalProcess):
 #TODO: ARREGLAR
     def _sampler(self, samples=1, prior=False, noise=False):
         debug('sampler')
-        rand = np.random.randn(len(self.th_space.get_value()), samples)
-        return self.f_mapping(self._mean(prior=prior, noise=noise) + self._cholesky(prior=prior, noise=noise).dot(rand))
+        rand = np.random.randn(len(self.space), samples)
+        return self.f_mapping(self._mean(prior=prior, noise=noise)[:, None] + self._cholesky(prior=prior, noise=noise).dot(rand))
 
 
 def debug(*args, **kwargs):

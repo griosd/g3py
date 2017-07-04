@@ -14,18 +14,22 @@ def debug(x, name='', force=False):
 
 
 class makefn:
-    def __init__(self, th_vars, fn, precompile=False):
+    def __init__(self, th_vars, fn, bijection=None, precompile=False):
         self.th_vars = th_vars
         self.fn = fn
+        self.bijection = bijection
         if precompile:
             self.compiled = th.function(self.th_vars, self.fn, allow_input_downcast=True, on_unused_input='ignore')
         else:
             self.compiled = None
 
-    def __call__(self, *args, **kwargs):
+    def __call__(self, params):
         if self.compiled is None:
             self.compiled = th.function(self.th_vars, self.fn, allow_input_downcast=True, on_unused_input='ignore')
-        return self.compiled(*args, **kwargs)
+        if self.bijection is None:
+            return self.compiled(**params)
+        else:
+            return self.compiled(**self.bijection(params))
 
 
 def show_graph(f, name='temp.png'):
@@ -49,6 +53,16 @@ def tt_to_cov(c):
     r = tt_to_num(c)
     m = tt.min(tt.diag(r))
     return tt.switch(m > 0, r, r + (1e-6-m)*tt.eye(c.shape[0]) )
+
+
+def tt_to_bounded(r, lower=None, upper=None):
+    if lower is None and upper is None:
+        return r
+    if lower is None:
+        return tt.switch(r > upper, upper, r)
+    if upper is None:
+        return tt.switch(r < lower, lower, r)
+    return tt.switch(r < lower, lower, tt.switch(r > upper, upper, r))
 
 
 def inverse_function(func, z, tol=1e-3, n_steps=1024, alpha=0.1):

@@ -140,8 +140,8 @@ class StochasticProcess(PlotModel):#TheanoBlackBox
     def _predictive(self, prior=False, noise=False):
         pass
 
-    def _logp(self):
-        pass
+    def _logp(self, prior=False, noise=False):
+        return self.active.model.logpt
 
     def _std(self, *args, **kwargs):
         return tt.sqrt(self._variance(*args, **kwargs))
@@ -159,16 +159,19 @@ class StochasticProcess(PlotModel):#TheanoBlackBox
         self.logp = types.MethodType(self._method_name('_logp'), self)
 
     def _method_name(self, name=None):
-        def _method(self, params=None, space=None, hidden=None, inputs=None, outputs=None, prior=False, noise=False, *args, **kwargs):
+        def _method(self, params=None, space=None, hidden=None, inputs=None, outputs=None, prior=False, noise=False, array=False, *args, **kwargs):
             if params is None:
                 params = self.params_current
             if (space is not None) or (hidden is not None) or (inputs is not None) or (outputs is not None):
                 self.set_space(space=space, hidden=hidden, inputs=inputs, outputs=outputs)
-            return self._jit_compile(name, prior=prior, noise=noise, *args, **kwargs)(**params)
+            return self._jit_compile(name, prior=prior, noise=noise, array=array, *args, **kwargs)(params)
         return _method
 
-    def _jit_compile(self, method, prior=False, noise=False, *args, **kwargs):
-        name = ''
+    def _jit_compile(self, method, prior=False, noise=False, array=False, *args, **kwargs):
+        if array:
+            name = 'array_'
+        else:
+            name = ''
         if prior:
             name += 'prior'
         else:
@@ -182,8 +185,11 @@ class StochasticProcess(PlotModel):#TheanoBlackBox
             name += str(kwargs)
         if not hasattr(self.compiles, name):
             vars = self.active.model.vars #[self.space_th, self.inputs_th, self.outputs_th] +
+            bijection = None
+            if array:
+                bijection = self.active.bijection.rmap
             self.compiles[name] = makefn(vars, getattr(self, method)(prior=prior, noise=noise, *args, **kwargs),
-                                         self.precompile)
+                                         bijection=bijection, precompile=self.precompile)
         return self.compiles[name]
 
     def set_params(self, params=None):
@@ -251,7 +257,7 @@ class StochasticProcess(PlotModel):#TheanoBlackBox
             values['noise_up'] = self.quantiler(params, q=0.975, prior=prior, noise=True)
             values['noise_down'] = self.quantiler(params, q=0.025, prior=prior, noise=True)
         if samples > 0:
-            values['samples'] = self.sampler(params, samples=samples, prior=prior, noise=noise)
+            values['samples'] = self.sampler(params, samples=samples, prior=prior, noise=False)
         if distribution:
             values['logp'] = lambda x: self.compiles['posterior_logp'](x, space, inputs, outputs, **params)
             values['logpred'] = lambda x: self.compiles['posterior_logpred'](x, space, inputs, outputs, **params)
