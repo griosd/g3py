@@ -40,13 +40,13 @@ class StochasticProcess(PlotModel):#TheanoBlackBox
         self.nspace = ndim
         self.name = name
 
-        self.th_order = th.shared(np.array([0.0, 1.0], dtype=th.config.floatX), name=self.name + '_order', borrow=False, allow_downcast=True)
-        self.th_space = th.shared(np.array([[0.0, 1.0]]*self.nspace, dtype=th.config.floatX).T, name=self.name + '_space', borrow=False, allow_downcast=True)
-        self.th_hidden = th.shared(np.array([0.0, 1.0], dtype=th.config.floatX), name=self.name + '_hidden', borrow=False, allow_downcast=True)
+        self.th_order = th.shared(np.array([0.0, 1.0], dtype=th.config.floatX), name=self.name + '_order', borrow=True, allow_downcast=True)
+        self.th_space = th.shared(np.array([[0.0, 1.0]]*self.nspace, dtype=th.config.floatX).T, name=self.name + '_space', borrow=True, allow_downcast=True)
+        self.th_hidden = th.shared(np.array([0.0, 1.0], dtype=th.config.floatX), name=self.name + '_hidden', borrow=True, allow_downcast=True)
 
-        self.th_index = th.shared(np.array([0.0, 1.0], dtype=th.config.floatX), name=self.name + '_index', borrow=False, allow_downcast=True)
-        self.th_inputs = th.shared(np.array([[0.0, 1.0]]*self.nspace, dtype=th.config.floatX).T, name=self.name + '_inputs', borrow=False, allow_downcast=True)
-        self.th_outputs = th.shared(np.array([0.0, 1.0], dtype=th.config.floatX), name=self.name + '_outputs', borrow=False, allow_downcast=True)
+        self.th_index = th.shared(np.array([0.0, 1.0], dtype=th.config.floatX), name=self.name + '_index', borrow=True, allow_downcast=True)
+        self.th_inputs = th.shared(np.array([[0.0, 1.0]]*self.nspace, dtype=th.config.floatX).T, name=self.name + '_inputs', borrow=True, allow_downcast=True)
+        self.th_outputs = th.shared(np.array([0.0, 1.0], dtype=th.config.floatX), name=self.name + '_outputs', borrow=True, allow_downcast=True)
 
         self.set_space(space=space, hidden=hidden, order=order, inputs=inputs, outputs=outputs, index=index)
 
@@ -65,45 +65,45 @@ class StochasticProcess(PlotModel):#TheanoBlackBox
 
     @property
     def space(self):
-        return self.th_space.get_value()
+        return self.th_space.get_value(borrow=True)
     @space.setter
     def space(self, value):
-        self.th_space.set_value(value)
+        self.th_space.set_value(value, borrow=True)
 
     @property
     def hidden(self):
-        return self.th_hidden.get_value()
+        return self.th_hidden.get_value(borrow=True)
     @hidden.setter
     def hidden(self, value):
-        self.th_hidden.set_value(value)
+        self.th_hidden.set_value(value, borrow=True)
 
     @property
     def inputs(self):
-        return self.th_inputs.get_value()
+        return self.th_inputs.get_value(borrow=True)
     @inputs.setter
     def inputs(self, value):
-        self.th_inputs.set_value(value)
+        self.th_inputs.set_value(value, borrow=True)
 
     @property
     def outputs(self):
-        return self.th_outputs.get_value()
+        return self.th_outputs.get_value(borrow=True)
     @outputs.setter
     def outputs(self, value):
-        self.th_outputs.set_value(value)
+        self.th_outputs.set_value(value, borrow=True)
 
     @property
     def order(self):
-        return self.th_order.get_value()
+        return self.th_order.get_value(borrow=True)
     @order.setter
     def order(self, value):
-        self.th_order.set_value(value)
+        self.th_order.set_value(value, borrow=True)
 
     @property
     def index(self):
-        return self.th_index.get_value()
+        return self.th_index.get_value(borrow=True)
     @index.setter
     def index(self, value):
-        self.th_index.set_value(value)
+        self.th_index.set_value(value, borrow=True)
 
     def default_hypers(self):
         pass
@@ -113,6 +113,9 @@ class StochasticProcess(PlotModel):#TheanoBlackBox
 
     def _define_process(self):
         pass
+
+    def _obs(self, prior=False, noise=False):
+        return self.th_outputs
 
     def _quantiler(self, q=0.975, prior=False, noise=False):
         pass
@@ -142,6 +145,7 @@ class StochasticProcess(PlotModel):#TheanoBlackBox
         return tt.sqrt(self._variance(*args, **kwargs))
 
     def _compile_methods(self):
+        self.obs = types.MethodType(self._method_name('_obs'), self)
         self.mean = types.MethodType(self._method_name('_mean'), self)
         self.median = types.MethodType(self._method_name('_median'), self)
         self.variance = types.MethodType(self._method_name('_variance'), self)
@@ -184,37 +188,37 @@ class StochasticProcess(PlotModel):#TheanoBlackBox
         if space is not None:
             if len(space.shape) < 2:
                 space = space.reshape(len(space), 1)
-            self.th_space.set_value(space)
+            self.space = space
         if hidden is not None:
             if len(hidden.shape) > 1:
                 hidden = hidden.reshape(len(hidden))
-            self.th_hidden.set_value(hidden)
+            self.hidden = hidden
         if order is not None:
             if len(order.shape) > 1:
                 order = order.reshape(len(order))
-            self.th_order.set_value(order)
+            self.order = order
         elif self.nspace == 1:
-            self.th_order.set_value(self.space.reshape(len(self.space)))
+            self.order = self.space.reshape(len(self.space))
 
         if inputs is not None:
             if len(inputs.shape) < 2:
                 inputs = inputs.reshape(len(inputs), 1)
-            self.th_inputs.set_value(inputs)
+            self.inputs = inputs
         if outputs is not None:
             if len(outputs.shape) > 1:
                 outputs = outputs.reshape(len(outputs))
-            self.th_outputs.set_value(outputs)
+            self.outputs = outputs
         if index is not None:
             if len(index.shape) > 1:
                 index = index.reshape(len(index))
-            self.th_index.set_value(index)
+            self.index = index
         elif self.nspace == 1:
-            self.th_index.set_value(self.inputs.reshape(len(self.inputs)))
+            self.index = self.inputs.reshape(len(self.inputs))
         #check dims
         if len(self.order) != len(self.space):
-            self.th_order.set_value(np.arange(len(self.space)))
+            self.order = np.arange(len(self.space))
         if len(self.index) != len(self.inputs):
-            self.th_index.set_value(np.arange(len(self.inputs)))
+            self.index = np.arange(len(self.inputs))
 
     def observed(self, inputs=None, outputs=None, index=None):
         self.set_space(inputs=inputs, outputs=outputs, index=index)
@@ -343,6 +347,9 @@ class EllipticalProcess(StochasticProcess):
             tsl.solve(self.prior_kernel_inputs, self.cross_kernel_f_space_inputs.T))
         self.posterior_cholesky_f_space = cholesky_robust(self.posterior_kernel_f_space)
 
+    def _mapping(self, prior=False, noise=False):
+        return self.mapping_outputs
+
     def _location(self, prior=False, noise=False):
         if prior:
             return self.prior_location_space
@@ -375,6 +382,7 @@ class EllipticalProcess(StochasticProcess):
 
     def _compile_methods(self):
         super()._compile_methods()
+        self.mapping = types.MethodType(self._method_name('_mapping'), self)
         self.location = types.MethodType(self._method_name('_location'), self)
         self.kernel = types.MethodType(self._method_name('_kernel'), self)
         self.cholesky = types.MethodType(self._method_name('_cholesky'), self)
