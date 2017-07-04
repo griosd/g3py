@@ -159,15 +159,15 @@ class StochasticProcess(PlotModel):#TheanoBlackBox
         self.logp = types.MethodType(self._method_name('_logp'), self)
 
     def _method_name(self, name=None):
-        def _method(self, params=None, space=None, hidden=None, inputs=None, outputs=None, prior=False, noise=False, **kwargs):
+        def _method(self, params=None, space=None, hidden=None, inputs=None, outputs=None, prior=False, noise=False, *args, **kwargs):
             if params is None:
                 params = self.params_current
             if (space is not None) or (hidden is not None) or (inputs is not None) or (outputs is not None):
                 self.set_space(space=space, hidden=hidden, inputs=inputs, outputs=outputs)
-            return self._jit_compile(name, prior=prior, noise=noise, **kwargs)(**params)
+            return self._jit_compile(name, prior=prior, noise=noise, *args, **kwargs)(**params)
         return _method
 
-    def _jit_compile(self, method, prior=False, noise=False, **kwargs):
+    def _jit_compile(self, method, prior=False, noise=False, *args, **kwargs):
         name = ''
         if prior:
             name += 'prior'
@@ -176,9 +176,13 @@ class StochasticProcess(PlotModel):#TheanoBlackBox
         name += method
         if noise:
             name += '_noise'
+        if len(args) > 0:
+            name += str(args)
+        if len(kwargs) > 0:
+            name += str(kwargs)
         if not hasattr(self.compiles, name):
             vars = self.active.model.vars #[self.space_th, self.inputs_th, self.outputs_th] +
-            self.compiles[name] = makefn(vars, getattr(self, method)(prior=prior, noise=noise, **kwargs),
+            self.compiles[name] = makefn(vars, getattr(self, method)(prior=prior, noise=noise, *args, **kwargs),
                                          self.precompile)
         return self.compiles[name]
 

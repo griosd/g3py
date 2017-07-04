@@ -9,7 +9,7 @@ from scipy import stats
 from theano.ifelse import ifelse
 from .stochastic import EllipticalProcess
 from .hypers.mappings import Identity
-from ..libs.tensors import cholesky_robust, debug#, tt_to_num
+from ..libs.tensors import cholesky_robust, debug, tt_to_bounded
 
 
 class GaussianProcess(EllipticalProcess):
@@ -32,7 +32,7 @@ class GaussianProcess(EllipticalProcess):
 
     def _variance(self, prior=False, noise=False):
         debug('variance')
-        return tnl.extract_diag(self._kernel(prior=prior, noise=noise))
+        return tt_to_bounded(tnl.extract_diag(self._kernel(prior=prior, noise=noise)), 0)
 
     def _quantiler(self, q=0.975, prior=False, noise=False):
         debug('quantiler')
