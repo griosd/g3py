@@ -263,6 +263,7 @@ class GraphicalModel:
 
 class PlotModel:
     def __init__(self, name='', description = None):
+        #print('PlotModel__init__')
         self.name = name
         self.description = description
         if self.description is None:
@@ -273,7 +274,6 @@ class PlotModel:
         self._widget_traces = None
         self.params_widget = None
         self.params_current = None
-
 
     def predict(self):
         pass

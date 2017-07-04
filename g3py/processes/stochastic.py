@@ -18,21 +18,12 @@ from matplotlib import cm
 
 class StochasticProcess(PlotModel):#TheanoBlackBox
 
-    def __new__(cls, *args, **kwargs):
-        instance = super().__new__(cls)
-        instance.__init__(*args, **kwargs)
-        with instance.active.model:
-            instance._check_hypers()
-            instance._define_process()
-        instance._compile_methods()
-        return instance
-
     def __init__(self, name='SP', space=None, order=None, inputs=None, outputs=None, hidden=None, index=None,
                  distribution=None, active=True, precompile=False, *args, **kwargs):
-
+        #print('StochasticProcess__init_')
         ndim = 1
         if space is not None:
-            if hasattr(space,'shape'):
+            if hasattr(space, 'shape'):
                 if len(space.shape) > 1:
                     ndim = space.shape[1]
             else:
@@ -50,6 +41,13 @@ class StochasticProcess(PlotModel):#TheanoBlackBox
 
         self.set_space(space=space, hidden=hidden, order=order, inputs=inputs, outputs=outputs, index=index)
 
+        #self.space_th = tt.matrix(self.name + '_space_th', dtype=th.config.floatX)
+        #self.inputs_th = tt.matrix(self.name + '_inputs_th', dtype=th.config.floatX)
+        #self.outputs_th = tt.vector(self.name + '_outputs_th', dtype=th.config.floatX)
+        #self.space_th.tag.test_value = self.space
+        #self.inputs_th.tag.test_value = self.inputs
+        #self.outputs_th.tag.test_value = self.outputs
+
         self.distribution = distribution
         if active is True:
             if GraphicalModel.active is None:
@@ -62,6 +60,10 @@ class StochasticProcess(PlotModel):#TheanoBlackBox
         self.compiles = DictObj()
         self.precompile = precompile
         super().__init__(*args, **kwargs)
+        with self.active.model:
+            self._check_hypers()
+            self._define_process()
+        self._compile_methods()
 
     @property
     def space(self):
@@ -156,8 +158,7 @@ class StochasticProcess(PlotModel):#TheanoBlackBox
         self.sampler = types.MethodType(self._method_name('_sampler'), self)
         self.logp = types.MethodType(self._method_name('_logp'), self)
 
-    @staticmethod
-    def _method_name(name=None):
+    def _method_name(self, name=None):
         def _method(self, params=None, space=None, hidden=None, inputs=None, outputs=None, prior=False, noise=False, **kwargs):
             if params is None:
                 params = self.params_current
@@ -176,7 +177,8 @@ class StochasticProcess(PlotModel):#TheanoBlackBox
         if noise:
             name += '_noise'
         if not hasattr(self.compiles, name):
-            self.compiles[name] = makefn(self.active.model.vars, getattr(self, method)(prior=prior, noise=noise, **kwargs),
+            vars = self.active.model.vars #[self.space_th, self.inputs_th, self.outputs_th] +
+            self.compiles[name] = makefn(vars, getattr(self, method)(prior=prior, noise=noise, **kwargs),
                                          self.precompile)
         return self.compiles[name]
 
@@ -279,17 +281,19 @@ class StochasticProcess(PlotModel):#TheanoBlackBox
 class EllipticalProcess(StochasticProcess):
     def __init__(self, location: Mean=None, kernel: Kernel=None, degree: Freedom=None, mapping: Mapping=Identity(),
                  noise=True, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+        #print('EllipticalProcess__init__')
 
         self.f_location = location
         self.f_degree = degree
         self.f_mapping = mapping
         if noise:
             self.f_kernel = kernel
-            self.f_kernel_noise = KernelSum(self.f_kernel, WN(self.th_space, 'Noise'))
+            self.f_kernel_noise = KernelSum(self.f_kernel, WN(name='Noise')) #self.th_space,
         else:
             self.f_kernel = kernel
             self.f_kernel_noise = self.f_kernel
+
+        super().__init__(*args, **kwargs)
 
     def _check_hypers(self):
 
@@ -317,6 +321,7 @@ class EllipticalProcess(StochasticProcess):
                 **self.f_mapping.default_hypers_dims(x, y)}
 
     def _define_process(self):
+        #print('stochastic_define_process')
         # Basic Tensors
         self.mapping_outputs = tt_to_num(self.f_mapping.inv(self.th_outputs))
         #self.mapping_th = tt_to_num(self.mapping(self.random_th))

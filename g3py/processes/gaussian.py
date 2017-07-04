@@ -15,6 +15,7 @@ from ..libs.tensors import cholesky_robust, debug#, tt_to_num
 class GaussianProcess(EllipticalProcess):
 
     def _define_process(self):
+        #print('gaussian_define_process')
         super()._define_process()
         self.distribution = TransformedGaussianDistribution(self.name, mu=self.prior_location_inputs,
                                                             cov=self.prior_kernel_inputs, mapping=Identity(),
