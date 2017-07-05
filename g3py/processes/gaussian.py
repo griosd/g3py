@@ -17,6 +17,7 @@ class GaussianProcess(StochasticProcess):
 
     def _define_process(self):
         # Prior
+
         self.prior_mean = self.location_space
         self.prior_covariance = self.kernel_f_space
         self.prior_cholesky = cholesky_robust(self.prior_covariance)
@@ -27,12 +28,12 @@ class GaussianProcess(StochasticProcess):
         self.prior_noise = tt.sqrt(tnl.extract_diag(self.kernel_space))
         self.prior_logpred = TGPDist.logp_cho(self.random_th, self.prior_mean, nL.alloc_diag(self.prior_noise),
                                               self.mapping)
-
+        sigma = 1.96
         self.prior_median = self.prior_mean
-        self.prior_quantile_up = self.prior_mean + 1.96 * self.prior_std
-        self.prior_quantile_down = self.prior_mean - 1.96 * self.prior_std
-        self.prior_noise_up = self.prior_mean + 1.96 * self.prior_noise
-        self.prior_noise_down = self.prior_mean - 1.96 * self.prior_noise
+        self.prior_quantile_up = self.prior_mean + sigma * self.prior_std
+        self.prior_quantile_down = self.prior_mean - sigma * self.prior_std
+        self.prior_noise_up = self.prior_mean + sigma * self.prior_noise
+        self.prior_noise_down = self.prior_mean - sigma * self.prior_noise
         self.prior_sampler = self.prior_mean + self.prior_cholesky.dot(self.random_th)
 
         # Posterior

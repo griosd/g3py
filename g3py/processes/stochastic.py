@@ -23,6 +23,7 @@ import theano.tensor.nlinalg as tnl
 import emcee
 from numba import jit
 from matplotlib import cm
+from scipy.stats import invgamma, t
 
 Model = pm.Model
 
@@ -387,17 +388,25 @@ class _StochasticProcess:
         self.compiles['prior_std'] = makefn(params, self.prior_std, precompile)
         self.compiles['prior_noise'] = makefn(params, self.prior_noise, precompile)
         self.compiles['prior_median'] = makefn(params, self.prior_median, precompile)
-        self.compiles['prior_quantile_up'] = makefn(params, self.prior_quantile_up, precompile)
-        self.compiles['prior_quantile_down'] = makefn(params, self.prior_quantile_down, precompile)
-        self.compiles['prior_noise_up'] = makefn(params, self.prior_noise_up, precompile)
-        self.compiles['prior_noise_down'] = makefn(params, self.prior_noise_down, precompile)
+
         self.compiles['prior_logp'] = makefn([self.random_th] + params, self.prior_logp, precompile)
         self.compiles['prior_logpred'] = makefn([self.random_th] + params, self.prior_logpred, precompile)
         self.compiles['prior_distribution'] = makefn([self.random_th] + params, self.prior_distribution, precompile)
         try:
-            self.compiles['prior_sampler'] = makefn([self.random_th] + params, self.prior_sampler, precompile)
+            self.compiles['prior_freedom'] = makefn(params, self.prior_freedom, precompile)
+            self.compiles['prior_sampler'] = makefn([self.random_scalar, self.random_th] + params, self.prior_sampler,
+                                                    precompile)
+            self.compiles['prior_quantile_up'] = makefn([self.random_scalar] + params, self.prior_quantile_up, precompile)
+            self.compiles['prior_quantile_down'] = makefn([self.random_scalar] + params, self.prior_quantile_down, precompile)
+            self.compiles['prior_noise_up'] = makefn([self.random_scalar] + params, self.prior_noise_up, precompile)
+            self.compiles['prior_noise_down'] = makefn([self.random_scalar] + params, self.prior_noise_down, precompile)
         except:
-            self.compiles['prior_sampler'] = makefn([self.random_scalar, self.random_th] + params, self.prior_sampler, precompile)
+            self.compiles['prior_sampler'] = makefn([self.random_th] + params, self.prior_sampler, precompile)
+            self.compiles['prior_quantile_up'] = makefn(params, self.prior_quantile_up, precompile)
+            self.compiles['prior_quantile_down'] = makefn(params, self.prior_quantile_down, precompile)
+            self.compiles['prior_noise_up'] = makefn(params, self.prior_noise_up, precompile)
+            self.compiles['prior_noise_down'] = makefn(params, self.prior_noise_down, precompile)
+
 
         params = [self.space_th, self.inputs_th, self.outputs_th] + self.model.vars
         self.compiles['posterior_mean'] = makefn(params, self.posterior_mean, precompile)
@@ -407,17 +416,24 @@ class _StochasticProcess:
         self.compiles['posterior_std'] = makefn(params, self.posterior_std, precompile)
         self.compiles['posterior_noise'] = makefn(params, self.posterior_noise, precompile)
         self.compiles['posterior_median'] = makefn(params, self.posterior_median, precompile)
-        self.compiles['posterior_quantile_up'] = makefn(params, self.posterior_quantile_up, precompile)
-        self.compiles['posterior_quantile_down'] = makefn(params, self.posterior_quantile_down, precompile)
-        self.compiles['posterior_noise_up'] = makefn(params, self.posterior_noise_up, precompile)
-        self.compiles['posterior_noise_down'] = makefn(params, self.posterior_noise_down, precompile)
+
         self.compiles['posterior_logp'] = makefn([self.random_th] + params, self.posterior_logp, precompile)
         self.compiles['posterior_logpred'] = makefn([self.random_th] + params, self.posterior_logpred, precompile)
         self.compiles['posterior_distribution'] = makefn([self.random_th] + params, self.posterior_distribution, precompile)
         try:
-            self.compiles['posterior_sampler'] = makefn([self.random_th] + params, self.posterior_sampler, precompile)
-        except:
+            self.compiles['posterior_freedom'] = makefn(params, self.posterior_freedom, precompile)
             self.compiles['posterior_sampler'] = makefn([self.random_scalar, self.random_th] + params, self.posterior_sampler, precompile)
+            self.compiles['posterior_quantile_up'] = makefn([self.random_scalar] + params, self.posterior_quantile_up, precompile)
+            self.compiles['posterior_quantile_down'] = makefn([self.random_scalar] + params, self.posterior_quantile_down, precompile)
+            self.compiles['posterior_noise_up'] = makefn([self.random_scalar] + params, self.posterior_noise_up, precompile)
+            self.compiles['posterior_noise_down'] = makefn([self.random_scalar] + params, self.posterior_noise_down, precompile)
+        except:
+            self.compiles['posterior_sampler'] = makefn([self.random_th] + params, self.posterior_sampler, precompile)
+            self.compiles['posterior_quantile_up'] = makefn(params, self.posterior_quantile_up, precompile)
+            self.compiles['posterior_quantile_down'] = makefn(params, self.posterior_quantile_down, precompile)
+            self.compiles['posterior_noise_up'] = makefn(params, self.posterior_noise_up, precompile)
+            self.compiles['posterior_noise_down'] = makefn(params, self.posterior_noise_down, precompile)
+
 
     def _compile_transforms(self, precompile=False):
         params = [self.random_th]
@@ -466,19 +482,35 @@ class _StochasticProcess:
         if median:
             values['median'] = self.compiles['prior_median'](space, **params)
         if quantiles:
-            values['quantile_up'] = self.compiles['prior_quantile_up'](space, **params)
-            values['quantile_down'] = self.compiles['prior_quantile_down'](space, **params)
+            try:
+                values['quantile_up'] = self.compiles['prior_quantile_up'](space, **params)
+                values['quantile_down'] = self.compiles['prior_quantile_down'](space, **params)
+            except:
+                sigma = np.float32(t.interval(0.95, self.compiles['prior_freedom'](space, **params))[1])
+                values['quantile_up'] = self.compiles['prior_quantile_up'](sigma, space, **params)
+                values['quantile_down'] = self.compiles['prior_quantile_down'](sigma, space, **params)
         if noise:
             values['noise'] = self.compiles['prior_noise'](space, **params)
-            values['noise_up'] = self.compiles['prior_noise_up'](space, **params)
-            values['noise_down'] = self.compiles['prior_noise_down'](space, **params)
+            try:
+                values['noise_up'] = self.compiles['prior_noise_up'](space, **params)
+                values['noise_down'] = self.compiles['prior_noise_down'](space, **params)
+            except:
+                sigma = np.float32(t.interval(0.95, self.compiles['prior_freedom'](space, **params))[1])
+                values['noise_up'] = self.compiles['prior_noise_up'](sigma, space, **params)
+                values['noise_down'] = self.compiles['prior_noise_down'](sigma, space, **params)
         # TODO: if samples is with another distribution
         if samples > 0:
             S = np.empty((len(space), samples))
             rand = np.random.randn(len(space), samples)
-            for i in range(samples):
-                S[:, i] = self.compiles['prior_sampler'](rand[:, i], space, **params)
-                values['samples'] = S
+            try:
+                for i in range(samples):
+                    S[:, i] = self.compiles['prior_sampler'](rand[:, i], space, **params)
+            except:
+                d = self.compiles['prior_freedom'](space, **params)
+                scale = invgamma.rvs(d/2, size=samples)*(d-2)/2
+                for i in range(samples):
+                    S[:, i] = self.compiles['prior_sampler'](scale[i], rand[:, i], space, **params)
+            values['samples'] = S
         if distribution:
             values['logp'] = lambda x: self.compiles['prior_logp'](x, space, **params)
             values['logpred'] = lambda x: self.compiles['prior_logpred'](x, space, **params)
@@ -505,18 +537,34 @@ class _StochasticProcess:
         if median:
             values['median'] = self.compiles['posterior_median'](space, inputs, outputs, **params)
         if quantiles:
-            values['quantile_up'] = self.compiles['posterior_quantile_up'](space, inputs, outputs, **params)
-            values['quantile_down'] = self.compiles['posterior_quantile_down'](space, inputs, outputs, **params)
+            try:
+                values['quantile_up'] = self.compiles['posterior_quantile_up'](space, inputs, outputs, **params)
+                values['quantile_down'] = self.compiles['posterior_quantile_down'](space, inputs, outputs, **params)
+            except:
+                sigma = np.float32(t.interval(0.95, self.compiles['posterior_freedom'](space, inputs, outputs, **params))[1])
+                values['quantile_up'] = self.compiles['posterior_quantile_up'](sigma, space, inputs, outputs, **params)
+                values['quantile_down'] = self.compiles['posterior_quantile_down'](sigma, space, inputs, outputs, **params)
         if noise:
             values['noise'] = self.compiles['posterior_noise'](space, inputs, outputs, **params)
-            values['noise_up'] = self.compiles['posterior_noise_up'](space, inputs, outputs, **params)
-            values['noise_down'] = self.compiles['posterior_noise_down'](space, inputs, outputs, **params)
+            try:
+                values['noise_up'] = self.compiles['posterior_noise_up'](space, inputs, outputs, **params)
+                values['noise_down'] = self.compiles['posterior_noise_down'](space, inputs, outputs, **params)
+            except:
+                sigma = np.float32(t.interval(0.95, self.compiles['posterior_freedom'](space, inputs, outputs, **params))[1])
+                values['noise_up'] = self.compiles['posterior_noise_up'](sigma, space, inputs, outputs, **params)
+                values['noise_down'] = self.compiles['posterior_noise_down'](sigma, space, inputs, outputs, **params)
         # TODO: if samples is with another distribution
         if samples > 0:
             S = np.empty((len(space), samples))
             rand = np.random.randn(len(space), samples)
-            for i in range(samples):
-                S[:, i] = self.compiles['posterior_sampler'](rand[:, i], space, inputs, outputs, **params)
+            try:
+                for i in range(samples):
+                    S[:, i] = self.compiles['posterior_sampler'](rand[:, i], space, inputs, outputs, **params)
+            except:
+                d = self.compiles['posterior_freedom'](space, inputs, outputs, **params)
+                scale = invgamma.rvs(d / 2, size=samples) * (d - 2) / 2
+                for i in range(samples):
+                    S[:, i] = self.compiles['posterior_sampler'](scale[i], rand[:, i], space, inputs, outputs, **params)
             values['samples'] = S
         if distribution:
             values['logp'] = lambda x: self.compiles['posterior_logp'](x, space, inputs, outputs, **params)
