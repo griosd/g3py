@@ -14,6 +14,9 @@ from ..libs.tensors import cholesky_robust, debug, tt_to_bounded
 
 class GaussianProcess(EllipticalProcess):
 
+    def __init__(self, name='GP', *args, **kwargs):
+        super().__init__(name=name, *args, **kwargs)
+
     def _define_process(self):
         #print('gaussian_define_process')
         super()._define_process()
@@ -23,31 +26,31 @@ class GaussianProcess(EllipticalProcess):
                                                             dtype=th.config.floatX)
 
     def _median(self, prior=False, noise=False):
-        debug('median')
+        debug('median'+str(prior)+str(noise))
         return self.f_mapping(self._location(prior=prior, noise=noise))
 
     def _mean(self, prior=False, noise=False):
-        debug('mean')
+        debug('mean'+str(prior)+str(noise))
         return self.f_mapping(self._location(prior=prior, noise=noise))
 
     def _variance(self, prior=False, noise=False):
-        debug('variance')
+        debug('variance'+str(prior)+str(noise))
         return tt_to_bounded(tnl.extract_diag(self._kernel(prior=prior, noise=noise)), 0)
 
     def _quantiler(self, q=0.975, prior=False, noise=False):
-        debug('quantiler')
+        debug('quantiler'+str(q)+str(prior)+str(noise))
         p = stats.norm.ppf(q)
         return self.f_mapping(self._mean(prior=prior, noise=noise) + p * self._std(prior=prior, noise=noise))
 
 #TODO: ARREGLAR
     def _sampler(self, samples=1, prior=False, noise=False):
-        debug('sampler')
+        debug('sampler'+str(samples)+str(prior)+str(noise))
         rand = np.random.randn(len(self.space), samples)
         return self.f_mapping(self._mean(prior=prior, noise=noise)[:, None] + self._cholesky(prior=prior, noise=noise).dot(rand))
 
 
 def debug(*args, **kwargs):
-    print(*args, **kwargs)
+    pass #print(*args, **kwargs)
 
 
 class TransformedGaussianProcess(GaussianProcess):

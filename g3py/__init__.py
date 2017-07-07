@@ -3,6 +3,8 @@ import sys
 from . import config
 from .version import __version__
 from .bayesian.models import *
+from .bayesian.selection import *
+from .bayesian.average import *
 from .libs import *
 from .processes import *
 from .processes.hypers import *

@@ -1,3 +1,4 @@
+import os
 import IPython.display as display
 import matplotlib.pyplot as plt
 import numpy as np
@@ -55,6 +56,7 @@ def style_widget():
     return display.display(display.HTML('''<style>
                 .widget-label { min-width: 30ex !important; }
                 .widget-hslider { min-width:100%}
+                div.output_subarea {max-width: 100%}
             </style>'''))
 
 
@@ -70,6 +72,7 @@ def plot_text(title="title", x="xlabel", y="ylabel", ncol=3, loc=8, axis=None, l
 
 
 def plot_save(file='example.pdf'):
+    os.makedirs(file[:file.rfind('/')], exist_ok=True)
     plt.savefig(file, bbox_inches='tight')
 
 

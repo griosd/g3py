@@ -5,11 +5,11 @@ import numpy as np
 import theano as th
 import theano.tensor as tt
 import pymc3 as pm
-from ..libs import clone
+from ..libs import clone, DictObj
 from ..libs.tensors import makefn, tt_to_num
 from ..libs.plots import figure, plot, show, plot_text, grid2d, plot_2d
 from .. import config
-from ipywidgets import interact
+from ipywidgets import interact, interact_manual, FloatSlider
 import matplotlib.pyplot as plt
 
 Model = pm.Model
@@ -41,6 +41,16 @@ def get_model():
     return model
 
 
+def transformed_hypers(hypers):
+    trans = DictObj()
+    for k, v in hypers.items():
+        if type(k) is pm.model.TransformedRV:
+            trans[k.transformed] = k.transformed.distribution.transform_used.forward(v).eval()
+        else:
+            trans[k] = v
+    return trans
+
+
 class GraphicalModel:
     """Abstract class used to define a GraphicalModel.
 
@@ -49,7 +59,7 @@ class GraphicalModel:
     """
     active = None
 
-    def __init__(self, name=None, description=None, file=None, reset=False):
+    def __init__(self, name='GM', description=None, file=None, reset=False):
         if file is not None and not reset:
             try:
                 self.reset(file)
@@ -58,20 +68,20 @@ class GraphicalModel:
             except:
                 print('Not found model in '+str(file))
         # Name, Description, Factor Graph, Space, Hidden
-        if name is None:
-            self.name = self.__class__.__name__
-        else:
-            self.name = name
+        self.name = name
         if description is None:
             self.description = ''
         else:
             self.description = description
         self.model = get_model()
 
+        self.components = DictObj()
         # Model Average
+        self.current_params = None
         self.current_sample = None
+
         self.fixed_keys = []
-        self.fixed_sample = None
+        #self.fixed_sample = None
         self.sampling_dims = None
         self.fixed_dims = None
         #self.calc_dimensions() BUG de PYMC3
@@ -86,6 +96,9 @@ class GraphicalModel:
 
     def activate(self):
         type(self).active = self
+
+    def add_component(self, component):
+        self.components[component.name] = component
 
     @classmethod
     def load(cls, path):
@@ -118,17 +131,63 @@ class GraphicalModel:
         except Exception as details:
             print('Error saving model '+path, details)
 
-    def set_sample(self, sample):
+    @property
+    def bijection(self):
+        return pm.DictToArrayBijection(pm.ArrayOrdering(pm.inputvars(self.model.cont_vars)), self.model.test_point)
+
+    @property
+    def ndim(self):
+        return self.model.bijection.ordering.dimensions
+
+    def array_to_dict(self, params):
+        return self.bijection.rmap(params)
+
+    def dict_to_array(self, params):
+        return self.bijection.map(params)
+
+    def set_params(self, params=None):
+        self.current_params = params
+
+    def set_sample(self, sample=None):
         self.current_sample = sample
+
+    @property
+    def params(self):
+        if self.current_params is not None:
+            return clone(self.current_params)
+        else:
+            return self.params_default
+
+    @property
+    def params_test(self):
+        return clone(self.model.test_point)
+
+    @property
+    def params_default(self):
+        default = self.params_test
+        for name, component in self.components.items():
+            for k, v in transformed_hypers(component.default_hypers()).items():
+                if k in self.model.vars:
+                    default[k.name] = v
+        return default
+
+    def params_random(self, mean=None, sigma=0.1, prop=True):
+        if mean is None:
+            mean = self.params_default
+        for k, v in mean.items():
+            if prop:
+                mean[k] = v * (1 + sigma * np.random.randn(v.size).reshape(v.shape)).astype(th.config.floatX)
+            else:
+                mean[k] = v + sigma * np.random.randn(v.size).reshape(v.shape).astype(th.config.floatX)
+        return mean
+
+    def params_datatrace(self, dt, loc):
+        return self.model.bijection.rmap(dt.loc[loc])
 
     def fix_vars(self, keys=[], sample=None):
         self.fixed_keys = keys
         self.fixed_sample = sample
         self.calc_dimensions()
-
-    @property
-    def bijection(self):
-        return pm.DictToArrayBijection(pm.ArrayOrdering(pm.inputvars(self.model.cont_vars)), self.model.test_point)
 
     def calc_dimensions(self):
         dimensions = list(range(self.ndim))
@@ -160,16 +219,6 @@ class GraphicalModel:
     def sampling_vars(self):
         return [t for t in self.model.vars if t not in self.fixed_vars]
 
-    @property
-    def ndim(self):
-        return self.model.bijection.ordering.dimensions
-
-    def array_to_dict(self, params):
-        return self.model.bijection.rmap(params)
-
-    def dict_to_array(self, params):
-        return self.model.dict_to_array(params)
-
     def logp_dict(self, params):
         return self.model.logp_array(self.model.dict_to_array(params))
 
@@ -190,61 +239,15 @@ class GraphicalModel:
             params_return.update(self.params_fixed)
         return params_return
 
-    def get_params_random(self, mean=None, sigma=0.1, prop=True, fixed=True):
-        if mean is None:
-            mean = self.get_params_default()
-        for k, v in mean.items():
-            if prop:
-                mean[k] = v * (1 + sigma * np.random.randn(v.size).reshape(v.shape)).astype(th.config.floatX)
-            else:
-                mean[k] = v + sigma * np.random.randn(v.size).reshape(v.shape).astype(th.config.floatX)
-        if fixed:
-            mean.update(self.params_fixed)
-        return mean
-
-    def get_params_test(self, fixed=False):
-        test = clone(self.model.test_point)
-        if fixed:
-            test.update(self.params_fixed)
-        return test
-
-    def get_params_default(self, fixed=True):
-        if self.observed_index is None:
-            return self.get_params_test(fixed)
-        default = self.get_params_test(fixed)
-        for k, v in trans_hypers(self.default_hypers()).items():
-            if k in self.model.vars:
-                default[k.name] = v
-        if fixed:
-            default.update(self.params_fixed)
-        return default
-
-    def get_params_current(self, fixed=True):
-        if self.params_current is None:
-            return self.get_params_default(fixed)
-        if fixed:
-            self.params_current.update(self.params_fixed)
-        return clone(self.params_current)
-
-    def get_params_widget(self, fixed=False):
-        if self.params_widget is None:
-            return self.get_params_default(fixed)
-        if fixed:
-            self.params_widget.update(self.params_fixed)
-        return clone(self.params_widget)
-
     def get_params_sampling(self, params=None):
         if params is None:
             params = self.get_params_current()
         return {k: v for k, v in params.items() if k not in self._fixed_keys}
 
-    def get_params_datatrace(self, dt, loc):
-        return self.model.bijection.rmap(dt.loc[loc])
-
     def get_point(self, point):
         return {v.name: point[v.name] for v in self.model.vars}
 
-    def point_to_In(self, point):
+    def point_to_in(self, point):
         r = list()
         for k, v in point.items():
             r.append(th.In(self.model[k], value=v))
@@ -262,24 +265,29 @@ class GraphicalModel:
     def eval_current(self):
         return self.eval_point(self.get_params_current())
 
-    def eval_widget(self):
-        return self.eval_point(self.get_params_widget())
-
 
 class PlotModel:
     def __init__(self, name=None, description = None):
         #print('PlotModel__init__')
         if name is not None:
             self.name = name
+        self.is_observed = False
         self.description = description
         if self.description is None:
             self.description = {'title': self.name,
                                 'x': 'x',
                                 'y': 'y'}
-        self._widget_samples = 0
-        self._widget_traces = None
-        self.params_widget = None
-        self.params_current = None
+        self._widget_args = None
+        self._widget_kwargs = None
+        #self._widget_traces = None
+        self.widget_params = None
+        #self.params_current = None
+
+    @property
+    def params_widget(self):
+        if self.widget_params is None:
+            return self.params
+        return clone(self.widget_params)
 
     def predict(self):
         pass
@@ -294,15 +302,15 @@ class PlotModel:
         if title is not None:
             self.description['text'] = text
 
-    def plot_space(self, independ=False, observed=False):
-        if independ:
+    def plot_space(self, independent=False, observed=False):
+        if independent:
             for i in range(self.space.shape[1]):
                 figure(i)
                 plot(self.order, self.space[:, i])
         else:
             plot(self.order, self.space)
         if self.index is not None and observed:
-            if independ:
+            if independent:
                 for i in range(self.space.shape[1]):
                     figure(i)
                     plot(self.index, self.inputs[:, i], '.k')
@@ -349,7 +357,7 @@ class PlotModel:
             plot(self.order, values['samples'], alpha=0.4)
         if title is None:
             title = self.description['title']
-        if data:
+        if data and self.is_observed:
             self.plot_observations(big)
         if loc is not None:
             plot_text(title, self.description['x'], self.description['y'], loc=loc)
@@ -357,6 +365,56 @@ class PlotModel:
             show()
             self.plot_space()
             plot_text('Space X', 'Index', 'Value', legend=False)
+
+    def widget(self, params=None, model=False, auto=False, *args, **kwargs):
+        if params is None:
+            params = self.params_widget
+        intervals = dict()
+        for k, v in params.items():
+            v = np.squeeze(v)
+            if v > 0.1:
+                intervals[k] = FloatSlider(min=0.0, max=2*v, value=v, step=1e-2)
+            elif v < -0.1:
+                intervals[k] = FloatSlider(min=2*v, max=0.0, value=v, step=1e-2)
+            else:
+                intervals[k] = FloatSlider(min=-5.0, max=5.0, value=v, step=1e-2)
+        self._widget_args = args
+        self._widget_kwargs = kwargs
+        if model:
+            widget_plot = self._widget_plot_model
+        else:
+            widget_plot = self._widget_plot
+        if auto:
+            interact(widget_plot, **intervals)
+        else:
+            interact_manual(widget_plot, **intervals)
+
+    def _check_params_dims(self, params):
+        r = dict()
+        for k, v in params.items():
+            try:
+                r[k] = np.array(v, dtype=th.config.floatX).reshape(self.model[k].tag.test_value.shape)
+            except KeyError:
+                pass
+        return r
+
+    def _widget_plot(self, **params):
+        self.widget_params = self._check_params_dims(params)
+        self.plot(params=self.params_widget, *self._widget_args, **self._widget_kwargs)
+        show()
+
+    def _widget_plot_model(self, **params):
+        self.widget_params = self._check_params_dims(params)
+        self.plot_model(params=self.params_widget, indexs=None, kernel=False, mapping=True, marginals=True,
+                        bivariate=False)
+        show()
+
+
+
+
+
+
+
 
     def plot_distribution(self, index=0, params=None, space=None, inputs=None, outputs=None, mean=True, var=True, cov=False, median=False, quantiles=False, noise=False, prior=False, sigma=4, neval=100, title=None, swap=False, label=None):
         pred = self.predict(params=params, space=space, inputs=inputs, outputs=outputs, mean=mean, var=var, cov=cov, median=median, quantiles=quantiles, noise=noise, distribution=True, prior=prior)
@@ -393,48 +451,12 @@ class PlotModel:
             title = 'Distribution2D'
         plot_text(title, 'Domain y_'+str(self.th_order[indexs[0]]), 'Domain y_'+str(self.th_order[indexs[1]]), legend=False)
 
-    def _check_params_dims(self, params):
-        r = dict()
-        for k, v in params.items():
-            try:
-                r[k] = np.array(v, dtype=th.config.floatX).reshape(self.model[k].tag.test_value.shape)
-            except KeyError:
-                pass
-        return r
-
-    def _widget_plot(self, params):
-        self.params_widget = params
-        self.plot(params=self.params_widget, samples=self._widget_samples)
-
     def _widget_plot_trace(self, id_trace):
         self._widget_plot(self._check_params_dims(self._widget_traces[id_trace]))
-
-    def _widget_plot_params(self, **params):
-        self._widget_plot(self._check_params_dims(params))
-
-    def _widget_plot_model(self, **params):
-        self.params_widget = self._check_params_dims(params)
-        self.plot_model(params=self.params_widget, indexs=None, kernel=False, mapping=True, marginals=True,
-                        bivariate=False)
 
     def widget_traces(self, traces, chain=0):
         self._widget_traces = traces._straces[chain]
         interact(self._widget_plot_trace, __manual=True, id_trace=[0, len(self._widget_traces) - 1])
-
-    def widget_params(self, params=None, samples=0):
-        if params is None:
-            params = self.get_params_widget()
-        intervals = dict()
-        for k, v in params.items():
-            v = np.squeeze(v)
-            if v > 0.1:
-                intervals[k] = [0, 2*v]
-            elif v < -0.1:
-                intervals[k] = [2*v, 0]
-            else:
-                intervals[k] = [-5.00, 5.00]
-        self._widget_samples = samples
-        interact(self._widget_plot_params, __manual=True, **intervals)
 
     def widget_model(self, params=None):
         if params is None:

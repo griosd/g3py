@@ -1,125 +1,31 @@
-import os, sys, time
+import time
 import numpy as np
 import scipy as sp
 import pandas as pd
-import pymc3 as pm
-import seaborn as sb
-import multiprocessing as mp
 import matplotlib.pyplot as plt
 from datetime import datetime as dt
 from tqdm import tqdm
 from inspect import signature
 from ..libs import random_obs, uniform_obs, save_pkl, load_pkl, nan_to_high, MaxTime
 from .average import marginal
-from ..processes import StochasticProcess
 
 
-def _optimize(process: StochasticProcess, fmin=None, vars=None, start=None, max_time=None, *args, **kwargs):
-    if fmin is None:
+def optimize(logp, start, dlogp=None, fmin=None, max_time=None, *args, **kwargs):
+    if fmin in [None, 'bfgs', 'BFGS']:
         fmin = sp.optimize.fmin_bfgs
-    if vars is None:
-        vars = process.sampling_vars
-    if start is None:
-        start = process.get_params_default()
+    else:
+        fmin = sp.optimize.fmin_powell
     if max_time is None:
         callback = None
     else:
         callback = MaxTime(max_time)
-
-    if process._fixed_chain is None:
-        lambda_f = process._logp_fixed
-        lambda_df = process._dlogp_fixed
+    if ('fprime' in signature(fmin).parameters) and (dlogp is not None):
+        r = fmin(lambda x: nan_to_high(-logp(x)), start, #process.model.bijection.map(start)[process.sampling_dims],
+                 fprime=lambda x: np.nan_to_num(-dlogp(x)), callback=callback, *args, **kwargs)
     else:
-        lambda_f = process._logp_fixed_chain
-        lambda_df = process._dlogp_fixed_chain
-
-    if 'fprime' in signature(fmin).parameters:
-        r = fmin(lambda x: nan_to_high(-lambda_f(x)), process.model.bijection.map(start)[process.sampling_dims],
-                 fprime=lambda x: np.nan_to_num(-lambda_df(x)), callback=callback, *args, **kwargs)
-    else:
-        r = fmin(lambda x: nan_to_high(-lambda_f(x)), process.model.bijection.map(start)[process.sampling_dims],
+        r = fmin(lambda x: nan_to_high(-logp(x)), start, #process.model.bijection.map(start)[process.sampling_dims],
                  callback=callback, *args, **kwargs)
-    process._fixed_array[process.sampling_dims] = r
-    return process.model.bijection.rmap(process._fixed_array)
-
-
-def find_MAP(process: StochasticProcess, start=None, points=1, plot=False, return_points=False, display=True, powell=True, max_time=None):
-    points_list = list()
-    if start is None:
-        start = process.get_params_current()
-    if process._fixed_chain is None:
-        logp_eval = process.logp_array
-    else:
-        logp_eval = process.logp_fixed_chain
-
-    if type(start) is list:
-        i = 0
-        for s in start:
-            i += 1
-            points_list.append(('start' + str(i), logp_eval(process.dict_to_array(s)), s))
-    else:
-        points_list.append(('start', logp_eval(process.dict_to_array(start)), start))
-    n_starts = len(points_list)
-    if process.outputs.get_value() is None:
-        print('For find_MAP it is necessary to have observations')
-        return start
-    if display:
-        print('Starting function value (-logp): ' + str(-logp_eval(process.dict_to_array(points_list[0][2]))))
-    if plot:
-        plt.figure(0)
-        process.plot(params=points_list[0][2], title='start')
-        plt.show()
-    with process.model:
-        i = -1
-        points -= 1
-        while i < points:
-            i += 1
-            try:
-                if powell:
-                    name, logp, start = points_list[i // 2]
-                else:
-                    name, logp, start = points_list[i]
-                if i % 2 == 0 or not powell:  #
-                    if name.endswith('_bfgs'):
-                        if i > n_starts:
-                            points += 1
-                        continue
-                    name += '_bfgs'
-                    if display:
-                        print('\n' + name)
-                    new = process._optimize(fmin=sp.optimize.fmin_bfgs, vars=process.sampling_vars, start=start,
-                                            max_time=max_time, disp=display)
-                else:
-                    if name.endswith('_powell'):
-                        if i > n_starts:
-                            points += 1
-                        continue
-                    name += '_powell'
-                    if display:
-                        print('\n' + name)
-                    new = process._optimize(fmin=sp.optimize.fmin_powell, vars=process.sampling_vars, start=start,
-                                            max_time=max_time, disp=display)
-                points_list.append((name, logp_eval(process.dict_to_array(new)), new))
-                if plot:
-                    plt.figure(i + 1)
-                    process.plot(params=new, title=name)
-                    plt.show()
-            except Exception as error:
-                print(error)
-                pass
-
-    optimal = points_list[0]
-    for test in points_list:
-        if test[1] > optimal[1]:
-            optimal = test
-    name, logp, params = optimal
-    if display:
-        # print(params)
-        pass
-    if return_points is False:
-        return params
-    else:
-        return params, points_list
+    return r
 
 
 class CrossValidation:

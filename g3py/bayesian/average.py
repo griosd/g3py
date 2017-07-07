@@ -1,4 +1,6 @@
 import os
+import sys
+import emcee
 import numpy as np
 import scipy as sp
 import pandas as pd
@@ -8,36 +10,26 @@ import matplotlib.pyplot as plt
 from sklearn import mixture, neighbors
 from matplotlib import cm
 from numba import jit
+from tqdm import tqdm
 
-# CREATE
 
+# SAMPLING
 
-def sample_hypers(process, start=None, samples=1000, chains=None, ntemps=None, raw=False, noise_mult=0.1, noise_sum=0.01,
-                  burnin_tol=0.001, burnin_method='multi-sum', outlayer_percentile=0.0005):
-    if start is None:
-        start = process.find_MAP()
-    if isinstance(start, dict):
-        start = process.dict_to_array(start)
-    ndim = len(process.sampling_dims)
+def mcmc_ensemble(ndim, samples=1000, chains=None, ntemps=None, start=None, logp=None, loglike=None, logprior=None,
+                  noise_mult=0.1, noise_sum=0.01):
+
     if chains is None:
-        chains = 2 * process.ndim
-
-    if len(start.shape) == 1:
-        start = start[process.sampling_dims]
-    elif len(start.shape) == 2:
-        start = start[:, process.sampling_dims]
-    elif len(start.shape) == 3:
-        start = start[:, 0, process.sampling_dims]
+        chains = 2 * ndim
 
     if ntemps is None:
-        sampler = emcee.EnsembleSampler(chains, ndim, process._logp_fixed)
+        sampler = emcee.EnsembleSampler(chains, ndim, logp)
         if start.shape == (chains, ndim):
             p0 = start
         else:
             noise = np.random.normal(loc=1, scale=noise_mult, size=(chains, ndim))
             p0 = noise * np.ones((chains, 1)) * start
     else:
-        sampler = emcee.PTSampler(ntemps, chains, ndim, process._logp_fixed_like, process._logp_fixed_prior)
+        sampler = emcee.PTSampler(ntemps, chains, ndim, loglike, logprior)
         if start.shape == (ntemps, chains, ndim):
             p0 = start
         elif start.shape == (chains, ndim):
@@ -55,17 +47,10 @@ def sample_hypers(process, start=None, samples=1000, chains=None, ntemps=None, r
     sampler.reset()
     if ntemps is not None:
         lnprob, echain = lnprob[0, :, :], echain[0, :, :]
-    complete_chain = np.empty((echain.shape[0], echain.shape[1], process.ndim))
-    complete_chain[:, :, process.sampling_dims] = echain
-    complete_chain[:, :, process.fixed_dims] = process._fixed_array[process.fixed_dims]
-    if raw:
-        return complete_chain, lnprob
-    else:
+    return lnprob, echain
 
-        return chains_to_datatrace(process, complete_chain, ll=lnprob, burnin_tol=burnin_tol,
-                                   burnin_method=burnin_method, burnin_dims=process.sampling_dims,
-                                   outlayer_percentile=outlayer_percentile)
 
+# DATATRACE
 
 def chains_to_datatrace(process, chains, ll=None, transforms=True, burnin_tol=0.01, burnin_method='multi-sum', burnin_dims=None,
                         outlayer_percentile=0.001):
@@ -80,7 +65,7 @@ def chains_to_datatrace(process, chains, ll=None, transforms=True, burnin_tol=0.
         ll = ll[None, :]
     if burnin_tol is not None:
         if burnin_dims is None:
-            chains_to_burnin = chains[:, :, process.sampling_dims]
+            chains_to_burnin = chains[:, :, process.active.sampling_dims]
         else:
             chains_to_burnin = chains[:, :, burnin_dims]
         nburn = burn_in_samples(chains_to_burnin, tol=burnin_tol, method=burnin_method)
@@ -108,7 +93,7 @@ def chains_to_datatrace(process, chains, ll=None, transforms=True, burnin_tol=0.
 
     if transforms:
         ncolumn = n_vars
-        varnames = process.get_params_test().keys()
+        varnames = process.params.keys()
         for v in datatrace.columns:
             if '___' in v:
                 name = v[:v.find('___')+1]
@@ -196,7 +181,6 @@ def load_datatrace(path='datatrace.pkl'):
 
 # SELECTION
 
-
 def marginal(dt, items=None, like=None, regex=None, samples=None):
     if items is None and like is None and regex is None:
         df = dt
@@ -243,11 +227,10 @@ def find_candidates(dt, ll=1, l1=0, l2=0, mean=False, median=False, cluster=Fals
             m = dt.median()
             m.name = 'median'
             candidates.append(m)
-    return pd.DataFrame(candidates).append(dt.sample(rand))
+    return pd.DataFrame(candidates).append(dt.sample(rand)).sort_values(by='_ll', ascending=False)
 
 
 # PLOTS
-
 
 def plot_datatrace(datatrace, burnin = False, outlayer = False, varnames=None, transform=lambda x: x, figsize=None,
                   lines=None, combined=False, plot_transformed=True, grid=True,
@@ -362,6 +345,7 @@ def plot_datatrace(datatrace, burnin = False, outlayer = False, varnames=None, t
     plt.tight_layout()
 
 
+#TODO: ARREGLAR
 def kde_datatrace(dt, items=None, size=6, n_levels=20, cmap="Blues_d"):
     dt = marginal(dt, items)
     g = sb.PairGrid(dt, size=size)
@@ -371,19 +355,23 @@ def kde_datatrace(dt, items=None, size=6, n_levels=20, cmap="Blues_d"):
     return g
 
 
-def hist_datatrace(dt, items=None, like=None, regex=None, samples=None, bins=200, layout=(5, 5), figsize=(20, 20), burnin=True, outlayer=True):
+def hist_datatrace(dt, items=None, like=None, drop=['_burnin', '_outlayer', '_nchain', '_niter'], regex=None, samples=None, bins=200, layout=(5, 5), figsize=(20, 20), burnin=True, outlayer=True):
     if burnin and hasattr(dt, '_burnin'):
         dt = dt[dt._burnin]
     if outlayer and hasattr(dt, '_outlayer'):
         dt = dt[dt._outlayer]
+    if drop is not None:
+        dt = dt.drop(drop, axis=1)
     marginal(dt, items=items, like=like, regex=regex, samples=samples).hist(bins=bins, layout=layout, figsize=figsize)
 
 
-def scatter_datatrace(dt, items=None, like=None, regex=None, samples=100000, bins=200, figsize=(15, 15), burnin=True, outlayer=True, cluster=None, cmap=cm.rainbow_r):
+def scatter_datatrace(dt, items=None, like=None, drop=['_burnin', '_outlayer', '_nchain', '_niter'], regex=None, samples=100000, bins=200, figsize=(15, 15), burnin=True, outlayer=True, cluster=None, cmap=cm.rainbow_r):
     if burnin and hasattr(dt, '_burnin'):
         dt = dt[dt._burnin]
     if outlayer and hasattr(dt, '_outlayer'):
         dt = dt[dt._outlayer]
+    if drop is not None:
+        dt = dt.drop(drop, axis=1)
     df = marginal(dt, items=items, like=like, regex=regex, samples=samples)
     if cluster is None and hasattr(dt, '_cluster'):
         cluster = dt._cluster
@@ -393,8 +381,8 @@ def scatter_datatrace(dt, items=None, like=None, regex=None, samples=100000, bin
         pd.scatter_matrix(df, grid=True, hist_kwds={'normed': True, 'bins': bins}, figsize=figsize, c=cluster[df.index],
                           cmap=cmap)
 
-# DIAGNOSTICS
 
+# DIAGNOSTICS
 
 @jit
 def gelman_rubin(chains, method='multi-sum'):
@@ -472,13 +460,15 @@ def effective_sample_min(process, alpha=0.05, error=0.05, p=None):
     return np.pi*(2**(2/p))*(sp.stats.chi2.ppf(1-alpha, p)) / (((p*sp.special.gamma(p/2))**(2/p))*(error**2))
 
 
+# mESS (Estimation Markov CLT sigma_cov)
+
 def effective_sample_size(process, dt, method='mIS', batch_size=None, fixed=True, flat=False, reshape=False, burnin=True):
     chains = datatrace_to_chains(process, dt, flat=flat, burnin=burnin)
     if fixed:
         if flat:
-            chains = chains[:, process.sampling_dims]
+            chains = chains[:, process.active.sampling_dims]
         else:
-            chains = chains[:, :, process.sampling_dims]
+            chains = chains[:, :, process.active.sampling_dims]
     #print(chains.shape)
     dim_sample = 1
     #flat samples

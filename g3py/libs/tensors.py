@@ -4,6 +4,7 @@ import theano as th
 import theano.tensor as tt
 import theano.tensor.slinalg as tsl
 from IPython.display import Image
+from . import clone
 
 
 def debug(x, name='', force=False):
@@ -30,6 +31,11 @@ class makefn:
             return self.compiled(**params)
         else:
             return self.compiled(**self.bijection(params))
+
+    def clone(self, bijection=None):
+        r = clone(self)
+        r.bijection = bijection
+        return r
 
 
 def show_graph(f, name='temp.png'):
