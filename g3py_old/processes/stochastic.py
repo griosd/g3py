@@ -1,16 +1,6 @@
 import pymc3 as pm
 
 
-
-def trans_hypers(hypers):
-    trans = DictObj()
-    for k, v in hypers.items():
-        if type(k) is pm.model.TransformedRV:
-            trans[k.transformed] = k.transformed.distribution.transform_used.forward(v).eval()
-        else:
-            trans[k] = v
-    return trans
-
 def def_space(space=None, name=None, squeeze=False):
     if space is None:
         space = np.arange(0, 2, dtype=th.config.floatX)
@@ -63,6 +53,7 @@ def def_space(space=None, name=None, squeeze=False):
         else:
             space_th = th.shared(space_x.values, name, borrow=True)
     return space_th, space_x, space_t.astype(np.int32)
+
 
 class _StochasticProcess:
     """Abstract class used to define a StochasticProcess.
@@ -141,18 +132,6 @@ class _StochasticProcess:
                 self.compiles_trans[str(v)] = makefn(params, dist.transform_used.backward(self.random_th), precompile)
                 self.compiles_transf[str(v)] = makefn(params, dist.transform_used.forward(self.random_th), precompile)
 
-    def _compile_logprior(self):
-        self.logp_prior = self.model.bijection.mapf(self.model.fn(tt.add(*map(tt.sum, [var.logpt for var in self.model.free_RVs] + self.model.potentials))))
-
-
-    def dlogp_array(self, params):
-        return self.model.dlogp_array(params)
-
-    def logp_chain(self, chain):
-        out = np.empty(len(chain))
-        for i in range(len(out)):
-            out[i] = self.model.logp_array(chain[i])
-        return out
 
     def logp_fixed(self, params):
         if len(params) > len(self.sampling_dims):
