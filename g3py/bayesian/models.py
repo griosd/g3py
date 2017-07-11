@@ -184,6 +184,9 @@ class GraphicalModel:
     def params_datatrace(self, dt, loc):
         return self.model.bijection.rmap(dt.loc[loc])
 
+
+    #TODO: Revisar
+
     def fix_vars(self, keys=[], sample=None):
         self.fixed_keys = keys
         self.fixed_sample = sample
@@ -414,7 +417,7 @@ class PlotModel:
 
 
 
-
+    #TODO: Revisar
 
     def plot_distribution(self, index=0, params=None, space=None, inputs=None, outputs=None, mean=True, var=True, cov=False, median=False, quantiles=False, noise=False, prior=False, sigma=4, neval=100, title=None, swap=False, label=None):
         pred = self.predict(params=params, space=space, inputs=inputs, outputs=outputs, mean=mean, var=var, cov=cov, median=median, quantiles=quantiles, noise=noise, distribution=True, prior=prior)
@@ -569,7 +572,7 @@ class ScalingQuantiles(TheanoBlackBox):
         return self.serie*self.quantile
 
     def random(self):
-        return {self.serie.name:self.serie.get_value()}
+        return {self.serie.name: self.serie.get_value()}
 
 
 class BlackBoxSums(TheanoBlackBox):

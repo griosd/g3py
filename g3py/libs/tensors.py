@@ -1,10 +1,34 @@
 import numpy as np
 import scipy as sp
+import pymc3 as pm
 import theano as th
 import theano.tensor as tt
 import theano.tensor.slinalg as tsl
 from IPython.display import Image
 from . import clone
+
+
+def gradient1(f, v):
+    """flat gradient of f wrt v"""
+    return tt.flatten(tt.grad(f, v, disconnected_inputs='warn'))
+
+
+def gradient(f, wrt=None):
+    if wrt is None:
+        wrt = pm.cont_inputs(f)
+    if wrt:
+        return tt.concatenate([gradient1(f, v) for v in wrt], axis=0)
+    else:
+        return tt.zeros(0, dtype='float32')
+
+
+def jacobian(f, wrt=None):
+    if wrt is None:
+        wrt = pm.cont_inputs(f)
+    if wrt:
+        return tt.jacobian(f, wrt)
+    else:
+        return tt.zeros(0, dtype='float32')
 
 
 def debug(x, name='', force=False):
@@ -69,6 +93,31 @@ def tt_to_bounded(r, lower=None, upper=None):
     if upper is None:
         return tt.switch(r < lower, lower, r)
     return tt.switch(r < lower, lower, tt.switch(r > upper, upper, r))
+
+
+class EvalOp(th.gof.Op):
+
+    view_map = {0: [0]}
+
+    def make_node(self, xin):
+        xout = xin.type.make_variable()
+        return th.gof.Apply(op=self, inputs=[xin], outputs=[xout])
+
+    def perform(self, node, inputs, output_storage):
+        xin, = inputs
+        xout, = output_storage
+        xout[0] = xin
+
+    def grad(self, input, output_gradients):
+        return output_gradients
+
+    def R_op(self, inputs, eval_points):
+        return [x for x in eval_points]
+
+    def c_code_cache_version(self):
+        return (1,)
+
+tt_eval = EvalOp()
 
 
 def inverse_function(func, z, tol=1e-3, n_steps=1024, alpha=0.1):

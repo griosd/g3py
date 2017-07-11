@@ -9,7 +9,7 @@ from scipy import stats
 from theano.ifelse import ifelse
 from .stochastic import EllipticalProcess
 from .hypers.mappings import Identity
-from ..libs.tensors import cholesky_robust, debug, tt_to_bounded
+from ..libs.tensors import cholesky_robust, debug, tt_to_bounded, tt_eval
 
 
 class GaussianProcess(EllipticalProcess):
@@ -21,63 +21,58 @@ class GaussianProcess(EllipticalProcess):
         #print('gaussian_define_process')
         super()._define_process()
         self.distribution = TransformedGaussianDistribution(self.name, mu=self.prior_location_inputs,
-                                                            cov=self.prior_kernel_inputs, mapping=Identity(),
-                                                            observed=self.th_outputs, testval=self.th_outputs,
-                                                            dtype=th.config.floatX)
-
-    def _median(self, prior=False, noise=False):
-        debug('median'+str(prior)+str(noise))
-        return self.f_mapping(self._location(prior=prior, noise=noise))
-
-    def _mean(self, prior=False, noise=False):
-        debug('mean'+str(prior)+str(noise))
-        return self.f_mapping(self._location(prior=prior, noise=noise))
-
-    def _variance(self, prior=False, noise=False):
-        debug('variance'+str(prior)+str(noise))
-        return tt_to_bounded(tnl.extract_diag(self._kernel(prior=prior, noise=noise)), 0)
-
-    def _quantiler(self, q=0.975, prior=False, noise=False):
-        debug('quantiler'+str(q)+str(prior)+str(noise))
-        p = stats.norm.ppf(q)
-        return self.f_mapping(self._mean(prior=prior, noise=noise) + p * self._std(prior=prior, noise=noise))
-
-#TODO: ARREGLAR
-    def _sampler(self, samples=1, prior=False, noise=False):
-        debug('sampler'+str(samples)+str(prior)+str(noise))
-        rand = np.random.randn(len(self.space), samples)
-        return self.f_mapping(self._mean(prior=prior, noise=noise)[:, None] + self._cholesky(prior=prior, noise=noise).dot(rand))
-
-
-def debug(*args, **kwargs):
-    pass #print(*args, **kwargs)
-
-
-class TransformedGaussianProcess(GaussianProcess):
-
-    def _define_process(self):
-        super()._define_process()
-
-        self.distribution = TransformedGaussianDistribution(self.name, mu=self.prior_location_inputs,
                                                             cov=self.prior_kernel_inputs, mapping=self.f_mapping,
                                                             observed=self.th_outputs, testval=self.th_outputs,
                                                             dtype=th.config.floatX)
 
+    def _median(self, prior=False, noise=False):
+        debug_p('median' + str(prior) + str(noise))
+        return self.f_mapping(self._location(prior=prior, noise=noise))
+
+    def _mean(self, prior=False, noise=False):
+        debug_p('mean' + str(prior) + str(noise))
+        return self.f_mapping(self._location(prior=prior, noise=noise))
+
+    def _variance(self, prior=False, noise=False):
+        debug_p('variance' + str(prior) + str(noise))
+        return self._kernel_diag(prior=prior, noise=noise)
+
+    def _quantiler(self, q=0.975, prior=False, noise=False):
+        debug_p('quantiler' + str(q) + str(prior) + str(noise))
+        p = stats.norm.ppf(q)
+        return self.f_mapping(self._location(prior=prior, noise=noise) + p*self._kernel_sd(prior=prior, noise=noise))
+
+#TODO: ARREGLAR
+    def _sampler(self, samples=1, prior=False, noise=False):
+        debug_p('sampler' + str(samples) + str(prior) + str(noise))
+        rand = np.random.randn(len(self.space), samples)
+        return self.f_mapping(self._location(prior=prior, noise=noise)[:, None] + self._cholesky(prior=prior, noise=noise).dot(rand))
+
+
+def debug_p(*args, **kwargs):
+    pass#print(*args, **kwargs)
+
+
+class TransformedGaussianProcess(GaussianProcess):
+
+    def __init__(self, name='TGP', *args, **kwargs):
+        super().__init__(name=name, *args, **kwargs)
+
     def _mean(self, prior=False, noise=False, n=10):
-        debug('mean')
+        debug_p('mean')
         _a, _w = np.polynomial.hermite.hermgauss(n)
         a = th.shared(_a.astype(th.config.floatX), borrow=True).dimshuffle([0, 'x'])
         w = th.shared(_w.astype(th.config.floatX), borrow=True)
         return self.gauss_hermite(lambda v: self.f_mapping(v), self._location(prior=prior, noise=noise),
-                                  self._std(prior=prior, noise=noise), a, w)
+                                  self._kernel_sd(prior=prior, noise=noise), a, w)
 
     def _variance(self, prior=False, noise=False, n=10):
-        debug('mean')
+        debug_p('mean')
         _a, _w = np.polynomial.hermite.hermgauss(n)
         a = th.shared(_a.astype(th.config.floatX), borrow=True).dimshuffle([0, 'x'])
         w = th.shared(_w.astype(th.config.floatX), borrow=True)
         return self.gauss_hermite(lambda v: self.f_mapping(v) ** 2, self._location(prior=prior, noise=noise),
-                                  self.std(prior=prior, noise=noise), a, w) - self._mean(prior=prior, noise=noise) ** 2
+                                  self._kernel_sd(prior=prior, noise=noise), a, w) - self._mean(prior=prior, noise=noise) ** 2
 
     @classmethod
     def gauss_hermite(cls, f, mu, sigma, a, w):

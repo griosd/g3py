@@ -114,7 +114,7 @@ class MeanSum(MeanComposition):
 
 class Zero(Mean):
     def eval(self, x):
-        return tt.zeros(shape=(x.shape[0],)) #TODO: check dims
+        return tt.zeros_like(x[:, 0]) #TODO: check dims
 
 
 class Bias(Mean):
@@ -132,7 +132,7 @@ class Bias(Mean):
         return {self.bias: y.mean().astype(th.config.floatX)}
 
     def eval(self, x):
-        return self.bias * tt.ones(shape=(x.shape[0],)) #TODO: check dims
+        return self.bias * tt.ones_like(x[:, 0]) #TODO: check dims
 
 
 class Linear(Mean):

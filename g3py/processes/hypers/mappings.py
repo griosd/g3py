@@ -167,8 +167,8 @@ class BoxCoxShifted(Mapping):
                 self.power: np.float32(1.0)}
 
     def __call__(self, x):
-        scaled = self.power*x+1.0
-        transformed = tt.sgn(scaled) * tt.abs_(scaled) ** (1.0 / self.power)
+        scaled = (self.power*x)+1.0
+        transformed = tt.sgn(scaled) * (tt.abs_(scaled) ** (1.0 / self.power))
         return transformed-self.shift
 
     def inv(self, y):

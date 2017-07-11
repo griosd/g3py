@@ -2,8 +2,9 @@ import types
 import numpy as np
 import theano as th
 import theano.tensor as tt
-import pymc3 as pm
-from ..libs.tensors import tt_to_num, tt_to_cov, cholesky_robust, makefn
+import theano.tensor.nlinalg as tnl
+#import pymc3 as pm
+from ..libs.tensors import tt_to_num, tt_to_cov, tt_to_bounded, cholesky_robust, makefn, gradient
 from .hypers import Freedom
 from .hypers.means import Mean
 from .hypers.kernels import Kernel, KernelSum, WN
@@ -48,7 +49,7 @@ class StochasticProcess(PlotModel):#TheanoBlackBox
         self.th_outputs = th.shared(np.array([0.0, 1.0], dtype=th.config.floatX),
                                     name=self.name + '_outputs', borrow=True, allow_downcast=True)
         self.is_observed = False
-        self.set_space(space=space, hidden=hidden, order=order, inputs=inputs, outputs=outputs, index=index)
+
 
         #self.space_th = tt.matrix(self.name + '_space_th', dtype=th.config.floatX)
         #self.inputs_th = tt.matrix(self.name + '_inputs_th', dtype=th.config.floatX)
@@ -74,6 +75,8 @@ class StochasticProcess(PlotModel):#TheanoBlackBox
         with self.model:
             self._check_hypers()
             self._define_process()
+
+        self.set_space(space=space, hidden=hidden, order=order, inputs=inputs, outputs=outputs, index=index)
         self._compile_methods()
 
     def set_params(self, *args, **kwargs):
@@ -207,13 +210,14 @@ class StochasticProcess(PlotModel):#TheanoBlackBox
 
     def _logp(self, prior=False, noise=False):
         if prior:
-            factors = [var.logpt for var in self.model.free_RVs] + self.model.potentials
-            return tt.add(*map(tt.sum, factors))
+            random_vars = self.model.free_RVs
         else:
-            return self.model.logpt
+            random_vars = self.model.basic_RVs
+        factors = [var.logpt for var in random_vars] + self.model.potentials
+        return tt.add(*map(tt.sum, factors))
 
     def _dlogp(self, dvars=None, *args, **kwargs):
-        return tt_to_num(pm.gradient(self._logp(*args, **kwargs), dvars))
+        return tt_to_num(gradient(self._logp(*args, **kwargs), dvars))
 
     def _loglike(self, prior=False, noise=False):
         factors = [var.logpt for var in self.model.observed_RVs]
@@ -231,6 +235,8 @@ class StochasticProcess(PlotModel):#TheanoBlackBox
         self.logp = types.MethodType(self._method_name('_logp'), self)
         self.dlogp = types.MethodType(self._method_name('_dlogp'), self)
         self.loglike = types.MethodType(self._method_name('_loglike'), self)
+
+        _ = self.logp(), self.dlogp()
 
     def _method_name(self, name=None):
         def _method(self, params=None, space=None, hidden=None, inputs=None, outputs=None, prior=False, noise=False, array=False, *args, **kwargs):
@@ -324,7 +330,6 @@ class StochasticProcess(PlotModel):#TheanoBlackBox
 
     def find_MAP(self, start=None, points=1, plot=False, return_points=False, display=True,
                  powell=True, max_time=None):
-
         if (not hasattr(self.compiles, 'array_posterior_logp')) or (not hasattr(self.compiles, 'array_posterior_dlogp')):
             _ = self.logp(prior=False, array=True), self.dlogp(prior=False, array=True)
         logp = self.compiles.array_posterior_logp
@@ -461,6 +466,7 @@ class StochasticProcess(PlotModel):#TheanoBlackBox
             out[i] = self.logp(chain[i], array=True)
         return out
 
+
 class EllipticalProcess(StochasticProcess):
     def __init__(self, location: Mean=None, kernel: Kernel=None, degree: Freedom=None, mapping: Mapping=Identity(),
                  noise=True, *args, **kwargs):
@@ -503,37 +509,89 @@ class EllipticalProcess(StochasticProcess):
         return {**self.f_location.default_hypers_dims(x, y), **self.f_kernel_noise.default_hypers_dims(x, y),
                 **self.f_mapping.default_hypers_dims(x, y)}
 
+    @property
+    def mapping_outputs(self):
+        return tt_to_num(self.f_mapping.inv(self.th_outputs))
+
+    @property
+    def prior_location_space(self):
+        return self.f_location(self.th_space)
+
+    @property
+    def prior_location_inputs(self):
+        return self.f_location(self.th_inputs)
+
+    @property
+    def prior_kernel_space(self):
+        return tt_to_cov(self.f_kernel_noise.cov(self.th_space))
+
+    @property
+    def prior_kernel_inputs(self):
+        return tt_to_cov(self.f_kernel_noise.cov(self.th_inputs))
+
+    @property
+    def prior_kernel_f_space(self):
+        return tt_to_cov(self.f_kernel.cov(self.th_space))
+
+    @property
+    def prior_kernel_f_inputs(self):
+        return tt_to_cov(self.f_kernel.cov(self.th_inputs))
+
+    @property
+    def cross_kernel_space_inputs(self):
+        return tt_to_num(self.f_kernel_noise.cov(self.th_space, self.th_inputs))
+
+    @property
+    def cross_kernel_f_space_inputs(self):
+        return tt_to_num(self.f_kernel.cov(self.th_space, self.th_inputs))
+
+    @property
+    def posterior_location_space(self):
+        return self.prior_location_space + self.cross_kernel_f_space_inputs.dot(
+            tsl.solve(self.prior_kernel_inputs, self.mapping_outputs - self.prior_location_inputs))
+
+    @property
+    def posterior_kernel_space(self):
+        return self.prior_kernel_space - self.cross_kernel_space_inputs.dot(
+            tsl.solve(self.prior_kernel_inputs, self.cross_kernel_space_inputs.T))
+
+    @property
+    def posterior_kernel_f_space(self):
+        return self.prior_kernel_f_space - self.cross_kernel_f_space_inputs.dot(
+            tsl.solve(self.prior_kernel_inputs, self.cross_kernel_f_space_inputs.T))
+
     def _define_process(self):
         #print('stochastic_define_process')
         # Basic Tensors
-        self.mapping_outputs = tt_to_num(self.f_mapping.inv(self.th_outputs))
+        #self.mapping_outputs = tt_to_num(self.f_mapping.inv(self.th_outputs))
         #self.mapping_th = tt_to_num(self.mapping(self.random_th))
         #self.mapping_inv_th = tt_to_num(self.mapping.inv(self.random_th))
 
-        self.prior_location_space = self.f_location(self.th_space)
-        self.prior_location_inputs = self.f_location(self.th_inputs)
+        #self.prior_location_space = self.f_location(self.th_space)
+        #self.prior_location_inputs = self.f_location(self.th_inputs)
 
-        self.prior_kernel_space = tt_to_cov(self.f_kernel_noise.cov(self.th_space))
-        self.prior_kernel_inputs = tt_to_cov(self.f_kernel_noise.cov(self.th_inputs))
-        self.prior_cholesky_space = cholesky_robust(self.prior_kernel_space)
+        #self.prior_kernel_space = tt_to_cov(self.f_kernel_noise.cov(self.th_space))
+        #self.prior_kernel_inputs = tt_to_cov(self.f_kernel_noise.cov(self.th_inputs))
+        #self.prior_cholesky_space = cholesky_robust(self.prior_kernel_space)
 
-        self.prior_kernel_f_space = self.f_kernel.cov(self.th_space)
-        self.prior_kernel_f_inputs = self.f_kernel.cov(self.th_inputs)
-        self.prior_cholesky_f_space = cholesky_robust(self.prior_kernel_f_space)
+        #self.prior_kernel_f_space = self.f_kernel.cov(self.th_space)
+        #self.prior_kernel_f_inputs = self.f_kernel.cov(self.th_inputs)
+        #self.prior_cholesky_f_space = cholesky_robust(self.prior_kernel_f_space)
 
-        self.cross_kernel_space_inputs = tt_to_num(self.f_kernel_noise.cov(self.th_space, self.th_inputs))
-        self.cross_kernel_f_space_inputs = tt_to_num(self.f_kernel.cov(self.th_space, self.th_inputs))
+        #self.cross_kernel_space_inputs = tt_to_num(self.f_kernel_noise.cov(self.th_space, self.th_inputs))
+        #self.cross_kernel_f_space_inputs = tt_to_num(self.f_kernel.cov(self.th_space, self.th_inputs))
 
-        self.posterior_location_space = self.prior_location_space + self.cross_kernel_f_space_inputs.dot(
-            tsl.solve(self.prior_kernel_inputs, self.mapping_outputs - self.prior_location_inputs))
+        #self.posterior_location_space = self.prior_location_space + self.cross_kernel_f_space_inputs.dot(
+        #    tsl.solve(self.prior_kernel_inputs, self.mapping_outputs - self.prior_location_inputs))
 
-        self.posterior_kernel_space = self.prior_kernel_space - self.cross_kernel_space_inputs.dot(
-            tsl.solve(self.prior_kernel_inputs, self.cross_kernel_space_inputs.T))
-        self.posterior_cholesky_space = cholesky_robust(self.posterior_kernel_space)
+        #self.posterior_kernel_space = self.prior_kernel_space - self.cross_kernel_space_inputs.dot(
+        #    tsl.solve(self.prior_kernel_inputs, self.cross_kernel_space_inputs.T))
+        #self.posterior_cholesky_space = cholesky_robust(self.posterior_kernel_space)
 
-        self.posterior_kernel_f_space = self.prior_kernel_f_space - self.cross_kernel_f_space_inputs.dot(
-            tsl.solve(self.prior_kernel_inputs, self.cross_kernel_f_space_inputs.T))
-        self.posterior_cholesky_f_space = cholesky_robust(self.posterior_kernel_f_space)
+        #self.posterior_kernel_f_space = self.prior_kernel_f_space - self.cross_kernel_f_space_inputs.dot(
+        #    tsl.solve(self.prior_kernel_inputs, self.cross_kernel_f_space_inputs.T))
+        #self.posterior_cholesky_f_space = cholesky_robust(self.posterior_kernel_f_space)
+        pass
 
     def _mapping(self, prior=False, noise=False):
         return self.mapping_outputs
@@ -557,16 +615,13 @@ class EllipticalProcess(StochasticProcess):
                 return self.posterior_kernel_f_space
 
     def _cholesky(self, prior=False, noise=False):
-        if prior:
-            if noise:
-                return self.prior_cholesky_space
-            else:
-                return self.prior_cholesky_f_space
-        else:
-            if noise:
-                return self.posterior_cholesky_space
-            else:
-                return self.posterior_cholesky_f_space
+        return cholesky_robust(self._kernel(prior=prior, noise=noise))
+
+    def _kernel_diag(self, prior=False, noise=False):
+        return tt_to_bounded(tnl.extract_diag(self._kernel(prior=prior, noise=noise)), 0)
+
+    def _kernel_sd(self, prior=False, noise=False):
+        return tt.sqrt(self._kernel_diag(prior=prior, noise=noise))
 
     def _compile_methods(self):
         super()._compile_methods()

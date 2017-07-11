@@ -28,6 +28,7 @@ def optimize(logp, start, dlogp=None, fmin=None, max_time=None, *args, **kwargs)
     return r
 
 
+#TODO: Probar
 class CrossValidation:
     def __init__(self, models=None, file=None, load=True):
         self.file = file
