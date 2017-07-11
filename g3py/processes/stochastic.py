@@ -907,8 +907,6 @@ class _StochasticProcess:
                 p0 = noise * np.ones((chains, 1)) * start
         else:
             sampler = emcee.PTSampler(ntemps, chains, ndim, self._logp_fixed_like, self._logp_fixed_prior)
-            print((ntemps,chains, ndim))
-            print(start.shape)
             if start.shape == (ntemps, chains, ndim):
                 p0 = start
             elif start.shape == (chains, ndim):
