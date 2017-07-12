@@ -35,11 +35,11 @@ class StochasticProcess(PlotModel):#TheanoBlackBox
         self.nspace = ndim
         self.name = name
 
-        self.th_order = th.shared(np.array([0.0, 1.0], dtype=th.config.floatX),
+        self.th_order = th.shared(np.array([0.0, 1.0, 2.0], dtype=th.config.floatX),
                                   name=self.name + '_order', borrow=True, allow_downcast=True)
-        self.th_space = th.shared(np.array([[0.0, 1.0]]*self.nspace, dtype=th.config.floatX).T,
+        self.th_space = th.shared(np.array([[0.0, 1.0, 2.0]]*self.nspace, dtype=th.config.floatX).T,
                                   name=self.name + '_space', borrow=True, allow_downcast=True)
-        self.th_hidden = th.shared(np.array([0.0, 1.0], dtype=th.config.floatX),
+        self.th_hidden = th.shared(np.array([0.0, 1.0, 2.0], dtype=th.config.floatX),
                                    name=self.name + '_hidden', borrow=True, allow_downcast=True)
 
         self.th_index = th.shared(np.array([0.0, 1.0], dtype=th.config.floatX),
@@ -50,13 +50,12 @@ class StochasticProcess(PlotModel):#TheanoBlackBox
                                     name=self.name + '_outputs', borrow=True, allow_downcast=True)
         self.is_observed = False
 
-
-        #self.space_th = tt.matrix(self.name + '_space_th', dtype=th.config.floatX)
-        #self.inputs_th = tt.matrix(self.name + '_inputs_th', dtype=th.config.floatX)
-        #self.outputs_th = tt.vector(self.name + '_outputs_th', dtype=th.config.floatX)
-        #self.space_th.tag.test_value = self.space
-        #self.inputs_th.tag.test_value = self.inputs
-        #self.outputs_th.tag.test_value = self.outputs
+        #self.th_space = tt.matrix(self.name + '_space_th', dtype=th.config.floatX)
+        #self.th_inputs = tt.matrix(self.name + '_inputs_th', dtype=th.config.floatX)
+        #self.th_outputs = tt.vector(self.name + '_outputs_th', dtype=th.config.floatX)
+        #self.th_space.tag.test_value = np.array([[0.0, 1.0, 2.0]]*self.nspace, dtype=th.config.floatX).T
+        #self.th_inputs.tag.test_value = np.array([[0.0, 1.0]]*self.nspace, dtype=th.config.floatX).T
+        #self.th_outputs.tag.test_value = np.array([0.0, 1.0], dtype=th.config.floatX)
 
         self.distribution = distribution
         if active is True:

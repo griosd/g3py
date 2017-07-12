@@ -22,7 +22,7 @@ class GaussianProcess(EllipticalProcess):
         super()._define_process()
         self.distribution = TransformedGaussianDistribution(self.name, mu=self.prior_location_inputs,
                                                             cov=self.prior_kernel_inputs, mapping=self.f_mapping,
-                                                            observed=self.th_outputs, testval=self.th_outputs,
+                                                            observed=self.th_outputs, testval=self.outputs,
                                                             dtype=th.config.floatX)
 
     def _median(self, prior=False, noise=False):
@@ -89,8 +89,11 @@ class TransformedGaussianDistribution(pm.Continuous):
 
     @classmethod
     def logp_cho(cls, value, mu, cho, mapping):
-
+        #print(value.tag.test_value)
+        #print(mu.tag.test_value)
+        #print(mapping.inv(value).tag.test_value)
         delta = mapping.inv(value) - mu
+
         lcho = tsl.solve_lower_triangular(cho, delta)
 
         npi = np.float32(-0.5) * cho.shape[0].astype(th.config.floatX) * tt.log(np.float32(2.0 * np.pi))
