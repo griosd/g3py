@@ -40,7 +40,7 @@ class GaussianProcess(EllipticalProcess):
     def _quantiler(self, q=0.975, prior=False, noise=False):
         debug_p('quantiler' + str(q) + str(prior) + str(noise))
         p = stats.norm.ppf(q)
-        return self.f_mapping(self._location(prior=prior, noise=noise) + p*self._kernel_sd(prior=prior, noise=noise))
+        return self.f_mapping(self._location(prior=prior, noise=noise) + tt_eval(p*self._kernel_sd(prior=prior, noise=noise)))
 
 #TODO: ARREGLAR
     def _sampler(self, samples=1, prior=False, noise=False):
