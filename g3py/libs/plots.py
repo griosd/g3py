@@ -10,6 +10,7 @@ figure = plt.figure
 plot = plt.plot
 show = plt.show
 
+
 def style_seaborn():
     plt.style.use('classic')
     sb.set(style='darkgrid', color_codes=False)
