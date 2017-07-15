@@ -37,20 +37,22 @@ class GaussianProcess(EllipticalProcess):
         debug_p('variance' + str(prior) + str(noise))
         return self._kernel_diag(prior=prior, noise=noise)
 
-    def _quantiler(self, q=0.975, prior=False, noise=False):
-        debug_p('quantiler' + str(q) + str(prior) + str(noise))
+# TODO: ARREGLAR
+    def quantiler(self, params=None, space=None, inputs=None, outputs=None, q=0.975, prior=False, noise=False):
+        #debug_p('quantiler' + str(q) + str(prior) + str(noise))
         p = stats.norm.ppf(q)
-        return self.f_mapping(self._location(prior=prior, noise=noise) + tt_eval(p*self._kernel_sd(prior=prior, noise=noise)))
+        return self.location(params, space, inputs, outputs, prior=prior) + p*self.kernel_sd(params, space, inputs, outputs, prior=prior, noise=noise) #self.f_mapping
 
-#TODO: ARREGLAR
-    def _sampler(self, samples=1, prior=False, noise=False):
-        debug_p('sampler' + str(samples) + str(prior) + str(noise))
-        rand = np.random.randn(len(self.space), samples)
-        return self.f_mapping(self._location(prior=prior, noise=noise)[:, None] + self._cholesky(prior=prior, noise=noise).dot(rand))
+    def sampler(self, params=None, space=None, inputs=None, outputs=None, samples=1, prior=False, noise=False):
+        #debug_p('sampler' + str(samples) + str(prior) + str(noise)+str(len(self.space)))
+        if space is None:
+            space = self.space
+        rand = np.random.randn(len(space), samples)
+        return self.location(params, space, inputs, outputs, prior=prior)[:, None] + self.cholesky(params, space, inputs, outputs, prior=prior, noise=noise).dot(rand) #self.f_mapping
 
 
 def debug_p(*args, **kwargs):
-    pass#print(*args, **kwargs)
+    pass#print(*args, **kwargs)#pass#
 
 
 class TransformedGaussianProcess(GaussianProcess):

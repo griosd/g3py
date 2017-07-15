@@ -338,9 +338,9 @@ class PlotModel:
             plot(self.index, self.outputs, '.k', ms=10)
             plot(self.index, self.outputs, '.r', ms=6, label='Observations')
 
-    def plot(self, params=None, space=None, inputs=None, outputs=None, mean=True, var=False, cov=False, median=False, quantiles=True, noise=True, samples=0, prior=False,
+    def plot(self, params=None, space=None, inputs=None, outputs=None, mean=True, std=True, var=False, cov=False, median=False, quantiles=True, noise=True, samples=0, prior=False,
              data=True, big=None, plot_space=False, title=None, loc=1):
-        values = self.predict(params=params, space=space, inputs=inputs, outputs=outputs, mean=mean, var=var, cov=cov, median=median, quantiles=quantiles, noise=noise, samples=samples, prior=prior)
+        values = self.predict(params=params, space=space, inputs=inputs, outputs=outputs, mean=mean, std=std, var=var, cov=cov, median=median, quantiles=quantiles, noise=noise, samples=samples, prior=prior)
         if data:
             self.plot_hidden(big)
         if mean:

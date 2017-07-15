@@ -376,10 +376,10 @@ def scatter_datatrace(dt, items=None, like=None, drop=['_burnin', '_outlayer', '
     if cluster is None and hasattr(dt, '_cluster'):
         cluster = dt._cluster
     if cluster is None:
-        pd.scatter_matrix(df, grid=True, hist_kwds={'normed': True, 'bins': bins}, figsize=figsize)
+        pd.plotting.scatter_matrix(df, grid=True, hist_kwds={'normed': True, 'bins': bins}, figsize=figsize)
     else:
-        pd.scatter_matrix(df, grid=True, hist_kwds={'normed': True, 'bins': bins}, figsize=figsize, c=cluster[df.index],
-                          cmap=cmap)
+        pd.plotting.scatter_matrix(df, grid=True, hist_kwds={'normed': True, 'bins': bins}, figsize=figsize,
+                                   c=cluster[df.index], cmap=cmap)
 
 
 # DIAGNOSTICS

@@ -15,18 +15,9 @@ def gradient1(f, v):
 
 def gradient(f, wrt=None):
     if wrt is None:
-        wrt = pm.cont_inputs(f)
+        wrt = pm.inputvars(pm.cont_inputs(f))
     if wrt:
         return tt.concatenate([gradient1(f, v) for v in wrt], axis=0)
-    else:
-        return tt.zeros(0, dtype='float32')
-
-
-def jacobian(f, wrt=None):
-    if wrt is None:
-        wrt = pm.cont_inputs(f)
-    if wrt:
-        return tt.jacobian(f, wrt)
     else:
         return tt.zeros(0, dtype='float32')
 
@@ -39,22 +30,23 @@ def debug(x, name='', force=False):
 
 
 class makefn:
-    def __init__(self, th_vars, fn, bijection=None, precompile=False):
+    def __init__(self, th_vars, fn, givens=None, bijection=None, precompile=False):
         self.th_vars = th_vars
         self.fn = fn
+        self.givens = givens
         self.bijection = bijection
         if precompile:
-            self.compiled = th.function(self.th_vars, self.fn, allow_input_downcast=True, on_unused_input='ignore')
+            self.compiled = th.function(self.th_vars, self.fn, givens=self.givens, allow_input_downcast=True, on_unused_input='ignore')
         else:
             self.compiled = None
 
-    def __call__(self, params):
+    def __call__(self, params, space, inputs, outputs):
         if self.compiled is None:
-            self.compiled = th.function(self.th_vars, self.fn, allow_input_downcast=True, on_unused_input='ignore')
+            self.compiled = th.function(self.th_vars, self.fn, givens=self.givens, allow_input_downcast=True, on_unused_input='ignore')
         if self.bijection is None:
-            return self.compiled(**params)
+            return self.compiled(space, inputs, outputs, **params)
         else:
-            return self.compiled(**self.bijection(params))
+            return self.compiled(space, inputs, outputs, **self.bijection(params))
 
     def clone(self, bijection=None):
         r = clone(self)

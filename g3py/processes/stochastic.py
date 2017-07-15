@@ -17,15 +17,17 @@ from ..libs.plots import show, plot_text
 from ..libs import DictObj, clone
 import matplotlib.pyplot as plt
 from matplotlib import cm
+from numba import jit
 # from ..bayesian.models import TheanoBlackBox
 
 
 class StochasticProcess(PlotModel):#TheanoBlackBox
 
-    def __init__(self, name='SP', space=None, order=None, inputs=None, outputs=None, hidden=None, index=None,
-                 distribution=None, active=False, precompile=False, *args, **kwargs):
+    def __init__(self, space=None, order=None, inputs=None, outputs=None, hidden=None, index=None,
+                 name='SP', distribution=None, active=False, precompile=False, *args, **kwargs):
         #print('StochasticProcess__init_')
         ndim = 1
+        self.makefn = makefn
         if space is not None:
             if hasattr(space, 'shape'):
                 if len(space.shape) > 1:
@@ -36,26 +38,32 @@ class StochasticProcess(PlotModel):#TheanoBlackBox
         self.name = name
 
         self.th_order = th.shared(np.array([0.0, 1.0, 2.0], dtype=th.config.floatX),
-                                  name=self.name + '_order', borrow=True, allow_downcast=True)
+                                  name=self.name + '_order', borrow=False, allow_downcast=True)
         self.th_space = th.shared(np.array([[0.0, 1.0, 2.0]]*self.nspace, dtype=th.config.floatX).T,
-                                  name=self.name + '_space', borrow=True, allow_downcast=True)
+                                  name=self.name + '_space', borrow=False, allow_downcast=True)
         self.th_hidden = th.shared(np.array([0.0, 1.0, 2.0], dtype=th.config.floatX),
-                                   name=self.name + '_hidden', borrow=True, allow_downcast=True)
+                                   name=self.name + '_hidden', borrow=False, allow_downcast=True)
 
         self.th_index = th.shared(np.array([0.0, 1.0], dtype=th.config.floatX),
-                                  name=self.name + '_index', borrow=True, allow_downcast=True)
+                                  name=self.name + '_index', borrow=False, allow_downcast=True)
         self.th_inputs = th.shared(np.array([[0.0, 1.0]]*self.nspace, dtype=th.config.floatX).T,
-                                   name=self.name + '_inputs', borrow=True, allow_downcast=True)
+                                   name=self.name + '_inputs', borrow=False, allow_downcast=True)
         self.th_outputs = th.shared(np.array([0.0, 1.0], dtype=th.config.floatX),
-                                    name=self.name + '_outputs', borrow=True, allow_downcast=True)
+                                    name=self.name + '_outputs', borrow=False, allow_downcast=True)
         self.is_observed = False
 
-        #self.th_space = tt.matrix(self.name + '_space_th', dtype=th.config.floatX)
-        #self.th_inputs = tt.matrix(self.name + '_inputs_th', dtype=th.config.floatX)
-        #self.th_outputs = tt.vector(self.name + '_outputs_th', dtype=th.config.floatX)
-        #self.th_space.tag.test_value = np.array([[0.0, 1.0, 2.0]]*self.nspace, dtype=th.config.floatX).T
-        #self.th_inputs.tag.test_value = np.array([[0.0, 1.0]]*self.nspace, dtype=th.config.floatX).T
-        #self.th_outputs.tag.test_value = np.array([0.0, 1.0], dtype=th.config.floatX)
+        self.th_space_ = tt.matrix(self.name + '_space_th', dtype=th.config.floatX)
+        self.th_inputs_ = tt.matrix(self.name + '_inputs_th', dtype=th.config.floatX)
+        self.th_outputs_ = tt.vector(self.name + '_outputs_th', dtype=th.config.floatX)
+        self.th_space_.tag.test_value = np.array([[0.0, 1.0, 2.0]]*self.nspace, dtype=th.config.floatX).T
+        self.th_inputs_.tag.test_value = np.array([[0.0, 1.0]]*self.nspace, dtype=th.config.floatX).T
+        self.th_outputs_.tag.test_value = np.array([0.0, 1.0], dtype=th.config.floatX)
+        self.th_scalar = tt.scalar('q', dtype=th.config.floatX)
+        self.th_scalar.tag.test_value = np.float32(1)
+        self.th_vector = tt.vector(self.name + '_vector_th', dtype=th.config.floatX)
+        self.th_vector.tag.test_value = np.array([0.0, 1.0], dtype=th.config.floatX)
+        self.th_matrix = tt.matrix(self.name + '_matrix_th', dtype=th.config.floatX)
+        self.th_matrix.tag.test_value = np.array([[0.0, 1.0]]*self.nspace, dtype=th.config.floatX).T
 
         self.distribution = distribution
         if active is True:
@@ -71,12 +79,15 @@ class StochasticProcess(PlotModel):#TheanoBlackBox
         self.compiles_trans = DictObj()
         self.precompile = precompile
         super().__init__(*args, **kwargs)
+        #print('_define_process')
         with self.model:
             self._check_hypers()
             self._define_process()
-
+        #print('set_space')
         self.set_space(space=space, hidden=hidden, order=order, inputs=inputs, outputs=outputs, index=index)
+        #print('_compile_methods')
         self._compile_methods()
+        #print('StochasticProcess__end_')
 
     def set_params(self, *args, **kwargs):
         return self.active.set_params(*args, **kwargs)
@@ -134,45 +145,45 @@ class StochasticProcess(PlotModel):#TheanoBlackBox
 
     @property
     def space(self):
-        return self.th_space.get_value(borrow=True)
+        return self.th_space.get_value(borrow=False)
     @space.setter
     def space(self, value):
-        self.th_space.set_value(value, borrow=True)
+        self.th_space.set_value(value, borrow=False)
 
     @property
     def hidden(self):
-        return self.th_hidden.get_value(borrow=True)
+        return self.th_hidden.get_value(borrow=False)
     @hidden.setter
     def hidden(self, value):
-        self.th_hidden.set_value(value, borrow=True)
+        self.th_hidden.set_value(value, borrow=False)
 
     @property
     def inputs(self):
-        return self.th_inputs.get_value(borrow=True)
+        return self.th_inputs.get_value(borrow=False)
     @inputs.setter
     def inputs(self, value):
-        self.th_inputs.set_value(value, borrow=True)
+        self.th_inputs.set_value(value, borrow=False)
 
     @property
     def outputs(self):
-        return self.th_outputs.get_value(borrow=True)
+        return self.th_outputs.get_value(borrow=False)
     @outputs.setter
     def outputs(self, value):
-        self.th_outputs.set_value(value, borrow=True)
+        self.th_outputs.set_value(value, borrow=False)
 
     @property
     def order(self):
-        return self.th_order.get_value(borrow=True)
+        return self.th_order.get_value(borrow=False)
     @order.setter
     def order(self, value):
-        self.th_order.set_value(value, borrow=True)
+        self.th_order.set_value(value, borrow=False)
 
     @property
     def index(self):
-        return self.th_index.get_value(borrow=True)
+        return self.th_index.get_value(borrow=False)
     @index.setter
     def index(self, value):
-        self.th_index.set_value(value, borrow=True)
+        self.th_index.set_value(value, borrow=False)
 
     def default_hypers(self):
         pass
@@ -183,10 +194,10 @@ class StochasticProcess(PlotModel):#TheanoBlackBox
     def _define_process(self):
         pass
 
-    def _quantiler(self, q=0.975, prior=False, noise=False):
+    def quantiler(self, q=0.975, prior=False, noise=False):
         pass
 
-    def _sampler(self, samples=1, prior=False, noise=False):
+    def sampler(self, samples=1, prior=False, noise=False):
         pass
 
     def _median(self, prior=False, noise=False):
@@ -229,75 +240,86 @@ class StochasticProcess(PlotModel):#TheanoBlackBox
         self.std = types.MethodType(self._method_name('_std'), self)
         self.covariance = types.MethodType(self._method_name('_covariance'), self)
         self.predictive = types.MethodType(self._method_name('_predictive'), self)
-        self.quantiler = types.MethodType(self._method_name('_quantiler'), self)
-        self.sampler = types.MethodType(self._method_name('_sampler'), self)
+
+        #self.quantiler = types.MethodType(self._method_name('_quantiler'), self)
+        #self.sampler = types.MethodType(self._method_name('_sampler'), self)
+
         self.logp = types.MethodType(self._method_name('_logp'), self)
         self.dlogp = types.MethodType(self._method_name('_dlogp'), self)
         self.loglike = types.MethodType(self._method_name('_loglike'), self)
 
         _ = self.logp(), self.dlogp()
 
-    def _method_name(self, name=None):
-        def _method(self, params=None, space=None, hidden=None, inputs=None, outputs=None, prior=False, noise=False, array=False, *args, **kwargs):
+    def _method_name(self, method=None):
+        def _method(self, params=None, space=None, inputs=None, outputs=None, prior=False, noise=False, array=False, *args, **kwargs):
             if params is None:
                 if array:
                     params = self.active.dict_to_array(self.params)
                 else:
                     params = self.params
-            if (space is not None) or (hidden is not None) or (inputs is not None) or (outputs is not None):
-                self.set_space(space=space, hidden=hidden, inputs=inputs, outputs=outputs)
-            return self._jit_compile(name, prior=prior, noise=noise, array=array, *args, **kwargs)(params)
+            if space is None:
+                space = self.space
+            if inputs is None:
+                inputs = self.inputs
+            if outputs is None:
+                outputs = self.outputs
+            #return self._jit_compile(method, prior=prior, noise=noise, array=array, *args, **kwargs)(self.space, self.inputs, self.outputs, params)
+            name = ''
+            if prior:
+                name += 'prior'
+            else:
+                name += 'posterior'
+            name += method
+            if noise:
+                name += '_noise'
+            if len(args) > 0:
+                name += str(args)
+            if len(kwargs) > 0:
+                name += str(kwargs)
+            if not hasattr(self.compiles, name):
+                th_vars = [self.th_space_, self.th_inputs_, self.th_outputs_] + self.model.vars
+                self.compiles[name] = self.makefn(th_vars, getattr(self, method)(prior=prior, noise=noise, *args, **kwargs),
+                                             givens = [(self.th_space, self.th_space_), (self.th_inputs, self.th_inputs_), (self.th_outputs, self.th_outputs_)],
+                                             bijection=None, precompile=self.precompile)
+            if array:
+                if not hasattr(self.compiles, 'array_' + name):
+                    self.compiles['array_' + name] = self.compiles[name].clone(self.active.bijection.rmap)
+                name = 'array_' + name
+            return self.compiles[name](params, space, inputs, outputs)
         return _method
 
-    def _jit_compile(self, method, prior=False, noise=False, array=False, *args, **kwargs):
-        name = ''
-        if prior:
-            name += 'prior'
-        else:
-            name += 'posterior'
-        name += method
-        if noise:
-            name += '_noise'
-        if len(args) > 0:
-            name += str(args)
-        if len(kwargs) > 0:
-            name += str(kwargs)
-        if not hasattr(self.compiles, name):
-            vars = self.model.vars #[self.space_th, self.inputs_th, self.outputs_th] +
-            self.compiles[name] = makefn(vars, getattr(self, method)(prior=prior, noise=noise, *args, **kwargs),
-                                         bijection=None, precompile=self.precompile)
-        if array:
-            if not hasattr(self.compiles, 'array_' + name):
-                self.compiles['array_' + name] = self.compiles[name].clone(self.active.bijection.rmap)
-            name = 'array_' + name
-        return self.compiles[name]
-
-    def predict(self, params=None, space=None, inputs=None, outputs=None, mean=True, var=True, cov=False, median=False,
+    def predict(self, params=None, space=None, inputs=None, outputs=None, mean=True, std=True, var=False, cov=False, median=False,
                 quantiles=False, noise=False, samples=0, distribution=False, prior=False):
         if params is None:
             params = self.params
         if not self.is_observed:
             prior = True
-        self.set_space(space=space, inputs=inputs, outputs=outputs)
+        if space is None:
+            space = self.space
+        if inputs is None:
+            inputs = self.inputs
+        if outputs is None:
+            outputs = self.outputs
         values = DictObj()
         if mean:
-            values['mean'] = self.mean(params, prior=prior)
+            values['mean'] = self.mean(params, space, inputs, outputs, prior=prior)
         if var:
-            values['variance'] = self.variance(params, prior=prior)
-            values['std'] = self.std(params, prior=prior)
+            values['variance'] = self.variance(params, space, inputs, outputs, prior=prior)
+        if std:
+            values['std'] = self.std(params, space, inputs, outputs, prior=prior)
         if cov:
-            values['covariance'] = self.covariance(params, prior=prior, noise=noise)
+            values['covariance'] = self.covariance(params, space, inputs, outputs, prior=prior, noise=noise)
         if median:
-            values['median'] = self.median(params, prior=prior)
+            values['median'] = self.median(params, space, inputs, outputs, prior=prior)
         if quantiles:
-            values['quantile_up'] = self.quantiler(params, q=0.975, prior=prior)
-            values['quantile_down'] = self.quantiler(params, q=0.025, prior=prior)
+            values['quantile_up'] = self.quantiler(params, space, inputs, outputs, q=0.975, prior=prior)
+            values['quantile_down'] = self.quantiler(params, space, inputs, outputs, q=0.025, prior=prior)
         if noise:
-            values['noise'] = self.std(params, prior=prior, noise=True)
-            values['noise_up'] = self.quantiler(params, q=0.975, prior=prior, noise=True)
-            values['noise_down'] = self.quantiler(params, q=0.025, prior=prior, noise=True)
+            values['noise'] = self.std(params, space, inputs, outputs, prior=prior, noise=True)
+            values['noise_up'] = self.quantiler(params, space, inputs, outputs, q=0.975, prior=prior, noise=True)
+            values['noise_down'] = self.quantiler(params, space, inputs, outputs, q=0.025, prior=prior, noise=True)
         if samples > 0:
-            values['samples'] = self.sampler(params, samples=samples, prior=prior, noise=False)
+            values['samples'] = self.sampler(params, space, inputs, outputs, samples=samples, prior=prior, noise=False)
         if distribution:
             values['logp'] = lambda x: self.compiles['posterior_logp'](x, space, inputs, outputs, **params)
             values['logpred'] = lambda x: self.compiles['posterior_logpred'](x, space, inputs, outputs, **params)
@@ -331,8 +353,8 @@ class StochasticProcess(PlotModel):#TheanoBlackBox
                  powell=True, max_time=None):
         if (not hasattr(self.compiles, 'array_posterior_logp')) or (not hasattr(self.compiles, 'array_posterior_dlogp')):
             _ = self.logp(prior=False, array=True), self.dlogp(prior=False, array=True)
-        logp = self.compiles.array_posterior_logp
-        dlogp = self.compiles.array_posterior_dlogp
+        logp = lambda p: self.compiles.array_posterior_logp(p, self.space, self.inputs, self.outputs)
+        dlogp = lambda p: self.compiles.array_posterior_dlogp(p, self.space, self.inputs, self.outputs)
 
         points_list = list()
         if start is None:
@@ -508,89 +530,37 @@ class EllipticalProcess(StochasticProcess):
         return {**self.f_location.default_hypers_dims(x, y), **self.f_kernel_noise.default_hypers_dims(x, y),
                 **self.f_mapping.default_hypers_dims(x, y)}
 
-    @property
-    def mapping_outputs(self):
-        return tt_to_num(self.f_mapping.inv(self.th_outputs))
-
-    @property
-    def prior_location_space(self):
-        return self.f_location(self.th_space)
-
-    @property
-    def prior_location_inputs(self):
-        return self.f_location(self.th_inputs)
-
-    @property
-    def prior_kernel_space(self):
-        return tt_to_cov(self.f_kernel_noise.cov(self.th_space))
-
-    @property
-    def prior_kernel_inputs(self):
-        return tt_to_cov(self.f_kernel_noise.cov(self.th_inputs))
-
-    @property
-    def prior_kernel_f_space(self):
-        return tt_to_cov(self.f_kernel.cov(self.th_space))
-
-    @property
-    def prior_kernel_f_inputs(self):
-        return tt_to_cov(self.f_kernel.cov(self.th_inputs))
-
-    @property
-    def cross_kernel_space_inputs(self):
-        return tt_to_num(self.f_kernel_noise.cov(self.th_space, self.th_inputs))
-
-    @property
-    def cross_kernel_f_space_inputs(self):
-        return tt_to_num(self.f_kernel.cov(self.th_space, self.th_inputs))
-
-    @property
-    def posterior_location_space(self):
-        return self.prior_location_space + self.cross_kernel_f_space_inputs.dot(
-            tsl.solve(self.prior_kernel_inputs, self.mapping_outputs - self.prior_location_inputs))
-
-    @property
-    def posterior_kernel_space(self):
-        return self.prior_kernel_space - self.cross_kernel_space_inputs.dot(
-            tsl.solve(self.prior_kernel_inputs, self.cross_kernel_space_inputs.T))
-
-    @property
-    def posterior_kernel_f_space(self):
-        return self.prior_kernel_f_space - self.cross_kernel_f_space_inputs.dot(
-            tsl.solve(self.prior_kernel_inputs, self.cross_kernel_f_space_inputs.T))
-
     def _define_process(self):
         #print('stochastic_define_process')
         # Basic Tensors
-        #self.mapping_outputs = tt_to_num(self.f_mapping.inv(self.th_outputs))
-        #self.mapping_th = tt_to_num(self.mapping(self.random_th))
+        self.mapping_outputs = tt_to_num(self.f_mapping.inv(self.th_outputs))
+        #self.mapping_th = tt_to_num(self.f_mapping(self.random_th))
         #self.mapping_inv_th = tt_to_num(self.mapping.inv(self.random_th))
 
-        #self.prior_location_space = self.f_location(self.th_space)
-        #self.prior_location_inputs = self.f_location(self.th_inputs)
+        self.prior_location_space = self.f_location(self.th_space)
+        self.prior_location_inputs = self.f_location(self.th_inputs)
 
-        #self.prior_kernel_space = tt_to_cov(self.f_kernel_noise.cov(self.th_space))
-        #self.prior_kernel_inputs = tt_to_cov(self.f_kernel_noise.cov(self.th_inputs))
-        #self.prior_cholesky_space = cholesky_robust(self.prior_kernel_space)
+        self.prior_kernel_space = tt_to_cov(self.f_kernel_noise.cov(self.th_space))
+        self.prior_kernel_inputs = tt_to_cov(self.f_kernel_noise.cov(self.th_inputs))
+        self.prior_cholesky_space = cholesky_robust(self.prior_kernel_space)
 
-        #self.prior_kernel_f_space = self.f_kernel.cov(self.th_space)
-        #self.prior_kernel_f_inputs = self.f_kernel.cov(self.th_inputs)
-        #self.prior_cholesky_f_space = cholesky_robust(self.prior_kernel_f_space)
+        self.prior_kernel_f_space = self.f_kernel.cov(self.th_space)
+        self.prior_kernel_f_inputs = self.f_kernel.cov(self.th_inputs)
+        self.prior_cholesky_f_space = cholesky_robust(self.prior_kernel_f_space)
 
-        #self.cross_kernel_space_inputs = tt_to_num(self.f_kernel_noise.cov(self.th_space, self.th_inputs))
-        #self.cross_kernel_f_space_inputs = tt_to_num(self.f_kernel.cov(self.th_space, self.th_inputs))
+        self.cross_kernel_space_inputs = tt_to_num(self.f_kernel_noise.cov(self.th_space, self.th_inputs))
+        self.cross_kernel_f_space_inputs = tt_to_num(self.f_kernel.cov(self.th_space, self.th_inputs))
 
-        #self.posterior_location_space = self.prior_location_space + self.cross_kernel_f_space_inputs.dot(
-        #    tsl.solve(self.prior_kernel_inputs, self.mapping_outputs - self.prior_location_inputs))
+        self.posterior_location_space = self.prior_location_space + self.cross_kernel_f_space_inputs.dot(
+            tsl.solve(self.prior_kernel_inputs, self.mapping_outputs - self.prior_location_inputs))
 
-        #self.posterior_kernel_space = self.prior_kernel_space - self.cross_kernel_space_inputs.dot(
-        #    tsl.solve(self.prior_kernel_inputs, self.cross_kernel_space_inputs.T))
-        #self.posterior_cholesky_space = cholesky_robust(self.posterior_kernel_space)
+        self.posterior_kernel_space = self.prior_kernel_space - self.cross_kernel_space_inputs.dot(
+            tsl.solve(self.prior_kernel_inputs, self.cross_kernel_space_inputs.T))
+        self.posterior_cholesky_space = cholesky_robust(self.posterior_kernel_space)
 
-        #self.posterior_kernel_f_space = self.prior_kernel_f_space - self.cross_kernel_f_space_inputs.dot(
-        #    tsl.solve(self.prior_kernel_inputs, self.cross_kernel_f_space_inputs.T))
-        #self.posterior_cholesky_f_space = cholesky_robust(self.posterior_kernel_f_space)
-        pass
+        self.posterior_kernel_f_space = self.prior_kernel_f_space - self.cross_kernel_f_space_inputs.dot(
+            tsl.solve(self.prior_kernel_inputs, self.cross_kernel_f_space_inputs.T))
+        self.posterior_cholesky_f_space = cholesky_robust(self.posterior_kernel_f_space)
 
     def _mapping(self, prior=False, noise=False):
         return self.mapping_outputs
@@ -628,6 +598,8 @@ class EllipticalProcess(StochasticProcess):
         self.location = types.MethodType(self._method_name('_location'), self)
         self.kernel = types.MethodType(self._method_name('_kernel'), self)
         self.cholesky = types.MethodType(self._method_name('_cholesky'), self)
+        self.kernel_diag = types.MethodType(self._method_name('_kernel_diag'), self)
+        self.kernel_sd = types.MethodType(self._method_name('_kernel_sd'), self)
 
     def plot_mapping(self, params=None, domain=None, inputs=None, outputs=None, neval=100, title=None, label='mapping'):
         if params is None:
@@ -652,7 +624,7 @@ class EllipticalProcess(StochasticProcess):
 
     def plot_kernel(self, params=None, space=None, inputs=None, centers=[1/10, 1/2, 9/10]):
         if params is None:
-            params = self.get_params_current()
+            params = self.params
         if space is None:
             space = self.th_space
         if inputs is None:
