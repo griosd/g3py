@@ -103,7 +103,7 @@ class ARD_L2(ARD):
 
     def default_hypers(self, x=None, y=None):
         try:
-            return {self.rate: 1 / np.abs(x[1:] - x[:-1]).mean(axis=0)}
+            return {self.rate: 0.5 / np.abs(x[1:] - x[:-1]).mean(axis=0)}
         except:
             return {}
 

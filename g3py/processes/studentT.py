@@ -15,8 +15,8 @@ from scipy import stats
 
 class StudentTProcess(GaussianProcess):
 
-    def _define_process(self):
-        super()._define_process()
+    def th_define_process(self):
+        super().th_define_process()
         self.distribution = TransformedStudentTDistribution(self.name, mu=self.prior_location_inputs,
                                                             cov=self.prior_kernel_inputs, mapping=Identity(),
                                                             observed=self.th_outputs, testval=self.th_outputs,
@@ -28,23 +28,23 @@ class StudentTProcess(GaussianProcess):
         else:
             return self.f_degree + self.th_inputs.shape[1]
 
-    def _variance(self, prior=False, noise=False):
+    def th_variance(self, prior=False, noise=False):
         beta = (self.mapping_outputs - self.location_inputs).T.dot(
             tsl.solve(self.kernel_inputs, self.mapping_outputs - self.f_location))
         coeff = (self.freedom(prior=prior) + beta - 2) / (self.freedom(prior=prior) - 2)
-        return super()._variance(prior=prior, noise=noise) * coeff
+        return super().th_variance(prior=prior, noise=noise) * coeff
 
     def _quantiler(self, q=0.975, prior=False, noise=False):
         debug('quantiler')
         p = stats.t.ppf(q, df=self.freedom(prior=prior))
-        return self.f_mapping(self._mean(prior=prior, noise=noise) + p * self.std(prior=prior, noise=noise))
+        return self.f_mapping(self.th_mean(prior=prior, noise=noise) + p * self.std(prior=prior, noise=noise))
 
     def _sampler(self, samples=1, prior=False, noise=False):
         debug('sampler')
         rand = np.random.randn(len(self.th_space), samples) * stats.invgamma.rvs(df=self.freedom(prior=prior) / 2,
                                                                                  loc=(self.freedom(prior=prior)-1)/2,
                                                                                  size=samples)
-        return self.f_mapping(self._mean(prior=prior, noise=noise) + self._cholesky(prior=prior, noise=noise).dot(rand))
+        return self.f_mapping(self.th_mean(prior=prior, noise=noise) + self.th_cholesky(prior=prior, noise=noise).dot(rand))
 
 
 class TransformedStudentTDistribution(pm.Continuous):

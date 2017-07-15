@@ -39,8 +39,10 @@ class makefn:
             self.compiled = th.function(self.th_vars, self.fn, givens=self.givens, allow_input_downcast=True, on_unused_input='ignore')
         else:
             self.compiled = None
+        self.executed = 0
 
     def __call__(self, params, space, inputs, outputs):
+        self.executed += 1
         if self.compiled is None:
             self.compiled = th.function(self.th_vars, self.fn, givens=self.givens, allow_input_downcast=True, on_unused_input='ignore')
         if self.bijection is None:

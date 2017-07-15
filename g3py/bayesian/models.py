@@ -2,15 +2,17 @@ import os
 import threading
 import _pickle as pickle
 import numpy as np
+import pymc3 as pm
 import theano as th
 import theano.tensor as tt
-import pymc3 as pm
+import matplotlib.pyplot as plt
 from ..libs import clone, DictObj
 from ..libs.tensors import makefn, tt_to_num
 from ..libs.plots import figure, plot, show, plot_text, grid2d, plot_2d
 from .. import config
 from ipywidgets import interact, interact_manual, FloatSlider
-import matplotlib.pyplot as plt
+from numba import jit
+
 
 Model = pm.Model
 
@@ -146,7 +148,7 @@ class GraphicalModel:
         return self.bijection.map(params)
 
     def set_params(self, params=None):
-        self.current_params = params
+        self.current_params = DictObj(params)
 
     def set_sample(self, sample=None):
         self.current_sample = sample
@@ -160,7 +162,7 @@ class GraphicalModel:
 
     @property
     def params_test(self):
-        return clone(self.model.test_point)
+        return DictObj(self.model.test_point)
 
     @property
     def params_default(self):
@@ -182,8 +184,10 @@ class GraphicalModel:
         return mean
 
     def params_datatrace(self, dt, loc):
-        return self.model.bijection.rmap(dt.loc[loc])
+        return DictObj(self.model.bijection.rmap(dt.loc[loc]))
 
+    def params_serie(self, serie):
+        return DictObj(self.model.bijection.rmap(serie))
 
     #TODO: Revisar
 
@@ -295,6 +299,53 @@ class PlotModel:
     def predict(self):
         pass
 
+    def sample(self, params=None, space=None, inputs=None, outputs=None, samples=1, prior=False):
+        S = self.predict(params=params, space=space, inputs=inputs, outputs=outputs, mean=False, var=False, cov=False, median=False, quantiles=False, noise=False, samples=samples, prior=False)
+        return S['samples']
+
+    def scores(self, params=None, space=None, hidden=None, inputs=None, outputs=None, logp=False, bias=True, variance=False, median=False, *args, **kwargs):
+        if hidden is None:
+            hidden = self.hidden
+        pred = self.predict(params=params, space=space, inputs=inputs, outputs=outputs, var=variance, median=median, distribution=logp)
+        scores = DictObj()
+        if bias:
+            scores['BiasL1'] = np.mean(np.abs(pred.mean - hidden))
+            scores['BiasL2'] = np.mean((pred.mean - hidden)**2)
+        if variance:
+            scores['MSE'] = np.mean((pred.mean - hidden) ** 2 + pred.variance)
+            scores['RMSE'] = np.sqrt(scores['_MSE'])
+        if median:
+            scores['MedianL1'] = np.mean(np.abs(pred.median - hidden))
+            scores['MedianL2'] = np.mean((pred.median - hidden)**2)
+        if logp:
+            #scores['_NLL'] = - pred.logp(hidden) / len(hidden)
+            scores['NLPD'] = - pred.logpred(hidden) / len(hidden)
+        return scores
+
+    def average(self, datatrace, scores=True, *args, **kwargs):
+        average = None
+        for k, v in datatrace.iterrows():
+            params = self.active.model.bijection.rmap(v)
+            pred = self.predict(params, *args, **kwargs)
+            if scores:
+                pred.update(self.scores(params, *args, **kwargs))
+            if average is None:
+                average = pred
+            else:
+                for k in pred.keys():
+                    average[k] += pred[k]
+        n = len(datatrace)
+        for k in pred.keys():
+            average[k] /= n
+        return average
+
+    def particles(self, datatrace, *args, **kwargs):
+        particles = {}
+        for k, v in datatrace.iterrows():
+            particles[k] = self.sample(self.active.model.bijection.rmap(v), *args, **kwargs)
+        particles = np.concatenate(list(particles.values()), axis=1)
+        return particles
+
     def describe(self, title=None, x=None, y=None, text=None):
         if title is not None:
             self.description['title'] = title
@@ -339,8 +390,11 @@ class PlotModel:
             plot(self.index, self.outputs, '.r', ms=6, label='Observations')
 
     def plot(self, params=None, space=None, inputs=None, outputs=None, mean=True, std=True, var=False, cov=False, median=False, quantiles=True, noise=True, samples=0, prior=False,
-             data=True, big=None, plot_space=False, title=None, loc=1):
-        values = self.predict(params=params, space=space, inputs=inputs, outputs=outputs, mean=mean, std=std, var=var, cov=cov, median=median, quantiles=quantiles, noise=noise, samples=samples, prior=prior)
+             values=None, data=True, big=None, plot_space=False, title=None, loc=1):
+        if values is None:
+            values = self.predict(params=params, space=space, inputs=inputs, outputs=outputs, mean=mean, std=std,
+                                  var=var, cov=cov, median=median, quantiles=quantiles, samples=samples, noise=noise,
+                                  prior=prior)
         if data:
             self.plot_hidden(big)
         if mean:
@@ -368,6 +422,21 @@ class PlotModel:
             show()
             self.plot_space()
             plot_text('Space X', 'Index', 'Value', legend=False)
+
+    def plot_datatrace(self, datatrace, overlap=False, limit=10, scores=True, *args, **kwargs):
+        for k, v in datatrace.iterrows():
+            self.plot(self.active.model.bijection.rmap(v), *args, **kwargs)
+            if not overlap:
+                if scores:
+                    name = str(k)+' - '+str(self.scores(self.active.model.bijection.rmap(v), *args, **kwargs))
+                else:
+                    name = str(k)
+                plot_text(name, self.description['x'], self.description['y'])
+                show()
+            if limit > 0:
+                limit-=1
+            else:
+                break
 
     def widget(self, params=None, model=False, auto=False, *args, **kwargs):
         if params is None:

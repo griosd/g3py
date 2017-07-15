@@ -2,7 +2,7 @@ import g3py as g3
 import numpy as np
 import pandas as pd
 import statsmodels.api as sm
-from .plots import plot as g3plot, plot_text
+from .plots import plot as g3plot, plot_text, show
 
 
 def data_sunspots():
@@ -37,7 +37,7 @@ def data_eurusd():
     return hr.index.values, hr.values
 
 
-def data_abalone(dataframe=True, raw=False):
+def data_abalone(dataframe=False, raw=False):
     names = ['Sex', 'Length', 'Diam', 'Height', 'Whole', 'Shucked', 'Viscera', 'Shell', 'Rings']
     print('abalone')
     abalone = pd.read_csv(g3.__path__[0] + '/libs/datasets/abalone.data', names=names)
@@ -51,7 +51,7 @@ def data_abalone(dataframe=True, raw=False):
         return x, y
 
 
-def data_creep(dataframe=True, raw=False):
+def data_creep(dataframe=False, raw=False):
     names = ['Lifetime', 'Rupture_stress', 'Temperature', 'Carbon', 'Silicon', 'Manganese', \
              'Phosphorus', 'Sulphur', 'Chromium', 'Molybdenum', 'Tungsten', 'Nickel', 'Copper', \
              'Vanadium', 'Niobium', 'Nitrogen', 'Aluminium', 'Boron', 'Cobalt', 'Tantalum', 'Oxygen', \
@@ -71,7 +71,7 @@ def data_creep(dataframe=True, raw=False):
         return x, y
 
 
-def data_ailerons(dataframe=True, raw=False):
+def data_ailerons(dataframe=False, raw=False):
     names = ['climbRate', 'Sgz', 'p', 'q', 'curPitch', 'curRoll', 'absRoll', 'diffClb', 'diffRollRate', \
              'diffDiffClb', 'SeTime1', 'SeTime2', 'SeTime3', 'SeTime4', 'SeTime5', 'SeTime6', 'SeTime7', \
              'SeTime8', 'SeTime9', 'SeTime10', 'SeTime11', 'SeTime12', 'SeTime13', 'SeTime14', \
@@ -125,10 +125,24 @@ def random_obs(x, y, p=0.2, s=1.0, include_min=False, plot=True):
     y_test = y[test_j]
     print('Total: '+str(len(x)) +' | '+'Obs: '+str(len(obs_j)) + ' ('+str(100*len(obs_j)/len(x))+'%)')
     if plot:
-        g3plot(x, y)
-        g3plot(x_obs, y_obs, '.k', ms=20)
-        g3plot(x_obs, y_obs, '.r', ms=15, label='Observations')
-        plot_text('Data', 'X', 'Y', legend=True)
+        if len(x.shape) > 1:
+            id = np.arange(len(x))
+            for k in range(x.shape[1]):
+                g3plot(id, x[:, k])
+                g3plot(obs_j, x_obs[:, k], '.k', ms=20)
+                g3plot(obs_j, x_obs[:, k], '.r', ms=15, label='Observations')
+                plot_text('Inputs', 'i', 'x', legend=True)
+                show()
+            show()
+            g3plot(id, y)
+            g3plot(obs_j, y_obs, '.k', ms=20)
+            g3plot(obs_j, y_obs, '.r', ms=15, label='Observations')
+            plot_text('Outputs', 'i', 'y', legend=True)
+        else:
+            g3plot(x, y)
+            g3plot(x_obs, y_obs, '.k', ms=20)
+            g3plot(x_obs, y_obs, '.r', ms=15, label='Observations')
+            plot_text('Data', 'Inputs', 'Outputs', legend=True)
     return obs_j, x_obs, y_obs, test_j, x_test, y_test
 
 

@@ -181,7 +181,9 @@ def load_datatrace(path='datatrace.pkl'):
 
 # SELECTION
 
-def marginal(dt, items=None, like=None, regex=None, samples=None):
+def marginal_datatrace(dt, items=None, like=None, regex=None, drop=None, samples=None):
+    if drop is not None:
+        dt = dt.drop(drop , axis=1)
     if items is None and like is None and regex is None:
         df = dt
     else:
@@ -192,18 +194,18 @@ def marginal(dt, items=None, like=None, regex=None, samples=None):
         return df.sample(samples)
 
 
-def conditional(dt, lambda_df):
+def conditional_datatrace(dt, lambda_df):
     conditional_traces = dt.loc[lambda_df, :]
     print('#' + str(len(conditional_traces)) + " (" + str(100 * len(conditional_traces) / len(dt)) + " %)")
     return conditional_traces
 
 
-def find_candidates(dt, ll=1, l1=0, l2=0, mean=False, median=False, cluster=False, rand=0):
+def find_candidates(dt, ll=1, l1=0, l2=0, mean=False, median=False, by_cluster=False, rand=0):
     # modes
     dt_full = dt.drop_duplicates(subset=[k for k in dt.columns if not k.startswith('_')])
     candidates = list()
-    for c in (dt_full._cluster.unique() if cluster else [0]):
-        if cluster:
+    for c in (dt_full._cluster.unique() if by_cluster else [0]):
+        if by_cluster:
             dt = dt_full[dt_full._cluster == c]
         else:
             dt = dt_full
@@ -347,7 +349,7 @@ def plot_datatrace(datatrace, burnin = False, outlayer = False, varnames=None, t
 
 #TODO: ARREGLAR
 def kde_datatrace(dt, items=None, size=6, n_levels=20, cmap="Blues_d"):
-    dt = marginal(dt, items)
+    dt = marginal_datatrace(dt, items)
     g = sb.PairGrid(dt, size=size)
     g.map_diag(sb.distplot, bins=200)
     g.map_offdiag(plt.scatter)
@@ -355,14 +357,28 @@ def kde_datatrace(dt, items=None, size=6, n_levels=20, cmap="Blues_d"):
     return g
 
 
-def hist_datatrace(dt, items=None, like=None, drop=['_burnin', '_outlayer', '_nchain', '_niter'], regex=None, samples=None, bins=200, layout=(5, 5), figsize=(20, 20), burnin=True, outlayer=True):
+def hist_datatrace(dt, params=None, items=None, like=None, drop=['_burnin', '_outlayer', '_nchain', '_niter'], regex=None, samples=None, bins=200, layout=(5, 5), figsize=(20, 20), burnin=True, outlayer=True):
     if burnin and hasattr(dt, '_burnin'):
         dt = dt[dt._burnin]
     if outlayer and hasattr(dt, '_outlayer'):
         dt = dt[dt._outlayer]
     if drop is not None:
         dt = dt.drop(drop, axis=1)
-    marginal(dt, items=items, like=like, regex=regex, samples=samples).hist(bins=bins, layout=layout, figsize=figsize)
+    marginal = marginal_datatrace(dt, items=items, like=like, regex=regex, samples=samples)
+    marginal.hist(bins=bins, layout=layout, figsize=figsize)
+    if params is not None:
+        columns = sorted(marginal.columns)
+        i = 1
+        for k in columns:
+            plt.subplot(layout[0], layout[1], i)
+            i += 1
+            try:
+                plt.axvline(x=params[k], color='r', linestyle='--')
+            except:
+                try:
+                    plt.axvline(x=params[k[:-3]][int(k[-1])], color='r', linestyle='--')
+                except:
+                    pass
 
 
 def scatter_datatrace(dt, items=None, like=None, drop=['_burnin', '_outlayer', '_nchain', '_niter'], regex=None, samples=100000, bins=200, figsize=(15, 15), burnin=True, outlayer=True, cluster=None, cmap=cm.rainbow_r):
@@ -372,7 +388,7 @@ def scatter_datatrace(dt, items=None, like=None, drop=['_burnin', '_outlayer', '
         dt = dt[dt._outlayer]
     if drop is not None:
         dt = dt.drop(drop, axis=1)
-    df = marginal(dt, items=items, like=like, regex=regex, samples=samples)
+    df = marginal_datatrace(dt, items=items, like=like, regex=regex, samples=samples)
     if cluster is None and hasattr(dt, '_cluster'):
         cluster = dt._cluster
     if cluster is None:

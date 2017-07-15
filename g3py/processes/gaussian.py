@@ -17,30 +17,31 @@ class GaussianProcess(EllipticalProcess):
     def __init__(self, name='GP', *args, **kwargs):
         super().__init__(name=name, *args, **kwargs)
 
-    def _define_process(self):
+    def th_define_process(self):
         #print('gaussian_define_process')
-        super()._define_process()
+        super().th_define_process()
         self.distribution = TransformedGaussianDistribution(self.name, mu=self.prior_location_inputs,
                                                             cov=self.prior_kernel_inputs, mapping=self.f_mapping,
                                                             observed=self.th_outputs, testval=self.outputs,
                                                             dtype=th.config.floatX)
 
-    def _median(self, prior=False, noise=False):
+    def th_median(self, prior=False, noise=False):
         debug_p('median' + str(prior) + str(noise))
-        return self.f_mapping(self._location(prior=prior, noise=noise))
+        return self.f_mapping(self.th_location(prior=prior, noise=noise))
 
-    def _mean(self, prior=False, noise=False):
+    def th_mean(self, prior=False, noise=False):
         debug_p('mean' + str(prior) + str(noise))
-        return self.f_mapping(self._location(prior=prior, noise=noise))
+        return self.f_mapping(self.th_location(prior=prior, noise=noise))
 
-    def _variance(self, prior=False, noise=False):
+    def th_variance(self, prior=False, noise=False):
         debug_p('variance' + str(prior) + str(noise))
-        return self._kernel_diag(prior=prior, noise=noise)
+        return self.th_kernel_diag(prior=prior, noise=noise)
 
 # TODO: ARREGLAR
     def quantiler(self, params=None, space=None, inputs=None, outputs=None, q=0.975, prior=False, noise=False):
         #debug_p('quantiler' + str(q) + str(prior) + str(noise))
         p = stats.norm.ppf(q)
+        # self.f_mapping
         return self.location(params, space, inputs, outputs, prior=prior) + p*self.kernel_sd(params, space, inputs, outputs, prior=prior, noise=noise) #self.f_mapping
 
     def sampler(self, params=None, space=None, inputs=None, outputs=None, samples=1, prior=False, noise=False):
@@ -48,6 +49,7 @@ class GaussianProcess(EllipticalProcess):
         if space is None:
             space = self.space
         rand = np.random.randn(len(space), samples)
+        # self.f_mapping
         return self.location(params, space, inputs, outputs, prior=prior)[:, None] + self.cholesky(params, space, inputs, outputs, prior=prior, noise=noise).dot(rand) #self.f_mapping
 
 
@@ -60,21 +62,21 @@ class TransformedGaussianProcess(GaussianProcess):
     def __init__(self, name='TGP', *args, **kwargs):
         super().__init__(name=name, *args, **kwargs)
 
-    def _mean(self, prior=False, noise=False, n=10):
+    def th_mean(self, prior=False, noise=False, n=10):
         debug_p('mean')
         _a, _w = np.polynomial.hermite.hermgauss(n)
         a = th.shared(_a.astype(th.config.floatX), borrow=True).dimshuffle([0, 'x'])
         w = th.shared(_w.astype(th.config.floatX), borrow=True)
-        return self.gauss_hermite(lambda v: self.f_mapping(v), self._location(prior=prior, noise=noise),
-                                  self._kernel_sd(prior=prior, noise=noise), a, w)
+        return self.gauss_hermite(lambda v: self.f_mapping(v), self.th_location(prior=prior, noise=noise),
+                                  self.th_kernel_sd(prior=prior, noise=noise), a, w)
 
-    def _variance(self, prior=False, noise=False, n=10):
+    def th_variance(self, prior=False, noise=False, n=10):
         debug_p('mean')
         _a, _w = np.polynomial.hermite.hermgauss(n)
         a = th.shared(_a.astype(th.config.floatX), borrow=True).dimshuffle([0, 'x'])
         w = th.shared(_w.astype(th.config.floatX), borrow=True)
-        return self.gauss_hermite(lambda v: self.f_mapping(v) ** 2, self._location(prior=prior, noise=noise),
-                                  self._kernel_sd(prior=prior, noise=noise), a, w) - self._mean(prior=prior, noise=noise) ** 2
+        return self.gauss_hermite(lambda v: self.f_mapping(v) ** 2, self.th_location(prior=prior, noise=noise),
+                                  self.th_kernel_sd(prior=prior, noise=noise), a, w) - self.th_mean(prior=prior, noise=noise) ** 2
 
     @classmethod
     def gauss_hermite(cls, f, mu, sigma, a, w):

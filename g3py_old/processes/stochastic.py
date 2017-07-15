@@ -169,7 +169,7 @@ class _StochasticProcess:
         out = np.empty(len(self._fixed_chain))
         for i in range(len(out)):
             out[i] = self.model.logp_array(self._fixed_chain[i])
-        return out._mean()
+        return out.th_mean()
 
     @jit
     def _dlogp_fixed_chain(self, sampling_params):
@@ -177,7 +177,7 @@ class _StochasticProcess:
         out = np.empty((len(self._fixed_chain), len(self.sampling_dims)))
         for i in range(len(out)):
             out[i, :] = self.model.dlogp_array(self._fixed_chain[i])[self.sampling_dims]
-        return out._mean(axis=0)
+        return out.th_mean(axis=0)
 
 
 class GaussianProcess(StochasticProcess):

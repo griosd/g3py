@@ -12,6 +12,13 @@ from .plots import *
 
 
 class DictObj(dict):
+
+    def __init__(self, data=None, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if data is not None:
+            for k,v in data.items():
+                self[k] = v
+
     def __getattr__(self, name):
         if name in self:
             return self[name]

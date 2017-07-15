@@ -7,7 +7,7 @@ from datetime import datetime as dt
 from tqdm import tqdm
 from inspect import signature
 from ..libs import random_obs, uniform_obs, save_pkl, load_pkl, nan_to_high, MaxTime
-from .average import marginal
+from .average import marginal_datatrace
 
 
 def optimize(logp, start, dlogp=None, fmin=None, max_time=None, *args, **kwargs):
@@ -281,7 +281,7 @@ class CrossValidation:
             else:
                 sim.update({'params': row.params})
             df = df.append(sim, ignore_index=True)
-        return marginal(df, like=like)
+        return marginal_datatrace(df, like=like)
 
     def simulations(self):
         return self.simulations_raw
