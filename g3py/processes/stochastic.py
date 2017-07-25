@@ -896,7 +896,7 @@ class _StochasticProcess:
         elif len(start.shape) == 2:
             start = start[:, self.sampling_dims]
         elif len(start.shape) == 3:
-            start = start[:, 0, self.sampling_dims]
+            start = start[:, :, self.sampling_dims]
 
         if ntemps is None:
             sampler = emcee.EnsembleSampler(chains, ndim, self._logp_fixed)
