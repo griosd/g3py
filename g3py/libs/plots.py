@@ -82,7 +82,8 @@ def plot_save(file='example.pdf'):
 def plot_img(name='example', path='plots/', extension='png'):
     file = path + name+'.'+extension
     plt.savefig(file, bbox_inches='tight')
-    return display.HTML('<img src=\'{}.jpg\'>'.format(file))
+    display.HTML('<img src=\'{}\'>'.format(file+'#'+str(np.random.rand())))
+    show()
 
 
 def grid2d(x, y):
