@@ -354,8 +354,8 @@ class WN(KernelStationary):
         if x2 is None:
             return self.var * tt.eye(x1.shape[0])
         else:
-            #return self.var * self.metric.gram(x1, x2)
-            return tt.zeros((x1.shape[0], x2.shape[0]))
+            return self.var * self.metric.gram(x1, x2)
+            #return tt.zeros((x1.shape[0], x2.shape[0]))
 
 
 class RQ(KernelStationary):

@@ -148,7 +148,10 @@ class GraphicalModel:
         return self.bijection.map(params)
 
     def set_params(self, params=None):
-        self.current_params = DictObj(params)
+        if params is None:
+            self.current_params = None
+        else:
+            self.current_params = DictObj(params)
 
     def set_sample(self, sample=None):
         self.current_sample = sample
@@ -299,8 +302,9 @@ class PlotModel:
     def predict(self):
         pass
 
-    def sample(self, params=None, space=None, inputs=None, outputs=None, samples=1, prior=False):
-        S = self.predict(params=params, space=space, inputs=inputs, outputs=outputs, mean=False, var=False, cov=False, median=False, quantiles=False, noise=False, samples=samples, prior=False)
+    def sample(self, params=None, space=None, inputs=None, outputs=None, samples=1, prior=False, noise=False):
+        S = self.predict(params=params, space=space, inputs=inputs, outputs=outputs, mean=False, var=False, cov=False,
+                         median=False, quantiles=False, quantiles_noise=False, samples=samples, prior=prior, noise=noise)
         return S['samples']
 
     def scores(self, params=None, space=None, hidden=None, inputs=None, outputs=None, logp=False, bias=True, variance=False, median=False, *args, **kwargs):
@@ -389,12 +393,13 @@ class PlotModel:
             plot(self.index, self.outputs, '.k', ms=10)
             plot(self.index, self.outputs, '.r', ms=6, label='Observations')
 
-    def plot(self, params=None, space=None, inputs=None, outputs=None, mean=True, std=True, var=False, cov=False, median=False, quantiles=True, noise=True, samples=0, prior=False,
+    def plot(self, params=None, space=None, inputs=None, outputs=None, mean=True, std=True, var=False, cov=False,
+             median=False, quantiles=True, quantiles_noise=True, samples=0, prior=False, noise=False,
              values=None, data=True, big=None, plot_space=False, title=None, loc=1):
         if values is None:
             values = self.predict(params=params, space=space, inputs=inputs, outputs=outputs, mean=mean, std=std,
-                                  var=var, cov=cov, median=median, quantiles=quantiles, samples=samples, noise=noise,
-                                  prior=prior)
+                                  var=var, cov=cov, median=median, quantiles=quantiles, quantiles_noise=quantiles_noise,
+                                  samples=samples, prior=prior, noise=noise)
         if data:
             self.plot_hidden(big)
         if mean:
@@ -408,7 +413,7 @@ class PlotModel:
             plot(self.order, values['median'], label='Median')
         if quantiles:
             plt.fill_between(self.order, values['quantile_up'], values['quantile_down'], alpha=0.1, label='95%')
-        if noise:
+        if quantiles_noise:
             plt.fill_between(self.order, values['noise_up'], values['noise_down'], alpha=0.1, label='noise')
         if samples > 0:
             plot(self.order, values['samples'], alpha=0.4)
@@ -488,8 +493,8 @@ class PlotModel:
 
     #TODO: Revisar
 
-    def plot_distribution(self, index=0, params=None, space=None, inputs=None, outputs=None, mean=True, var=True, cov=False, median=False, quantiles=False, noise=False, prior=False, sigma=4, neval=100, title=None, swap=False, label=None):
-        pred = self.predict(params=params, space=space, inputs=inputs, outputs=outputs, mean=mean, var=var, cov=cov, median=median, quantiles=quantiles, noise=noise, distribution=True, prior=prior)
+    def plot_distribution(self, index=0, params=None, space=None, inputs=None, outputs=None, mean=True, var=True, cov=False, median=False, quantiles=False, quantiles_noise=False, noise=False, prior=False, sigma=4, neval=100, title=None, swap=False, label=None):
+        pred = self.predict(params=params, space=space, inputs=inputs, outputs=outputs, mean=mean, var=var, cov=cov, median=median, quantiles=quantiles, quantiles_noise=quantiles_noise, noise=noise, distribution=True, prior=prior)
         domain = np.linspace(pred._mean - sigma * pred.std, pred._mean + sigma * pred.std, neval)
         dist_plot = np.zeros(len(domain))
         for i in range(len(domain)):
@@ -510,8 +515,8 @@ class PlotModel:
             plot(domain, dist_plot,label=label)
             plot_text(title, 'Domain y', 'Density')
 
-    def plot_distribution2D(self, indexs=[0, 1], params=None, space=None, inputs=None, outputs=None, mean=True, var=True, cov=False, median=False, quantiles=False, noise=False, prior=False, sigma_1=2, sigma_2=2, neval=33, title=None):
-        pred = self.predict(params=params, space=space, inputs=inputs, outputs=outputs, mean=mean, var=var, cov=cov, median=median, quantiles=quantiles, noise=noise, distribution=True, prior=prior)
+    def plot_distribution2D(self, indexs=[0, 1], params=None, space=None, inputs=None, outputs=None, mean=True, var=True, cov=False, median=False, quantiles=False, quantiles_noise=False, noise=False, prior=False, sigma_1=2, sigma_2=2, neval=33, title=None):
+        pred = self.predict(params=params, space=space, inputs=inputs, outputs=outputs, mean=mean, var=var, cov=cov, median=median, quantiles=quantiles, quantiles_noise=quantiles_noise, noise=noise, distribution=True, prior=prior)
         dist1 = np.linspace(pred._mean[0] - sigma_1 * pred.std[0], pred._mean[0] + sigma_1 * pred.std[0], neval)
         dist2 = np.linspace(pred._mean[1] - sigma_2 * pred.std[1], pred._mean[1] + sigma_2 * pred.std[1], neval)
         xy, x2d, y2d = grid2d(dist1, dist2)

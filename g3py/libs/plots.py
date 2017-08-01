@@ -6,9 +6,25 @@ import seaborn as sb
 from g3py import config
 from matplotlib import cm
 
-figure = plt.figure
-plot = plt.plot
-show = plt.show
+
+def figure(*args, **kwargs):
+    plt.figure(*args, **kwargs)
+
+
+def plot(*args, **kwargs):
+    plt.plot(*args, **kwargs)
+
+
+def subplot(*args, **kwargs):
+    plt.subplot(*args, **kwargs)
+
+
+def tight_layout(*args, **kwargs):
+    plt.show(*args, **kwargs)
+
+
+def show(*args, **kwargs):
+    plt.show(*args, **kwargs)
 
 
 def style_seaborn():

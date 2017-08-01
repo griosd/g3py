@@ -1,11 +1,11 @@
 import g3py as g3
 import numpy as np
 import pandas as pd
-import statsmodels.api as sm
 from .plots import plot as g3plot, plot_text, show
 
 
 def data_sunspots():
+    import statsmodels.api as sm
     data = sm.datasets.sunspots.load_pandas().data['SUNACTIVITY']
     print(sm.datasets.sunspots.NOTE)
     x = data.index.values[:]
@@ -13,15 +13,24 @@ def data_sunspots():
     return x, y
 
 
-def data_co2():
-    data = sm.datasets.co2.load_pandas().data
-    print(sm.datasets.co2.NOTE)
-    x = data.index.values[:]
-    y = data.values[:, 0]
+def data_co2(source='sklearn'):
+    if source is 'sklearn':
+        from sklearn.datasets import fetch_mldata
+        fetch = fetch_mldata('mauna-loa-atmospheric-co2')
+        print(fetch.DESCR)
+        x = fetch.data[:, 1]
+        y = fetch.data[:, 0]
+    else:
+        import statsmodels.api as sm
+        data = sm.datasets.co2.load_pandas().data
+        print(sm.datasets.co2.NOTE)
+        x = data.index.values[:]
+        y = data.values[:, 0]
     return x, y
 
 
 def data_engel():
+    import statsmodels.api as sm
     data = sm.datasets.engel.load_pandas().data
     print(sm.datasets.engel.NOTE)
     return data

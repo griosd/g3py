@@ -42,7 +42,7 @@ class GaussianProcess(EllipticalProcess):
         #debug_p('quantiler' + str(q) + str(prior) + str(noise))
         p = stats.norm.ppf(q)
         # self.f_mapping
-        return self.location(params, space, inputs, outputs, prior=prior) + p*self.kernel_sd(params, space, inputs, outputs, prior=prior, noise=noise) #self.f_mapping
+        return self.location(params, space, inputs, outputs, prior=prior, noise=noise) + p*self.kernel_sd(params, space, inputs, outputs, prior=prior, noise=noise) #self.f_mapping
 
     def sampler(self, params=None, space=None, inputs=None, outputs=None, samples=1, prior=False, noise=False):
         #debug_p('sampler' + str(samples) + str(prior) + str(noise)+str(len(self.space)))
@@ -50,7 +50,7 @@ class GaussianProcess(EllipticalProcess):
             space = self.space
         rand = np.random.randn(len(space), samples)
         # self.f_mapping
-        return self.location(params, space, inputs, outputs, prior=prior)[:, None] + self.cholesky(params, space, inputs, outputs, prior=prior, noise=noise).dot(rand) #self.f_mapping
+        return self.location(params, space, inputs, outputs, prior=prior, noise=noise)[:, None] + self.cholesky(params, space, inputs, outputs, prior=prior, noise=noise).dot(rand) #self.f_mapping
 
 
 def debug_p(*args, **kwargs):

@@ -297,9 +297,9 @@ def plot_datatrace(datatrace, burnin = False, outlayer = False, varnames=None, t
     #    datatrace = datatrace.drop(['_niter'], axis=1)
     if varnames is None:
         if plot_transformed:
-            varnames = [name for name in datatrace.columns if name != '_niter']
+            varnames = ['_ll'] + [name for name in datatrace.columns if name != '_niter' and name != '_ll']
         else:
-            varnames = [name for name in datatrace.columns if name != '_niter' and (not name.endswith('_'))]
+            varnames = ['_ll'] + [name for name in datatrace.columns if name != '_niter' and name != '_ll' and (not name.endswith('_'))]
 
     n = len(varnames)
 

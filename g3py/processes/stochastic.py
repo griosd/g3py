@@ -91,6 +91,9 @@ class StochasticProcess(PlotModel):#TheanoBlackBox
     def set_params(self, *args, **kwargs):
         return self.active.set_params(*args, **kwargs)
 
+    def params_random(self, *args, **kwargs):
+        return self.active.params_random(*args, **kwargs)
+
     def set_space(self, space=None, hidden=None, order=None, inputs=None, outputs=None, index=None):
         if space is not None:
             if len(space.shape) < 2:
@@ -291,8 +294,8 @@ class StochasticProcess(PlotModel):#TheanoBlackBox
     def executed(self):
         return {k: v.executed for k, v in self.compiles.items()}
 
-    def predict(self, params=None, space=None, inputs=None, outputs=None, mean=True, std=True, var=False, cov=False, median=False,
-                quantiles=False, noise=False, samples=0, distribution=False, prior=False):
+    def predict(self, params=None, space=None, inputs=None, outputs=None, mean=True, std=True, var=False, cov=False,
+                median=False, quantiles=False, quantiles_noise=False, samples=0, distribution=False, prior=False, noise=False):
         if params is None:
             params = self.params
         if not self.is_observed:
@@ -305,24 +308,24 @@ class StochasticProcess(PlotModel):#TheanoBlackBox
             outputs = self.outputs
         values = DictObj()
         if mean:
-            values['mean'] = self.mean(params, space, inputs, outputs, prior=prior)
+            values['mean'] = self.mean(params, space, inputs, outputs, prior=prior, noise=noise)
         if var:
-            values['variance'] = self.variance(params, space, inputs, outputs, prior=prior)
+            values['variance'] = self.variance(params, space, inputs, outputs, prior=prior, noise=noise)
         if std:
-            values['std'] = self.std(params, space, inputs, outputs, prior=prior)
+            values['std'] = self.std(params, space, inputs, outputs, prior=prior, noise=noise)
         if cov:
             values['covariance'] = self.covariance(params, space, inputs, outputs, prior=prior, noise=noise)
         if median:
-            values['median'] = self.median(params, space, inputs, outputs, prior=prior)
+            values['median'] = self.median(params, space, inputs, outputs, prior=prior, noise=noise)
         if quantiles:
-            values['quantile_up'] = self.quantiler(params, space, inputs, outputs, q=0.975, prior=prior)
-            values['quantile_down'] = self.quantiler(params, space, inputs, outputs, q=0.025, prior=prior)
-        if noise:
-            values['noise'] = self.std(params, space, inputs, outputs, prior=prior, noise=True)
+            values['quantile_up'] = self.quantiler(params, space, inputs, outputs, q=0.975, prior=prior, noise=noise)
+            values['quantile_down'] = self.quantiler(params, space, inputs, outputs, q=0.025, prior=prior, noise=noise)
+        if quantiles_noise:
+            values['noise_std'] = self.std(params, space, inputs, outputs, prior=prior, noise=True)
             values['noise_up'] = self.quantiler(params, space, inputs, outputs, q=0.975, prior=prior, noise=True)
             values['noise_down'] = self.quantiler(params, space, inputs, outputs, q=0.025, prior=prior, noise=True)
         if samples > 0:
-            values['samples'] = self.sampler(params, space, inputs, outputs, samples=samples, prior=prior, noise=False)
+            values['samples'] = self.sampler(params, space, inputs, outputs, samples=samples, prior=prior, noise=noise)
         if distribution:
             values['logp'] = lambda x: self.compiles['posterior_logp'](x, space, inputs, outputs, **params)
             values['logpred'] = lambda x: self.compiles['posterior_logpred'](x, space, inputs, outputs, **params)
@@ -529,7 +532,9 @@ class EllipticalProcess(StochasticProcess):
         self.cross_kernel_space_inputs = tt_to_num(self.f_kernel_noise.cov(self.th_space, self.th_inputs))
         self.cross_kernel_f_space_inputs = tt_to_num(self.f_kernel.cov(self.th_space, self.th_inputs))
 
-        self.posterior_location_space = self.prior_location_space + self.cross_kernel_f_space_inputs.dot(
+        self.posterior_location_space = self.prior_location_space + self.cross_kernel_space_inputs.dot(
+            tsl.solve(self.prior_kernel_inputs, self.mapping_outputs - self.prior_location_inputs))
+        self.posterior_location_f_space = self.prior_location_space + self.cross_kernel_f_space_inputs.dot(
             tsl.solve(self.prior_kernel_inputs, self.mapping_outputs - self.prior_location_inputs))
 
         self.posterior_kernel_space = self.prior_kernel_space - self.cross_kernel_space_inputs.dot(
@@ -547,7 +552,10 @@ class EllipticalProcess(StochasticProcess):
         if prior:
             return self.prior_location_space
         else:
-            return self.posterior_location_space
+            if noise:
+                return self.posterior_location_space
+            else:
+                return self.posterior_location_f_space
 
     def th_kernel(self, prior=False, noise=False):
         if prior:
@@ -579,6 +587,34 @@ class EllipticalProcess(StochasticProcess):
         self.kernel_diag = types.MethodType(self._method_name('th_kernel_diag'), self)
         self.kernel_sd = types.MethodType(self._method_name('th_kernel_sd'), self)
 
+    def plot_kernel(self, params=None, space=None, inputs=None, prior=True, noise=False, centers=[1/10, 1/2, 9/10]):
+        if params is None:
+            params = self.params
+        if space is None:
+            space = self.space
+        if inputs is None:
+            inputs = self.inputs
+        ksi = self.kernel(params=params, space=space, inputs=inputs, prior=prior, noise=noise).T
+        for ind in centers:
+            plt.plot(self.order, ksi[int(len(ksi)*ind), :], label='k(x_'+str(int(len(ksi)*ind))+')')
+        plot_text('Kernel', 'Space x', 'Kernel value k(x,v)')
+
+    def plot_concentration(self, params=None, space=None, prior=True, noise=True, color=True, cmap=cm.seismic, figsize=(6, 6)):
+        if params is None:
+            params = self.params
+        if space is None:
+            space = self.space
+        concentration_matrix = self.kernel(params=params, space=space, prior=prior, noise=noise)
+        if color:
+            if figsize is not None:
+                plt.figure(None, figsize)
+            v = np.max(np.abs(concentration_matrix))
+            plt.imshow(concentration_matrix, cmap=cmap, vmax=v, vmin=-v)
+        else:
+            plt.matshow(concentration_matrix)
+        plot_text('Concentration', 'Space x', 'Space x', legend=False)
+
+    # TODO: Check
     def plot_mapping(self, params=None, domain=None, inputs=None, outputs=None, neval=100, title=None, label='mapping'):
         if params is None:
             params = self.get_params_current()
@@ -600,34 +636,8 @@ class EllipticalProcess(StochasticProcess):
             title = 'Mapping'
         plot_text(title, 'Domain y', 'Domain T(y)')
 
-    def plot_kernel(self, params=None, space=None, inputs=None, centers=[1/10, 1/2, 9/10]):
-        if params is None:
-            params = self.params
-        if space is None:
-            space = self.th_space
-        if inputs is None:
-            inputs = self.inputs_values
-        ksi = self.compiles['kernel_space_inputs'](space, inputs, **params).T
-        for ind in centers:
-            plt.plot(self.order, ksi[int(len(ksi)*ind), :], label='k(x_'+str(int(len(ksi)*ind))+')')
-        plot_text('Kernel', 'Space x', 'Kernel value k(x,v)')
-
     def plot_kernel2D(self):
         pass
-
-    def plot_concentration(self, params=None, space=None, color=True, figsize=(6, 6)):
-        if params is None:
-            params = self.params
-        if space is None:
-            space = self.th_space
-        concentration_matrix = self.compiles.kernel_space(space, **params)
-        if color:
-            plt.figure(None, figsize)
-            v = np.max(np.abs(concentration_matrix))
-            plt.imshow(concentration_matrix, cmap=cm.seismic, vmax=v, vmin=-v)
-        else:
-            plt.matshow(concentration_matrix)
-        plot_text('Concentration', 'Space x', 'Space x', legend=False)
 
     def plot_location(self, params=None, space=None):
         if params is None:
