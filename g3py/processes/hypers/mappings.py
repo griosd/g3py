@@ -274,7 +274,8 @@ class WarpingTanh(Mapping):
 
     def inv(self, y):
         z = y.dimshuffle(0, 'x')
-        return y + tt.dot(tt.tanh(self.b * (z + self.c)), self.a).reshape(y.shape)
+        r = y + tt.dot(tt.tanh(self.b * (z + self.c)), self.a).reshape(y.shape)
+        return r
 
 
 class WarpingBoxCox(Mapping):

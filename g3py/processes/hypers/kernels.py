@@ -168,7 +168,21 @@ class KernelComposition(Kernel):
 
     @property
     def name(self):
-        return self.k1.name + " "+self.op+" " + self.k2.name
+        # TODO: Arreglar try/exceptions con dims
+        try:
+            return self.k1.name+"("+str(self.k1.dims.start)+","+str(self.k1.dims.stop)+")" + " "+self.op+" " \
+                   + self.k2.name+"("+str(self.k2.dims.start)+","+str(self.k2.dims.stop)+")"
+        except Exception:
+            try:
+                return self.k1.name+"("+str(self.k1.dims)+")" + " "+self.op+" " + self.k2.name+"("+str(self.k2.dims)+")"
+            except Exception:
+                try:
+                    return self.k1.name + " "+self.op+" " + self.k2.name+"("+str(self.k2.dims)+")"
+                except Exception:
+                    try:
+                        return self.k1.name+"("+str(self.k1.dims)+")" + " "+self.op+" " + self.k2.name
+                    except Exception:
+                        return self.k1.name + " "+self.op+" " + self.k2.name
 
     def __str__(self):
         return str(self.k1) + " "+self.op+" " + str(self.k2)
@@ -343,6 +357,20 @@ class NN(KernelDot):
             return self.var * tt.arcsin(2*self.metric.gram(x1, x2)/((1 + 2*self.metric.gram(x1, x1))*(1 + 2*self.metric.gram(x2, x2))))
 
 
+class KernelNoise(KernelStationary):
+    def __init__(self, x=None, name=None, metric=Delta, var=None):
+        super().__init__(x, name, metric, var)
+
+    def __call__(self, x1, x2):
+        return self.var * self.metric(x1, x2)
+
+    def cov(self, x1, x2=None):
+        if x2 is None:
+            return self.var * tt.eye(x1.shape[0])
+        else:
+            return tt.zeros((x1.shape[0], x2.shape[0]))
+
+
 class WN(KernelStationary):
     def __init__(self, x=None, name=None, metric=Delta, var=None):
         super().__init__(x, name, metric, var)
@@ -355,7 +383,6 @@ class WN(KernelStationary):
             return self.var * tt.eye(x1.shape[0])
         else:
             return self.var * self.metric.gram(x1, x2)
-            #return tt.zeros((x1.shape[0], x2.shape[0]))
 
 
 class RQ(KernelStationary):

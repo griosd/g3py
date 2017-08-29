@@ -36,19 +36,29 @@ class makefn:
         self.givens = givens
         self.bijection = bijection
         if precompile:
-            self.compiled = th.function(self.th_vars, self.fn, givens=self.givens, allow_input_downcast=True, on_unused_input='ignore')
+            #print(self.th_vars, self.fn)
+            self.compiled = th.function(self.th_vars, self.fn, givens=self.givens, allow_input_downcast=True,
+                                        on_unused_input='ignore')
         else:
             self.compiled = None
         self.executed = 0
 
-    def __call__(self, params, space, inputs, outputs):
+    def __call__(self, params, space, inputs, outputs, vector=None):
         self.executed += 1
         if self.compiled is None:
-            self.compiled = th.function(self.th_vars, self.fn, givens=self.givens, allow_input_downcast=True, on_unused_input='ignore')
-        if self.bijection is None:
-            return self.compiled(space, inputs, outputs, **params)
+            #print(self.th_vars, self.fn)
+            self.compiled = th.function(self.th_vars, self.fn, givens=self.givens, allow_input_downcast=True,
+                                        on_unused_input='ignore')
+        if vector is None:
+            if self.bijection is None:
+                return self.compiled(space, inputs, outputs, **params)
+            else:
+                return self.compiled(space, inputs, outputs, **self.bijection(params))
         else:
-            return self.compiled(space, inputs, outputs, **self.bijection(params))
+            if self.bijection is None:
+                return self.compiled(space, inputs, outputs, vector, **params)
+            else:
+                return self.compiled(space, inputs, outputs, vector, **self.bijection(params))
 
     def clone(self, bijection=None):
         r = clone(self)
@@ -115,13 +125,14 @@ tt_eval = EvalOp()
 
 
 def inverse_function(func, z, tol=1e-3, n_steps=1024, alpha=0.1):
-    def iter_newton(x):
-        diff = (func(x) - z)
+    def iter_newton(x, z1):
+        diff = (func(x) - z1)
         dfunc = tt.grad(tt.sum(diff), x)
         dfunc = tt.switch(tt.abs_(dfunc) < 1.0, tt.sgn(dfunc), dfunc)
-        return x - alpha*diff/dfunc, th.scan_module.until(tt.max(tt.abs_(diff)) < tol)
+        r = x - alpha*diff/dfunc
+        return r, th.scan_module.until(tt.max(tt.abs_(diff)) < tol)
     init = 0*z
-    values, _ = th.scan(iter_newton, outputs_info=init, n_steps=n_steps)
+    values, _ = th.scan(iter_newton, outputs_info=init, non_sequences=z, n_steps=n_steps)
     return values[-1]
 
 

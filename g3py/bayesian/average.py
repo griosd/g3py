@@ -170,13 +170,14 @@ def cluster_datatrace(process, dt, n_components=5, bayesian=True, burnin=True, n
     return _cluster
 
 
-def save_datatrace(dt, path='datatrace.pkl'):
-    os.makedirs(path[:path.rfind('/')], exist_ok=True)
-    dt.to_pickle(path)
+def save_datatrace(dt, path='datatrace.h5'):
+    if path.rfind('/') > -1:
+        os.makedirs(path[:path.rfind('/')], exist_ok=True)
+    dt.to_hdf(path, 'datatrace', mode='w')
 
 
-def load_datatrace(path='datatrace.pkl'):
-    return pd.read_pickle(path)
+def load_datatrace(path='datatrace.h5'):
+    return pd.read_hdf(path)
 
 
 # SELECTION
@@ -285,7 +286,7 @@ def plot_datatrace(datatrace, burnin = False, outlayer = False, varnames=None, t
     ax : matplotlib axes
 
     """
-    nburnin = (~datatrace._burnin).idxmin()
+    nburnin = datatrace.loc[(~datatrace._burnin).idxmin()]._niter
     if burnin and hasattr(datatrace, '_burnin'):
         datatrace = datatrace[datatrace._burnin]
     if outlayer and hasattr(datatrace, '_outlayer'):
@@ -357,7 +358,7 @@ def kde_datatrace(dt, items=None, size=6, n_levels=20, cmap="Blues_d"):
     return g
 
 
-def hist_datatrace(dt, params=None, items=None, like=None, drop=['_burnin', '_outlayer', '_nchain', '_niter'], regex=None, samples=None, bins=200, layout=(5, 5), figsize=(20, 20), burnin=True, outlayer=True):
+def hist_datatrace(dt, reference=None, items=None, like=None, drop=['_burnin', '_outlayer', '_nchain', '_niter'], regex=None, samples=None, bins=200, layout=(5, 5), figsize=(20, 20), burnin=True, outlayer=True):
     if burnin and hasattr(dt, '_burnin'):
         dt = dt[dt._burnin]
     if outlayer and hasattr(dt, '_outlayer'):
@@ -366,22 +367,22 @@ def hist_datatrace(dt, params=None, items=None, like=None, drop=['_burnin', '_ou
         dt = dt.drop(drop, axis=1)
     marginal = marginal_datatrace(dt, items=items, like=like, regex=regex, samples=samples)
     marginal.hist(bins=bins, layout=layout, figsize=figsize)
-    if params is not None:
+    if reference is not None:
         columns = sorted(marginal.columns)
         i = 1
         for k in columns:
             plt.subplot(layout[0], layout[1], i)
             i += 1
             try:
-                plt.axvline(x=params[k], color='r', linestyle='--')
+                plt.axvline(x=reference[k], color='r', linestyle='--')
             except:
                 try:
-                    plt.axvline(x=params[k[:-3]][int(k[-1])], color='r', linestyle='--')
+                    plt.axvline(x=reference[k[:-3]][int(k[-1])], color='r', linestyle='--')
                 except:
                     pass
 
 
-def scatter_datatrace(dt, items=None, like=None, drop=['_burnin', '_outlayer', '_nchain', '_niter'], regex=None, samples=100000, bins=200, figsize=(15, 15), burnin=True, outlayer=True, cluster=None, cmap=cm.rainbow_r):
+def scatter_datatrace(dt, items=None, like=None, drop=['_burnin', '_outlayer', '_nchain', '_niter'], regex=None, samples=100000, burnin=True, outlayer=True, cluster=None, figsize=(15, 15), bins=200, s=4, cmap=cm.rainbow_r, *args, **kwargs):
     if burnin and hasattr(dt, '_burnin'):
         dt = dt[dt._burnin]
     if outlayer and hasattr(dt, '_outlayer'):
@@ -392,11 +393,10 @@ def scatter_datatrace(dt, items=None, like=None, drop=['_burnin', '_outlayer', '
     if cluster is None and hasattr(dt, '_cluster'):
         cluster = dt._cluster
     if cluster is None:
-        pd.plotting.scatter_matrix(df, grid=True, hist_kwds={'normed': True, 'bins': bins}, figsize=figsize)
+        pd.plotting.scatter_matrix(df, grid=True, hist_kwds={'normed': True, 'bins': bins}, figsize=figsize, s=s, *args, **kwargs)
     else:
-        pd.plotting.scatter_matrix(df, grid=True, hist_kwds={'normed': True, 'bins': bins}, figsize=figsize,
-                                   c=cluster[df.index], cmap=cmap)
-
+        pd.plotting.scatter_matrix(df, grid=True, hist_kwds={'normed': True, 'bins': bins}, figsize=figsize, s=s,
+                                   c=cluster[df.index], cmap=cmap, *args, **kwargs)
 
 # DIAGNOSTICS
 

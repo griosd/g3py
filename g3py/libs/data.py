@@ -119,7 +119,7 @@ def load_csv(file, index_col=0):
     return pd.read_csv(file, index_col=index_col)
 
 
-def random_obs(x, y, p=0.2, s=1.0, include_min=False, plot=True):
+def random_obs(x, y, p=0.2, s=1.0, include_min=False, plot=True, plot_independent=False):
     n = int(len(x)*s)
     obs_j = np.unique(np.sort(np.random.choice(range(n), int(n*p), replace=False)))
     if include_min:
@@ -136,17 +136,26 @@ def random_obs(x, y, p=0.2, s=1.0, include_min=False, plot=True):
     if plot:
         if len(x.shape) > 1:
             id = np.arange(len(x))
-            for k in range(x.shape[1]):
-                g3plot(id, x[:, k])
-                g3plot(obs_j, x_obs[:, k], '.k', ms=20)
-                g3plot(obs_j, x_obs[:, k], '.r', ms=15, label='Observations')
-                plot_text('Inputs', 'i', 'x', legend=True)
-                show()
-            show()
+
             g3plot(id, y)
             g3plot(obs_j, y_obs, '.k', ms=20)
             g3plot(obs_j, y_obs, '.r', ms=15, label='Observations')
-            plot_text('Outputs', 'i', 'y', legend=True)
+            plot_text('Output', '', 'y', legend=True)
+            show()
+
+            if plot_independent:
+                for k in range(x.shape[1]):
+                    g3plot(id, x[:, k])
+                    g3plot(obs_j, x_obs[:, k], '.k', ms=20)
+                    g3plot(obs_j, x_obs[:, k], '.r', ms=15, label='Observations')
+                    plot_text('Input '+str(k), '', 'x', legend=True)
+                    show()
+            else:
+                g3plot(id, x)
+                g3plot(obs_j, x_obs, '.k', ms=20)
+                g3plot(obs_j, x_obs, '.r', ms=15)
+                plot_text('Inputs', '', 'x', legend=False)
+                show()
         else:
             g3plot(x, y)
             g3plot(x_obs, y_obs, '.k', ms=20)

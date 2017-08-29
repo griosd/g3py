@@ -8,7 +8,7 @@ import theano.tensor as tt
 import matplotlib.pyplot as plt
 from ..libs import clone, DictObj
 from ..libs.tensors import makefn, tt_to_num
-from ..libs.plots import figure, plot, show, plot_text, grid2d, plot_2d
+from ..libs.plots import figure, plot, show, plot_text
 from .. import config
 from ipywidgets import interact, interact_manual, FloatSlider
 from numba import jit
@@ -192,8 +192,8 @@ class GraphicalModel:
     def params_serie(self, serie):
         return DictObj(self.model.bijection.rmap(serie))
 
-    #TODO: Revisar
 
+    #TODO: Revisar
     def fix_vars(self, keys=[], sample=None):
         self.fixed_keys = keys
         self.fixed_sample = sample
@@ -313,18 +313,24 @@ class PlotModel:
         pred = self.predict(params=params, space=space, inputs=inputs, outputs=outputs, var=variance, median=median, distribution=logp)
         scores = DictObj()
         if bias:
-            scores['BiasL1'] = np.mean(np.abs(pred.mean - hidden))
-            scores['BiasL2'] = np.mean((pred.mean - hidden)**2)
+            scores['_l1'] = np.mean(np.abs(pred.mean - hidden))
+            scores['_l2'] = np.mean((pred.mean - hidden)**2)
         if variance:
-            scores['MSE'] = np.mean((pred.mean - hidden) ** 2 + pred.variance)
-            scores['RMSE'] = np.sqrt(scores['_MSE'])
+            scores['_mse'] = np.mean((pred.mean - hidden) ** 2 + pred.variance)
+            scores['_rmse'] = np.sqrt(scores['_mse'])
         if median:
-            scores['MedianL1'] = np.mean(np.abs(pred.median - hidden))
-            scores['MedianL2'] = np.mean((pred.median - hidden)**2)
+            scores['_median_l1'] = np.mean(np.abs(pred.median - hidden))
+            scores['_median_l2'] = np.mean((pred.median - hidden)**2)
         if logp:
-            #scores['_NLL'] = - pred.logp(hidden) / len(hidden)
-            scores['NLPD'] = - pred.logpred(hidden) / len(hidden)
+            #scores['_nll'] = - pred.logp(hidden) / len(hidden)
+            scores['_nlpd'] = - pred.logpred(hidden) / len(hidden)
         return scores
+
+    def eval_params(self, params=None):
+        r = params.clone()
+        r['_ll'] = self.logp(params)
+        r.update(self.scores(params))
+        return r
 
     def average(self, datatrace, scores=True, *args, **kwargs):
         average = None
@@ -343,11 +349,17 @@ class PlotModel:
             average[k] /= n
         return average
 
-    def particles(self, datatrace, *args, **kwargs):
-        particles = {}
-        for k, v in datatrace.iterrows():
-            particles[k] = self.sample(self.active.model.bijection.rmap(v), *args, **kwargs)
-        particles = np.concatenate(list(particles.values()), axis=1)
+    def particles(self, datatrace, nsamples = None, *args, **kwargs):
+        particles = []
+        if nsamples is None:
+            nsamples = len(datatrace)
+        while nsamples > 0:
+            for k, v in datatrace.iterrows():
+                particles.append(self.sample(self.active.model.bijection.rmap(v), *args, **kwargs))
+                nsamples -= 1
+                if not nsamples > 0:
+                    break
+        particles = np.concatenate(particles, axis=1)
         return particles
 
     def describe(self, title=None, x=None, y=None, text=None):
@@ -438,8 +450,8 @@ class PlotModel:
                     name = str(k)
                 plot_text(name, self.description['x'], self.description['y'])
                 show()
-            if limit > 0:
-                limit-=1
+            if limit > 1:
+                limit -= 1
             else:
                 break
 
@@ -493,40 +505,6 @@ class PlotModel:
 
     #TODO: Revisar
 
-    def plot_distribution(self, index=0, params=None, space=None, inputs=None, outputs=None, mean=True, var=True, cov=False, median=False, quantiles=False, quantiles_noise=False, noise=False, prior=False, sigma=4, neval=100, title=None, swap=False, label=None):
-        pred = self.predict(params=params, space=space, inputs=inputs, outputs=outputs, mean=mean, var=var, cov=cov, median=median, quantiles=quantiles, quantiles_noise=quantiles_noise, noise=noise, distribution=True, prior=prior)
-        domain = np.linspace(pred._mean - sigma * pred.std, pred._mean + sigma * pred.std, neval)
-        dist_plot = np.zeros(len(domain))
-        for i in range(len(domain)):
-            dist_plot[i] = pred.distribution(domain[i:i + 1])
-        if label is None:
-            if prior:
-                label='prior'
-            else:
-                label='posterior'
-        if label is False:
-            label = None
-        if title is None:
-            title = 'Marginal Distribution y_'+str(self.th_order[index])
-        if swap:
-            plot(dist_plot, domain, label=label)
-            plot_text(title, 'Density', 'Domain y')
-        else:
-            plot(domain, dist_plot,label=label)
-            plot_text(title, 'Domain y', 'Density')
-
-    def plot_distribution2D(self, indexs=[0, 1], params=None, space=None, inputs=None, outputs=None, mean=True, var=True, cov=False, median=False, quantiles=False, quantiles_noise=False, noise=False, prior=False, sigma_1=2, sigma_2=2, neval=33, title=None):
-        pred = self.predict(params=params, space=space, inputs=inputs, outputs=outputs, mean=mean, var=var, cov=cov, median=median, quantiles=quantiles, quantiles_noise=quantiles_noise, noise=noise, distribution=True, prior=prior)
-        dist1 = np.linspace(pred._mean[0] - sigma_1 * pred.std[0], pred._mean[0] + sigma_1 * pred.std[0], neval)
-        dist2 = np.linspace(pred._mean[1] - sigma_2 * pred.std[1], pred._mean[1] + sigma_2 * pred.std[1], neval)
-        xy, x2d, y2d = grid2d(dist1, dist2)
-        dist_plot = np.zeros(len(xy))
-        for i in range(len(xy)):
-            dist_plot[i] = pred.distribution(xy[i])
-        plot_2d(dist_plot, x2d, y2d)
-        if title is None:
-            title = 'Distribution2D'
-        plot_text(title, 'Domain y_'+str(self.th_order[indexs[0]]), 'Domain y_'+str(self.th_order[indexs[1]]), legend=False)
 
     def _widget_plot_trace(self, id_trace):
         self._widget_plot(self._check_params_dims(self._widget_traces[id_trace]))

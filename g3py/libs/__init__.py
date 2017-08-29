@@ -2,6 +2,7 @@ import os
 import _pickle as pickle
 import time
 from copy import copy
+from pprint import pprint
 from .data import *
 from .plots import *
 #from .tensors import *
@@ -16,7 +17,7 @@ class DictObj(dict):
     def __init__(self, data=None, *args, **kwargs):
         super().__init__(*args, **kwargs)
         if data is not None:
-            for k,v in data.items():
+            for k, v in data.items():
                 self[k] = v
 
     def __getattr__(self, name):
@@ -33,6 +34,9 @@ class DictObj(dict):
             del self[name]
         else:
             raise AttributeError("No such attribute: " + name)
+
+    def clone(self):
+        return DictObj(data=self)
 
 
 class MaxTime(object):
@@ -62,3 +66,8 @@ def save_pkl(to_pkl, path='file.pkl'):
 def load_pkl(path='file.pkl'):
     with open(path, 'rb') as f:
         return pickle.load(f)
+
+
+def print(*args):
+    for a in args:
+        pprint(a)

@@ -5,10 +5,11 @@ import numpy as np
 import seaborn as sb
 from g3py import config
 from matplotlib import cm
+from mpl_toolkits.mplot3d import Axes3D
 
 
 def figure(*args, **kwargs):
-    plt.figure(*args, **kwargs)
+    return plt.figure(*args, **kwargs)
 
 
 def plot(*args, **kwargs):
@@ -20,7 +21,7 @@ def subplot(*args, **kwargs):
 
 
 def tight_layout(*args, **kwargs):
-    plt.show(*args, **kwargs)
+    plt.tight_layout(*args, **kwargs)
 
 
 def show(*args, **kwargs):
@@ -111,17 +112,23 @@ def grid2d(x, y):
     return xy, x2d, y2d
 
 
-def plot_2d(xy, x, y, grid=True):
+def plot_2d(xy, x, y, title=None, grid=True, ax=None, contour_z=True, contour_xy=False):
     fxy2d_hidden = xy.reshape((len(x), len(y)))
     if grid:
         x2d, y2d = x, y
     else:
         x2d, y2d = np.meshgrid(x, y)
         x2d, y2d = x2d.T, y2d.T
-    fig = plt.figure(figsize=[20, 10])
-    ax = fig.gca(projection='3d')
-    cset = ax.contour(x2d, y2d, fxy2d_hidden, zdir='z', offset=np.min(fxy2d_hidden), cmap=cm.RdBu_r)
-    cset = ax.contour(x2d, y2d, fxy2d_hidden, zdir='x', offset=np.min(x), cmap=cm.RdBu_r)
-    cset = ax.contour(x2d, y2d, fxy2d_hidden, zdir='y', offset=np.max(y), cmap=cm.RdBu_r)
+    if ax is None:
+        fig = plt.figure(figsize=[20, 10])
+        ax = fig.gca(projection='3d')
+
+    if contour_z:
+        cset = ax.contour(x2d, y2d, fxy2d_hidden, zdir='z', offset=np.min(fxy2d_hidden), cmap=cm.RdBu_r)
+    if contour_xy:
+        cset = ax.contour(x2d, y2d, fxy2d_hidden, zdir='x', offset=np.min(x), cmap=cm.RdBu_r)
+        cset = ax.contour(x2d, y2d, fxy2d_hidden, zdir='y', offset=np.max(y), cmap=cm.RdBu_r)
 
     ax.plot_surface(x2d, y2d, fxy2d_hidden, alpha=0.4, cmap=cm.RdBu_r, rstride=1, cstride=1)
+    if title is not None:
+        plt.title(title)

@@ -7,14 +7,14 @@ import theano.tensor.nlinalg as tnl
 from ..libs.tensors import tt_to_num, tt_to_cov, tt_to_bounded, cholesky_robust, makefn, gradient
 from .hypers import Freedom
 from .hypers.means import Mean
-from .hypers.kernels import Kernel, KernelSum, WN
+from .hypers.kernels import Kernel, KernelSum, KernelNoise
 from .hypers.mappings import Mapping, Identity
 from ..bayesian.models import GraphicalModel, PlotModel
 import theano.tensor.slinalg as tsl
 from ..bayesian.selection import optimize
 from ..bayesian.average import mcmc_ensemble, chains_to_datatrace
-from ..libs.plots import show, plot_text
-from ..libs import DictObj, clone
+from ..libs.plots import show, plot_text, grid2d, plot_2d
+from ..libs import DictObj, clone, print
 import matplotlib.pyplot as plt
 from matplotlib import cm
 from numba import jit
@@ -37,9 +37,9 @@ class StochasticProcess(PlotModel):#TheanoBlackBox
         self.nspace = ndim
         self.name = name
 
-        self.th_order = th.shared(np.array([0.0, 1.0, 2.0], dtype=th.config.floatX),
+        self.th_order = th.shared(np.array([0.0, 1.0], dtype=th.config.floatX),
                                   name=self.name + '_order', borrow=False, allow_downcast=True)
-        self.th_space = th.shared(np.array([[0.0, 1.0, 2.0]]*self.nspace, dtype=th.config.floatX).T,
+        self.th_space = th.shared(np.array([[0.0, 1.0]]*self.nspace, dtype=th.config.floatX).T,
                                   name=self.name + '_space', borrow=False, allow_downcast=True)
 
         self.th_index = th.shared(np.array([0.0, 1.0], dtype=th.config.floatX),
@@ -54,10 +54,10 @@ class StochasticProcess(PlotModel):#TheanoBlackBox
         self.th_space_ = tt.matrix(self.name + '_space_th', dtype=th.config.floatX)
         self.th_inputs_ = tt.matrix(self.name + '_inputs_th', dtype=th.config.floatX)
         self.th_outputs_ = tt.vector(self.name + '_outputs_th', dtype=th.config.floatX)
-        self.th_space_.tag.test_value = np.array([[0.0, 1.0, 2.0]]*self.nspace, dtype=th.config.floatX).T
+        self.th_space_.tag.test_value = np.array([[0.0, 1.0]]*self.nspace, dtype=th.config.floatX).T
         self.th_inputs_.tag.test_value = np.array([[0.0, 1.0]]*self.nspace, dtype=th.config.floatX).T
         self.th_outputs_.tag.test_value = np.array([0.0, 1.0], dtype=th.config.floatX)
-        self.th_scalar = tt.scalar('q', dtype=th.config.floatX)
+        self.th_scalar = tt.scalar(self.name + '_scalar_th', dtype=th.config.floatX)
         self.th_scalar.tag.test_value = np.float32(1)
         self.th_vector = tt.vector(self.name + '_vector_th', dtype=th.config.floatX)
         self.th_vector.tag.test_value = np.array([0.0, 1.0], dtype=th.config.floatX)
@@ -217,6 +217,9 @@ class StochasticProcess(PlotModel):#TheanoBlackBox
     def th_predictive(self, prior=False, noise=False):
         pass
 
+    def th_cross_mean(self, prior=False, noise=False, cross_kernel=None):
+        pass
+
     def th_std(self, *args, **kwargs):
         return tt.sqrt(self.th_variance(*args, **kwargs))
 
@@ -238,7 +241,7 @@ class StochasticProcess(PlotModel):#TheanoBlackBox
     def _compile_methods(self):
         self.mean = types.MethodType(self._method_name('th_mean'), self)
         self.median = types.MethodType(self._method_name('th_median'), self)
-        self.variance = types.MethodType(self._method_name('_variance'), self)
+        self.variance = types.MethodType(self._method_name('th_variance'), self)
         self.std = types.MethodType(self._method_name('th_std'), self)
         self.covariance = types.MethodType(self._method_name('th_covariance'), self)
         self.predictive = types.MethodType(self._method_name('th_predictive'), self)
@@ -249,11 +252,12 @@ class StochasticProcess(PlotModel):#TheanoBlackBox
         self.logp = types.MethodType(self._method_name('th_logp'), self)
         self.dlogp = types.MethodType(self._method_name('th_dlogp'), self)
         self.loglike = types.MethodType(self._method_name('th_loglike'), self)
+        self.density = types.MethodType(self._method_name('th_density'), self)
 
         _ = self.logp(array=True), self.dlogp(array=True)
 
     def _method_name(self, method=None):
-        def _method(self, params=None, space=None, inputs=None, outputs=None, prior=False, noise=False, array=False, *args, **kwargs):
+        def _method(self, params=None, space=None, inputs=None, outputs=None, vector=None, prior=False, noise=False, array=False, *args, **kwargs):
             if params is None:
                 if array:
                     params = self.active.dict_to_array(self.params)
@@ -279,7 +283,11 @@ class StochasticProcess(PlotModel):#TheanoBlackBox
             if len(kwargs) > 0:
                 name += str(kwargs)
             if not hasattr(self.compiles, name):
-                th_vars = [self.th_space_, self.th_inputs_, self.th_outputs_] + self.model.vars
+                #print(method)
+                if method is 'th_predictive':
+                    th_vars = [self.th_space_, self.th_inputs_, self.th_outputs_, self.th_vector] + self.model.vars
+                else:
+                    th_vars = [self.th_space_, self.th_inputs_, self.th_outputs_] + self.model.vars
                 self.compiles[name] = self.makefn(th_vars, getattr(self, method)(prior=prior, noise=noise, *args, **kwargs),
                                              givens = [(self.th_space, self.th_space_), (self.th_inputs, self.th_inputs_), (self.th_outputs, self.th_outputs_)],
                                              bijection=None, precompile=self.precompile)
@@ -287,7 +295,7 @@ class StochasticProcess(PlotModel):#TheanoBlackBox
                 if not hasattr(self.compiles, 'array_' + name):
                     self.compiles['array_' + name] = self.compiles[name].clone(self.active.bijection.rmap)
                 name = 'array_' + name
-            return self.compiles[name](params, space, inputs, outputs)
+            return self.compiles[name](params, space, inputs, outputs, vector)
         return _method
 
     @property
@@ -327,9 +335,9 @@ class StochasticProcess(PlotModel):#TheanoBlackBox
         if samples > 0:
             values['samples'] = self.sampler(params, space, inputs, outputs, samples=samples, prior=prior, noise=noise)
         if distribution:
-            values['logp'] = lambda x: self.compiles['posterior_logp'](x, space, inputs, outputs, **params)
-            values['logpred'] = lambda x: self.compiles['posterior_logpred'](x, space, inputs, outputs, **params)
-            values['distribution'] = lambda x: self.compiles['posterior_distribution'](x, space, inputs, outputs, **params)
+            #values['logp'] = lambda x: self.compiles['posterior_logp'](x, space, inputs, outputs, **params)
+            #values['logpred'] = lambda x: self.compiles['posterior_logpred'](x, space, inputs, outputs, **params)
+            values['density'] = lambda x: self.predictive(params, space, inputs, outputs, vector=x, prior=prior, noise=noise)
         return values
 
     def find_MAP(self, start=None, points=1, plot=False, return_points=False, display=True,
@@ -379,7 +387,7 @@ class StochasticProcess(PlotModel):#TheanoBlackBox
                             continue
                         name += '_bfgs'
                         if display:
-                            print('\n' + name)
+                            print(name)
                         new = optimize(logp=logp, start=self.active.dict_to_array(start), dlogp=dlogp, fmin='bfgs',
                                        max_time=max_time, disp=display)
                     else:
@@ -389,7 +397,7 @@ class StochasticProcess(PlotModel):#TheanoBlackBox
                             continue
                         name += '_powell'
                         if display:
-                            print('\n' + name)
+                            print(name)
                         new = optimize(logp=logp, start=self.active.dict_to_array(start), fmin='powell', max_time=max_time,
                                        disp=display)
                     points_list.append((name, logp(new), self.active.array_to_dict(new)))
@@ -405,11 +413,10 @@ class StochasticProcess(PlotModel):#TheanoBlackBox
         for test in points_list:
             if test[1] > optimal[1]:
                 optimal = test
-        _, _, params = optimal
+        _name, _ll, params = optimal
         params = DictObj(params)
         if display:
-            # print(params)
-            pass
+            print(params)
         if return_points is False:
             return params
         else:
@@ -471,15 +478,15 @@ class StochasticProcess(PlotModel):#TheanoBlackBox
 
 class EllipticalProcess(StochasticProcess):
     def __init__(self, location: Mean=None, kernel: Kernel=None, degree: Freedom=None, mapping: Mapping=Identity(),
-                 noise=True, *args, **kwargs):
+                 noisy=True, *args, **kwargs):
         #print('EllipticalProcess__init__')
 
         self.f_location = location
         self.f_degree = degree
         self.f_mapping = mapping
-        if noise:
+        if noisy:
             self.f_kernel = kernel
-            self.f_kernel_noise = KernelSum(self.f_kernel, WN(name='Noise')) #self.th_space,
+            self.f_kernel_noise = KernelSum(self.f_kernel, KernelNoise(name='Noise')) #self.th_space,
         else:
             self.f_kernel = kernel
             self.f_kernel_noise = self.f_kernel
@@ -515,8 +522,8 @@ class EllipticalProcess(StochasticProcess):
         #print('stochastic_define_process')
         # Basic Tensors
         self.mapping_outputs = tt_to_num(self.f_mapping.inv(self.th_outputs))
-        #self.mapping_th = tt_to_num(self.f_mapping(self.random_th))
-        #self.mapping_inv_th = tt_to_num(self.mapping.inv(self.random_th))
+        self.mapping_latent = tt_to_num(self.f_mapping(self.th_outputs))
+        #self.mapping_scalar = tt_to_num(self.f_mapping.inv(self.th_scalar))
 
         self.prior_location_space = self.f_location(self.th_space)
         self.prior_location_inputs = self.f_location(self.th_inputs)
@@ -545,8 +552,11 @@ class EllipticalProcess(StochasticProcess):
             tsl.solve(self.prior_kernel_inputs, self.cross_kernel_f_space_inputs.T))
         self.posterior_cholesky_f_space = cholesky_robust(self.posterior_kernel_f_space)
 
-    def th_mapping(self, prior=False, noise=False):
+    def th_mapping_inv(self, prior=False, noise=False):
         return self.mapping_outputs
+
+    def th_mapping(self, prior=False, noise=False):
+        return self.mapping_latent
 
     def th_location(self, prior=False, noise=False):
         if prior:
@@ -581,11 +591,13 @@ class EllipticalProcess(StochasticProcess):
     def _compile_methods(self):
         super()._compile_methods()
         self.mapping = types.MethodType(self._method_name('th_mapping'), self)
+        self.mapping_inv = types.MethodType(self._method_name('th_mapping_inv'), self)
         self.location = types.MethodType(self._method_name('th_location'), self)
         self.kernel = types.MethodType(self._method_name('th_kernel'), self)
         self.cholesky = types.MethodType(self._method_name('th_cholesky'), self)
         self.kernel_diag = types.MethodType(self._method_name('th_kernel_diag'), self)
         self.kernel_sd = types.MethodType(self._method_name('th_kernel_sd'), self)
+        self.cross_mean = types.MethodType(self._method_name('th_cross_mean'), self)
 
     def plot_kernel(self, params=None, space=None, inputs=None, prior=True, noise=False, centers=[1/10, 1/2, 9/10]):
         if params is None:
@@ -599,7 +611,7 @@ class EllipticalProcess(StochasticProcess):
             plt.plot(self.order, ksi[int(len(ksi)*ind), :], label='k(x_'+str(int(len(ksi)*ind))+')')
         plot_text('Kernel', 'Space x', 'Kernel value k(x,v)')
 
-    def plot_concentration(self, params=None, space=None, prior=True, noise=True, color=True, cmap=cm.seismic, figsize=(6, 6)):
+    def plot_concentration(self, params=None, space=None, prior=True, noise=True, color=True, cmap=cm.seismic, figsize=(6, 6), title='Concentration'):
         if params is None:
             params = self.params
         if space is None:
@@ -612,40 +624,23 @@ class EllipticalProcess(StochasticProcess):
             plt.imshow(concentration_matrix, cmap=cmap, vmax=v, vmin=-v)
         else:
             plt.matshow(concentration_matrix)
-        plot_text('Concentration', 'Space x', 'Space x', legend=False)
+        plot_text(title, 'Space x', 'Space x', legend=False)
 
-    # TODO: Check
     def plot_mapping(self, params=None, domain=None, inputs=None, outputs=None, neval=100, title=None, label='mapping'):
         if params is None:
-            params = self.get_params_current()
-        if outputs is None:
-            outputs = self.outputs
+            params = self.params
         if domain is None:
+            if outputs is None:
+                outputs = self.outputs
             mean = np.mean(outputs)
             std = np.std(outputs)
             domain = np.linspace(mean - 2 * std, mean + 2 * std, neval)
-        #inv_transform = self.compiles['mapping_th'](domain, **params)
-        #plt.plot(inv_transform, domain, label='mapping_th')
-
-        #if domain is None:
-        #    domain = np.linspace(outputs.mean() - 2*np.sqrt(outputs.var()), outputs.mean() + 2*np.sqrt(outputs.var()), neval)
-        transform = self.compiles['mapping_inv_th'](domain, **params)
-        plt.plot(domain, transform, label=label)
+        plt.plot(self.mapping(params=params, outputs=domain, inputs=inputs), domain, label=label)
+        plt.plot(domain, self.mapping_inv(params=params, outputs=domain, inputs=inputs), label=label+'_inv')
 
         if title is None:
             title = 'Mapping'
         plot_text(title, 'Domain y', 'Domain T(y)')
-
-    def plot_kernel2D(self):
-        pass
-
-    def plot_location(self, params=None, space=None):
-        if params is None:
-            params = self.params
-        if space is None:
-            space = self.th_space
-        plt.plot(self.order, self.compiles.location_space(space, **params), label='location')
-        plot_text('Location', 'Space x', 'Location value m(x)')
 
     def plot_model(self, params=None, indexs=None, kernel=True, mapping=True, marginals=True, bivariate=True):
         if indexs is None:
@@ -669,6 +664,53 @@ class EllipticalProcess(StochasticProcess):
         if bivariate:
             self.plot_distribution2D(indexs=indexs, params=params, space=self.space[indexs, :])
             show()
+
+    def plot_distribution(self, index=0, params=None, space=None, inputs=None, outputs=None, mean=True, var=True, cov=False, median=False, quantiles=False, quantiles_noise=False, noise=False, prior=False, sigma=4, neval=100, title=None, swap=False, label=None):
+        pred = self.predict(params=params, space=space, inputs=inputs, outputs=outputs, mean=mean, var=var, cov=cov, median=median, quantiles=quantiles, quantiles_noise=quantiles_noise, noise=noise, distribution=True, prior=prior)
+        domain = np.linspace(pred.mean - sigma * pred.std, pred.mean + sigma * pred.std, neval)
+        dist_plot = np.zeros(len(domain))
+        for i in range(len(domain)):
+            dist_plot[i] = pred.density(domain[i:i + 1])
+        if label is None:
+            if prior:
+                label='prior'
+            else:
+                label='posterior'
+        if label is False:
+            label = None
+        if title is None:
+            title = 'Marginal Distribution y_'+str(self.order[index])
+        if swap:
+            plt.plot(dist_plot, domain, label=label)
+            plot_text(title, 'Density', 'Domain y')
+        else:
+            plt.plot(domain, dist_plot, label=label)
+            plot_text(title, 'Domain y', 'Density')
+
+    def plot_distribution2D(self, indexs=[0, 1], params=None, space=None, inputs=None, outputs=None, mean=True, var=True, cov=False, median=False, quantiles=False, quantiles_noise=False, noise=False, prior=False, sigma_1=2, sigma_2=2, neval=33, title=None):
+        pred = self.predict(params=params, space=space, inputs=inputs, outputs=outputs, mean=mean, var=var, cov=cov, median=median, quantiles=quantiles, quantiles_noise=quantiles_noise, noise=noise, distribution=True, prior=prior)
+        dist1 = np.linspace(pred.mean[0] - sigma_1 * pred.std[0], pred.mean[0] + sigma_1 * pred.std[0], neval)
+        dist2 = np.linspace(pred.mean[1] - sigma_2 * pred.std[1], pred.mean[1] + sigma_2 * pred.std[1], neval)
+        xy, x2d, y2d = grid2d(dist1, dist2)
+        dist_plot = np.zeros(len(xy))
+        for i in range(len(xy)):
+            dist_plot[i] = pred.density(xy[i])
+        plot_2d(dist_plot, x2d, y2d)
+        if title is None:
+            title = 'Distribution2D'
+        plot_text(title, 'Domain y_'+str(self.order[indexs[0]]), 'Domain y_'+str(self.order[indexs[1]]), legend=False)
+
+    # TODO: Check
+    def plot_kernel2D(self):
+        pass
+
+    def plot_location(self, params=None, space=None):
+        if params is None:
+            params = self.params
+        if space is None:
+            space = self.th_space
+        plt.plot(self.order, self.compiles.location_space(space, **params), label='location')
+        plot_text('Location', 'Space x', 'Location value m(x)')
 
 
 class CopulaProcess(StochasticProcess):

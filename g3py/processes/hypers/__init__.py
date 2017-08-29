@@ -38,7 +38,8 @@ class Hypers:
         self.shape = None
         self.dims = None
         self.potential = None
-        #self.check_dims(x)
+        if x is not None:
+            self.check_dims(x)
 
     def __str__(self):
         if len(self.hypers) is 0:
@@ -48,10 +49,14 @@ class Hypers:
     __repr__ = __str__
 
     def check_dims(self, x=None):
+        # TODO: Arreglar if/else y casos de uso
         if self.shape is not None:
             return
         if x is not None:
-            if type(x) is tuple:
+            if type(x) is list:
+                self.dims = np.array(x)
+                self.shape = self.dims.shape
+            elif type(x) is tuple:
                 domain, self.dims = x
                 if len(domain.shape) > 1:
                     self.shape = domain.shape[1]
@@ -86,6 +91,8 @@ class Hypers:
         self.potential = (hypers, reg, c)
 
     def check_potential(self):
+        if not hasattr(self, 'potential'):
+            return
         if self.potential is None:
             return
         hypers, reg, c = self.potential
