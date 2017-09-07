@@ -43,7 +43,7 @@ class makefn:
             self.compiled = None
         self.executed = 0
 
-    def __call__(self, params, space, inputs, outputs, vector=None):
+    def __call__(self, params, space=None, inputs=None, outputs=None, vector=None):
         self.executed += 1
         if self.compiled is None:
             #print(self.th_vars, self.fn)

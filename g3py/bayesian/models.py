@@ -77,16 +77,17 @@ class GraphicalModel:
             self.description = description
         self.model = get_model()
 
+        self.th_scalar = tt.scalar(self.name + '_scalar_th', dtype=th.config.floatX)
+        self.th_scalar.tag.test_value = np.float32(1)
+
         self.components = DictObj()
+        self.transformations = DictObj()
         # Model Average
         self.current_params = None
-        self.current_sample = None
-
+        self.fixed_datatrace = None
+        self.fixed_chain = None
         self.fixed_keys = []
-        #self.fixed_sample = None
-        self.sampling_dims = None
-        self.fixed_dims = None
-        #self.calc_dimensions() BUG de PYMC3
+        self.fixed_dims = []
 
         if file is not None:
             self.file = file
@@ -121,8 +122,8 @@ class GraphicalModel:
     def save(self, path=None, sample=None):
         if path is None:
             path = self.file
-        if sample is not None:
-            self.set_sample(sample)
+        #if sample is not None:
+        #    self.set_sample(sample)
         try:
             if os.path.isfile(path):
                 os.remove(path)
@@ -152,9 +153,6 @@ class GraphicalModel:
             self.current_params = None
         else:
             self.current_params = DictObj(params)
-
-    def set_sample(self, sample=None):
-        self.current_sample = sample
 
     @property
     def params(self):
@@ -192,8 +190,91 @@ class GraphicalModel:
     def params_serie(self, serie):
         return DictObj(self.model.bijection.rmap(serie))
 
+    def compile_transformations(self, precompile=False):
+        th_vars = [self.th_scalar]
+        for v in self.model.deterministics:
+            dist = v.transformed.distribution
+            # makefn(th_vars, dist.transform_used.backward(self.th_scalar), precompile)
+            self.transformations[str(v.transformed)] = th.function(th_vars, dist.transform_used.backward(self.th_scalar),
+                                                                   allow_input_downcast=True, on_unused_input='ignore')
+            # makefn(th_vars, dist.transform_used.forward(self.th_scalar), precompile)
+            self.transformations[str(v)] = th.function(th_vars, dist.transform_used.forward(self.th_scalar),
+                                                       allow_input_downcast=True, on_unused_input='ignore')
+
+    def transform_params(self, params, to_dict=True, to_transformed=True, complete=False):
+        if not isinstance(params, dict):
+            params = self.array_to_dict(params)
+        if complete or not to_dict:
+            r = DictObj(self.params)
+        else:
+            r = DictObj()
+        if to_transformed:
+            for k, v in params.items():
+                if k in self.original_to_transformed_names:
+                    r[self.original_to_transformed_names[k]] = self.transformations[k](v)
+                else:
+                    r[k] = v
+        else:
+            for k, v in params.items():
+                if k in self.transformed_to_original_names:
+                    r[self.transformed_to_original_names[k]] = self.transformations[k](v)
+                else:
+                    r[k] = v
+
+        if not to_dict:
+            r = self.dict_to_array(r)
+        return r
+
+    @property
+    def original_to_transformed_names(self):
+        return {k.name: k.transformed.name for k in self.model.deterministics}
+
+    @property
+    def transformed_to_original_names(self):
+        return {k.transformed.name: k.name for k in self.model.deterministics}
+
+    def fix_vars(self, datatrace=None, keys=None):
+        if datatrace is None or keys is None:
+            self.fixed_keys = []
+            self.fixed_datatrace = None
+            self.fixed_chain = None
+            self.fixed_dims = []
+        else:
+            self.fixed_keys = keys
+            self.fixed_datatrace = datatrace.copy()
+            self.fixed_chain = (self.fixed_datatrace.values[:, :self.ndim]).copy()
+            self.fixed_dims = sorted([self.fixed_datatrace.columns.get_loc(k) for k in keys])
+
+    @property
+    def sampling_dims(self):
+        return sorted(list(set(range(self.ndim)) - set(self.fixed_dims)))
+
+    def sampling_params(self, params):
+        if isinstance(params, dict):
+            return self.dict_to_array(params)[self.sampling_dims]
+        else:
+            return params[self.sampling_dims]
+
+    def dict_from_sampling_array(self, params):
+        if self.fixed_datatrace is None:
+            return self.array_to_dict(params)
+        r = self.dict_to_array(self.params)
+        r[self.sampling_dims] = params
+        return self.array_to_dict(r)
+
+
+class OldGraphicalModel:
+
+    def __init__(self):
+        self.current_sample = None
+        self.sampling_dims = None
+
+        #self.calc_dimensions() BUG de PYMC3
 
     #TODO: Revisar
+    def set_sample(self, sample=None):
+        self.current_sample = sample
+
     def fix_vars(self, keys=[], sample=None):
         self.fixed_keys = keys
         self.fixed_sample = sample
@@ -274,6 +355,30 @@ class GraphicalModel:
 
     def eval_current(self):
         return self.eval_point(self.get_params_current())
+
+
+    #TODO: Revisar
+
+    def _widget_plot_trace(self, id_trace):
+        self._widget_plot(self._check_params_dims(self._widget_traces[id_trace]))
+
+    def widget_traces(self, traces, chain=0):
+        self._widget_traces = traces._straces[chain]
+        interact(self._widget_plot_trace, __manual=True, id_trace=[0, len(self._widget_traces) - 1])
+
+    def widget_model(self, params=None):
+        if params is None:
+            params = self.get_params_widget()
+        intervals = dict()
+        for k, v in params.items():
+            v = np.squeeze(v)
+            if v > 0.1:
+                intervals[k] = [0, 2*v]
+            elif v < -0.1:
+                intervals[k] = [2*v, 0]
+            else:
+                intervals[k] = [-5.00, 5.00]
+        interact(self._widget_plot_model, __manual=True, **intervals)
 
 
 class PlotModel:
@@ -497,35 +602,6 @@ class PlotModel:
         self.plot_model(params=self.params_widget, indexs=None, kernel=False, mapping=True, marginals=True,
                         bivariate=False)
         show()
-
-
-
-
-
-
-    #TODO: Revisar
-
-
-    def _widget_plot_trace(self, id_trace):
-        self._widget_plot(self._check_params_dims(self._widget_traces[id_trace]))
-
-    def widget_traces(self, traces, chain=0):
-        self._widget_traces = traces._straces[chain]
-        interact(self._widget_plot_trace, __manual=True, id_trace=[0, len(self._widget_traces) - 1])
-
-    def widget_model(self, params=None):
-        if params is None:
-            params = self.get_params_widget()
-        intervals = dict()
-        for k, v in params.items():
-            v = np.squeeze(v)
-            if v > 0.1:
-                intervals[k] = [0, 2*v]
-            elif v < -0.1:
-                intervals[k] = [2*v, 0]
-            else:
-                intervals[k] = [-5.00, 5.00]
-        interact(self._widget_plot_model, __manual=True, **intervals)
 
 
 class BlackBox(object):

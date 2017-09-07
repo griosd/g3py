@@ -75,13 +75,14 @@ class StochasticProcess(PlotModel):#TheanoBlackBox
             self.active = active
         self.active.add_component(self)
         self.compiles = DictObj()
-        self.compiles_trans = DictObj()
+
         self.precompile = precompile
         super().__init__(*args, **kwargs)
         #print('_define_process')
         with self.model:
             self._check_hypers()
             self.th_define_process()
+            self.active.compile_transformations()
         #print('set_space')
         self.set_space(space=space, hidden=hidden, order=order, inputs=inputs, outputs=outputs, index=index)
         #print('_compile_methods')
@@ -254,7 +255,7 @@ class StochasticProcess(PlotModel):#TheanoBlackBox
         self.loglike = types.MethodType(self._method_name('th_loglike'), self)
         self.density = types.MethodType(self._method_name('th_density'), self)
 
-        _ = self.logp(array=True), self.dlogp(array=True)
+        _ = self.logp(array=True), self.dlogp(array=True), self.loglike(array=True), self.logp(prior=True, array=True)
 
     def _method_name(self, method=None):
         def _method(self, params=None, space=None, inputs=None, outputs=None, vector=None, prior=False, noise=False, array=False, *args, **kwargs):
@@ -340,32 +341,83 @@ class StochasticProcess(PlotModel):#TheanoBlackBox
             values['density'] = lambda x: self.predictive(params, space, inputs, outputs, vector=x, prior=prior, noise=noise)
         return values
 
+    #TODO: Vectorized
+    def logp_chain(self, chain):
+        out = np.empty(len(chain))
+        for i in range(len(out)):
+            out[i] = self.logp(chain[i], array=True)
+        return out
+
+    #@jit
+    def fixed_logp(self, sampling_params, return_array=False):
+        self.active.fixed_chain[:, self.active.sampling_dims] = sampling_params
+        r = np.zeros(len(self.active.fixed_chain))
+        for i, p in enumerate(self.active.fixed_chain):
+            r[i] = self.compiles.array_posterior_logp(p, self.space, self.inputs, self.outputs)
+        if return_array:
+            return r
+        else:
+            return np.mean(r)
+
+    #@jit
+    def fixed_dlogp(self, sampling_params, return_array=False):
+        self.active.fixed_chain[:, self.active.sampling_dims] = sampling_params
+        r = list()
+        for i, p in enumerate(self.active.fixed_chain):
+            r.append(self.compiles.array_posterior_dlogp(p, self.space, self.inputs, self.outputs)[self.active.sampling_dims])
+        if return_array:
+            return np.array(r)
+        else:
+            return np.mean(np.array(r), axis=0)
+
+    #@jit
+    def fixed_loglike(self, sampling_params, return_array=False):
+        self.active.fixed_chain[:, self.active.sampling_dims] = sampling_params
+        r = np.zeros(len(self.active.fixed_chain))
+        for i, p in enumerate(self.active.fixed_chain):
+            r[i] = self.compiles.array_posterior_loglike(p, self.space, self.inputs, self.outputs)
+        if return_array:
+            return r
+        else:
+            return np.mean(r)
+
+    #@jit
+    def fixed_logprior(self, sampling_params, return_array=False):
+        self.active.fixed_chain[:, self.active.sampling_dims] = sampling_params
+        r = np.zeros(len(self.active.fixed_chain))
+        for i, p in enumerate(self.active.fixed_chain):
+            r[i] = self.compiles.array_prior_logp(p, self.space, self.inputs, self.outputs)
+        if return_array:
+            return r
+        else:
+            return np.mean(r)
+
     def find_MAP(self, start=None, points=1, plot=False, return_points=False, display=True,
                  powell=True, max_time=None):
-        logp = lambda p: self.compiles.array_posterior_logp(p, self.space, self.inputs, self.outputs)
-        dlogp = lambda p: self.compiles.array_posterior_dlogp(p, self.space, self.inputs, self.outputs)
 
         points_list = list()
         if start is None:
             start = self.params
-        # if process._fixed_chain is None:
-        #    logp = process.logp_array
-        # else:
-        #    logp = process.logp_fixed_chain
+        if self.active.fixed_datatrace is None:
+            logp = lambda p: self.compiles.array_posterior_logp(p, self.space, self.inputs, self.outputs)
+            dlogp = lambda p: self.compiles.array_posterior_dlogp(p, self.space, self.inputs, self.outputs)
+        else:
+            logp = self.fixed_logp
+            dlogp = self.fixed_dlogp
 
         if type(start) is list:
             i = 0
             for s in start:
                 i += 1
-                points_list.append(('start' + str(i), logp(self.active.dict_to_array(s)), s))
+                points_list.append(('start' + str(i), logp(self.active.sampling_params(s)), s))
         else:
-            points_list.append(('start', logp(self.active.dict_to_array(start)), start))
+            points_list.append(('start', logp(self.active.sampling_params(start)), start))
         n_starts = len(points_list)
         if self.outputs is None:  # .get_value()
             print('For find_MAP it is necessary to have observations')
             return start
         if display:
-            print('Starting function value (-logp): ' + str(-logp(self.active.dict_to_array(points_list[0][2]))))
+            print('Starting function value (-logp): ' + str(-logp(self.active.sampling_params(points_list[0][2]))))
         if plot:
             plt.figure(0)
             self.plot(params=points_list[0][2], title='start')
@@ -375,39 +427,39 @@ class StochasticProcess(PlotModel):#TheanoBlackBox
             points -= 1
             while i < points:
                 i += 1
-                try:
-                    if powell:
-                        name, _, start = points_list[i // 2]
-                    else:
-                        name, _, start = points_list[i]
-                    if i % 2 == 0 or not powell:  #
-                        if name.endswith('_bfgs'):
-                            if i > n_starts:
-                                points += 1
-                            continue
-                        name += '_bfgs'
-                        if display:
-                            print(name)
-                        new = optimize(logp=logp, start=self.active.dict_to_array(start), dlogp=dlogp, fmin='bfgs',
-                                       max_time=max_time, disp=display)
-                    else:
-                        if name.endswith('_powell'):
-                            if i > n_starts:
-                                points += 1
-                            continue
-                        name += '_powell'
-                        if display:
-                            print(name)
-                        new = optimize(logp=logp, start=self.active.dict_to_array(start), fmin='powell', max_time=max_time,
-                                       disp=display)
-                    points_list.append((name, logp(new), self.active.array_to_dict(new)))
-                    if plot:
-                        plt.figure(i + 1)
-                        self.plot(params=new, title=name)
-                        plt.show()
-                except Exception as error:
-                    print(error)
-                    pass
+                #try:
+                if powell:
+                    name, _, start = points_list[i // 2]
+                else:
+                    name, _, start = points_list[i]
+                if i % 2 == 0 or not powell:  #
+                    if name.endswith('_bfgs'):
+                        if i > n_starts:
+                            points += 1
+                        continue
+                    name += '_bfgs'
+                    if display:
+                        print(name)
+                    new = optimize(logp=logp, start=self.active.sampling_params(start), dlogp=dlogp, fmin='bfgs',
+                                   max_time=max_time, disp=display)
+                else:
+                    if name.endswith('_powell'):
+                        if i > n_starts:
+                            points += 1
+                        continue
+                    name += '_powell'
+                    if display:
+                        print(name)
+                    new = optimize(logp=logp, start=self.active.sampling_params(start), fmin='powell', max_time=max_time,
+                                   disp=display)
+                points_list.append((name, logp(new), self.active.dict_from_sampling_array(new)))
+                if plot:
+                    plt.figure(i + 1)
+                    self.plot(params=self.active.dict_from_sampling_array(new), title=name)
+                    plt.show()
+                #except Exception as error:
+                #    print(error)
+                #    pass
 
         optimal = points_list[0]
         for test in points_list:
@@ -429,8 +481,6 @@ class StochasticProcess(PlotModel):#TheanoBlackBox
         if isinstance(start, dict):
             start = self.active.dict_to_array(start)
 
-        if self.active.sampling_dims is None:
-            self.active.calc_dimensions()
         ndim = len(self.active.sampling_dims)
 
         if len(start.shape) == 1:
@@ -440,23 +490,34 @@ class StochasticProcess(PlotModel):#TheanoBlackBox
         elif len(start.shape) == 3:
             start = start[:, 0, self.active.sampling_dims]
 
-        if ntemps is None:
-            logp =  lambda p: self.compiles.array_posterior_logp(p, self.space, self.inputs, self.outputs)
-            loglike = None
-            logprior = None
+        if self.active.fixed_datatrace is None:
+            if ntemps is None:
+                logp = lambda p: self.compiles.array_posterior_logp(p, self.space, self.inputs, self.outputs)
+                loglike = None
+                logprior = None
+            else:
+                logp = None
+                loglike = lambda p: self.compiles.array_posterior_loglike(p, self.space, self.inputs, self.outputs)
+                logprior = lambda p: self.compiles.array_prior_logp(p, self.space, self.inputs, self.outputs)
         else:
-            logp = None
-            loglike = lambda p: self.compiles.array_posterior_loglike(p, self.space, self.inputs, self.outputs)
-            logprior = lambda p: self.compiles.array_prior_logp(p, self.space, self.inputs, self.outputs)
+            if ntemps is None:
+                logp = self.fixed_logp
+                loglike = None
+                logprior = None
+            else:
+                logp = None
+                loglike = self.fixed_loglike
+                logprior = self.fixed_logprior
 
         lnprob, echain = mcmc_ensemble(ndim, samples=samples, chains=chains, ntemps=ntemps, start=start,
                                        logp=logp, loglike=loglike, logprior=logprior,
                                        noise_mult=noise_mult, noise_sum=noise_sum)
 
-        complete_chain = np.empty((echain.shape[0], echain.shape[1], self.active.ndim))
+        complete_chain = np.empty((echain.shape[0], echain.shape[1], self.ndim))
         complete_chain[:, :, self.active.sampling_dims] = echain
-        if len(self.active.fixed_dims)>0:
-            complete_chain[:, :, self.active.fixed_dims] = self.active._fixed_array[self.active.fixed_dims]
+        if self.active.fixed_datatrace is not None:
+            print("TODO: Check THIS complete_chain with MEAN")
+            complete_chain[:, :, self.active.fixed_dims] = self.fixed_chain[:, self.active.fixed_dims].mean(axis=0)
         if raw:
             return complete_chain, lnprob
         else:
@@ -468,12 +529,6 @@ class StochasticProcess(PlotModel):#TheanoBlackBox
     @property
     def ndim(self):
         return self.active.ndim
-
-    def logp_chain(self, chain):
-        out = np.empty(len(chain))
-        for i in range(len(out)):
-            out[i] = self.logp(chain[i], array=True)
-        return out
 
 
 class EllipticalProcess(StochasticProcess):

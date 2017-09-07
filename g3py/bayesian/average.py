@@ -108,7 +108,7 @@ def chains_to_datatrace(process, chains, ll=None, transforms=True, burnin_tol=0.
 
 
 def datatrace_to_chains(process, dt, flat=False, burnin=False):
-    if burnin and hasattr(dt,'_burnin'):
+    if burnin and hasattr(dt, '_burnin'):
         chain = dt[dt._burnin]
     else:
         chain = dt
