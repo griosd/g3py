@@ -124,15 +124,6 @@ class _StochasticProcess:
         self.set_space(space_raw, self.hidden)
 
 
-    def _compile_transforms(self, precompile=False):
-        params = [self.random_th]
-        for v in self.model.vars:
-            dist = v.distribution
-            if hasattr(dist, 'transform_used'):
-                self.compiles_trans[str(v)] = makefn(params, dist.transform_used.backward(self.random_th), precompile)
-                self.compiles_transf[str(v)] = makefn(params, dist.transform_used.forward(self.random_th), precompile)
-
-
     def logp_fixed(self, params):
         if len(params) > len(self.sampling_dims):
             params = params[self.sampling_dims]
