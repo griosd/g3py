@@ -1,5 +1,5 @@
 import os
-import threading
+# import threading
 import _pickle as pickle
 import numpy as np
 import pymc3 as pm
@@ -11,7 +11,7 @@ from ..libs.tensors import makefn, tt_to_num
 from ..libs.plots import figure, plot, show, plot_text
 from .. import config
 from ipywidgets import interact, interact_manual, FloatSlider
-from numba import jit
+# from numba import jit
 
 
 Model = pm.Model
