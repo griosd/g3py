@@ -33,10 +33,10 @@ class BlackBox(Mean):
         self.element = element
 
     def eval(self, x):
-        return self.element
+        return self.element[:x.shape[0]]
 
     def __call__(self, x):
-        return self.element
+        return self.element[:x.shape[0]]
 
 
 class MeanOperation(Mean):

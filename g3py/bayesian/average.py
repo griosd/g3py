@@ -101,8 +101,8 @@ def chains_to_datatrace(process, chains, ll=None, transforms=True, burnin_tol=0.
                 name = v
             if name not in varnames:
                 continue
-            if name in process.compiles_trans:
-                datatrace.insert(ncolumn, v.replace('_' + process.model[name].distribution.transform_used.name + '_', ''), process.compiles_trans[name](datatrace[v]))
+            if name in process.transformations:
+                datatrace.insert(ncolumn, v.replace('_' + process.model[name].distribution.transform_used.name + '_', ''), process.transformations[name](datatrace[v]))
                 ncolumn += 1
     return datatrace
 

@@ -77,8 +77,10 @@ class GraphicalModel:
             self.description = description
         self.model = get_model()
 
-        self.th_scalar = tt.scalar(self.name + '_scalar_th', dtype=th.config.floatX)
-        self.th_scalar.tag.test_value = np.float32(1)
+        #self.th_scalar = tt.scalar(self.name + '_scalar_th', dtype=th.config.floatX)
+        #self.th_scalar.tag.test_value = np.float32(1)
+        self.th_vector = tt.vector(self.name + '_vector_th', dtype=th.config.floatX)
+        self.th_vector.tag.test_value = np.array([0.0, 1.0], dtype=th.config.floatX)
 
         self.components = DictObj()
         self.transformations = DictObj()
@@ -191,14 +193,14 @@ class GraphicalModel:
         return DictObj(self.model.bijection.rmap(serie))
 
     def compile_transformations(self, precompile=False):
-        th_vars = [self.th_scalar]
+        th_vars = [self.th_vector]
         for v in self.model.deterministics:
             dist = v.transformed.distribution
-            # makefn(th_vars, dist.transform_used.backward(self.th_scalar), precompile)
-            self.transformations[str(v.transformed)] = th.function(th_vars, dist.transform_used.backward(self.th_scalar),
+            # makefn(th_vars, dist.transform_used.backward(self.th_vector), precompile)
+            self.transformations[str(v.transformed)] = th.function(th_vars, dist.transform_used.backward(self.th_vector),
                                                                    allow_input_downcast=True, on_unused_input='ignore')
-            # makefn(th_vars, dist.transform_used.forward(self.th_scalar), precompile)
-            self.transformations[str(v)] = th.function(th_vars, dist.transform_used.forward(self.th_scalar),
+            # makefn(th_vars, dist.transform_used.forward(self.th_vector), precompile)
+            self.transformations[str(v)] = th.function(th_vars, dist.transform_used.forward(self.th_vector),
                                                        allow_input_downcast=True, on_unused_input='ignore')
 
     def transform_params(self, params, to_dict=True, to_transformed=True, complete=False):
@@ -261,6 +263,12 @@ class GraphicalModel:
         r = self.dict_to_array(self.params)
         r[self.sampling_dims] = params
         return self.array_to_dict(r)
+
+    def eval_th(self, params):
+        r = dict()
+        for k, v in params.items():
+            r[self.model[k]] = v
+        return r
 
 
 class OldGraphicalModel:
@@ -342,12 +350,6 @@ class OldGraphicalModel:
         r = list()
         for k, v in point.items():
             r.append(th.In(self.model[k], value=v))
-        return r
-
-    def eval_point(self, point):
-        r = dict()
-        for k, v in point.items():
-            r[self.model[k]] = v
         return r
 
     def eval_default(self):

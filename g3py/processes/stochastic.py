@@ -303,6 +303,10 @@ class StochasticProcess(PlotModel):#TheanoBlackBox
     def executed(self):
         return {k: v.executed for k, v in self.compiles.items()}
 
+    @property
+    def transformations(self):
+        return self.active.transformations
+
     def predict(self, params=None, space=None, inputs=None, outputs=None, mean=True, std=True, var=False, cov=False,
                 median=False, quantiles=False, quantiles_noise=False, samples=0, distribution=False, prior=False, noise=False):
         if params is None:
