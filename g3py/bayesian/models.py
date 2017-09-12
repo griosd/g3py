@@ -84,6 +84,7 @@ class GraphicalModel:
 
         self.components = DictObj()
         self.transformations = DictObj()
+        self.potentials = DictObj()
         # Model Average
         self.current_params = None
         self.fixed_datatrace = None
@@ -192,7 +193,7 @@ class GraphicalModel:
     def params_serie(self, serie):
         return DictObj(self.model.bijection.rmap(serie))
 
-    def compile_transformations(self, precompile=False):
+    def compile_components(self, precompile=False):
         th_vars = [self.th_vector]
         for v in self.model.deterministics:
             dist = v.transformed.distribution
@@ -202,6 +203,9 @@ class GraphicalModel:
             # makefn(th_vars, dist.transform_used.forward(self.th_vector), precompile)
             self.transformations[str(v)] = th.function(th_vars, dist.transform_used.forward(self.th_vector),
                                                        allow_input_downcast=True, on_unused_input='ignore')
+        th_vars = self.model.vars
+        for pot in self.model.potentials:
+            self.potentials[str(pot)] = th.function(th_vars, pot, allow_input_downcast=True, on_unused_input='ignore')
 
     def transform_params(self, params, to_dict=True, to_transformed=True, complete=False):
         if not isinstance(params, dict):

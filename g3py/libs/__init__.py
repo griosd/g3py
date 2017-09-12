@@ -38,6 +38,9 @@ class DictObj(dict):
     def clone(self):
         return DictObj(data=self)
 
+    def copy(self):
+        return DictObj(data=self)
+
 
 class MaxTime(object):
     def __init__(self, max_sec=60):

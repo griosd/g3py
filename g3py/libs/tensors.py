@@ -75,18 +75,18 @@ def print_graph(f):
     return th.printing.debugprint(f)
 
 
-def inf_to_num(r, neg=-1e20, pos=1e20):
-    return tt.switch(tt.isinf(r) and r > 0, np.float32(pos), tt.switch(tt.isinf(r), np.float32(neg), r))
+def inf_to_num(r, neg=-np.float32(1e20), pos=np.float32(1e20)):
+    return tt.switch(tt.isinf(r) and r > np.float32(0), np.float32(pos), tt.switch(tt.isinf(r), np.float32(neg), r))
 
 
-def tt_to_num(r, nan=0, inf=1e10):
+def tt_to_num(r, nan=np.float32(0), inf=np.float32(1e10)):
     return tt.switch(tt.isnan(r), np.float32(nan), tt.switch(tt.isinf(r), np.nan_to_num(np.float32(inf)), r))
 
 
 def tt_to_cov(c):
     r = tt_to_num(c)
     m = tt.min(tt.diag(r))
-    return tt.switch(m > 0, r, r + (1e-6-m)*tt.eye(c.shape[0]) )
+    return tt.switch(m > np.float32(0), r, r + (np.float32(1e-6)-m)*tt.eye(c.shape[0]) )
 
 
 def tt_to_bounded(r, lower=None, upper=None):
@@ -192,15 +192,15 @@ class CholeskyRobust(th.gof.Op):
         # else:
         #print(K)
         diagK = np.diag(K)
-        dK = np.eye(K.shape[0]) * diagK.mean() * 1e-6
+        dK = np.eye(K.shape[0]) * diagK.mean() * np.float32(1e-6)
         if np.any(diagK <= 0.0):
-            K = K + np.eye(K.shape[0]) * (diagK.mean() * 1e-6 - diagK.min() )
+            K = K + np.eye(K.shape[0]) * (diagK.mean() * np.float32(1e-6) - diagK.min() )
             #raise sp.linalg.LinAlgError("not positive-definite: negative diagonal element")
         for num_tries in range(self.maxtries):
             try:
                 return np.nan_to_num(sp.linalg.cholesky(K + dK, lower=True))
             except:
-                dK *= 10
+                dK *= np.float32(10)
         raise sp.linalg.LinAlgError("not approximate positive-definite")
 
     def perform(self, node, inputs, outputs):
@@ -209,7 +209,7 @@ class CholeskyRobust(th.gof.Op):
         try:
             z[0] = self._cholesky(x).astype(x.dtype)
         except:
-            z[0] = (0*x + 1e-10*np.eye(len(x))).astype(x.dtype)
+            z[0] = (0*x + np.float32(1e-10)*np.eye(len(x))).astype(x.dtype)
             #raise sp.linalg.LinAlgError("not perform cholesky")
 
     def grad(self, inputs, gradients):

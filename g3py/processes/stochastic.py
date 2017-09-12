@@ -255,7 +255,13 @@ class StochasticProcess(PlotModel):#TheanoBlackBox
         self.loglike = types.MethodType(self._method_name('th_loglike'), self)
         self.density = types.MethodType(self._method_name('th_density'), self)
 
-        _ = self.logp(array=True), self.dlogp(array=True), self.loglike(array=True), self.logp(prior=True, array=True)
+        _ = self.logp(array=True)
+        _ = self.loglike(array=True)
+        _ = self.logp(prior=True, array=True)
+        try:
+            _ = self.dlogp(array=True)
+        except Exception as m:
+            print(m)
 
     def _method_name(self, method=None):
         def _method(self, params=None, space=None, inputs=None, outputs=None, vector=None, prior=False, noise=False, array=False, *args, **kwargs):
@@ -306,6 +312,10 @@ class StochasticProcess(PlotModel):#TheanoBlackBox
     @property
     def transformations(self):
         return self.active.transformations
+
+    @property
+    def potentials(self):
+        return self.active.potentials
 
     def predict(self, params=None, space=None, inputs=None, outputs=None, mean=True, std=True, var=False, cov=False,
                 median=False, quantiles=False, quantiles_noise=False, samples=0, distribution=False, prior=False, noise=False):
@@ -397,7 +407,7 @@ class StochasticProcess(PlotModel):#TheanoBlackBox
             return np.mean(r)
 
     def find_MAP(self, start=None, points=1, plot=False, return_points=False, display=True,
-                 powell=True, max_time=None):
+                 powell=True, powell_init=False, max_time=None):
 
         points_list = list()
         if start is None:
@@ -426,6 +436,10 @@ class StochasticProcess(PlotModel):#TheanoBlackBox
             plt.figure(0)
             self.plot(params=points_list[0][2], title='start')
             plt.show()
+        if powell_init is False:
+            check = 0
+        else:
+            check = 1
         with self.model:
             i = -1
             points -= 1
@@ -436,7 +450,7 @@ class StochasticProcess(PlotModel):#TheanoBlackBox
                     name, _, start = points_list[i // 2]
                 else:
                     name, _, start = points_list[i]
-                if i % 2 == 0 or not powell:  #
+                if i % 2 == check or not powell:  #
                     if name.endswith('_bfgs'):
                         if i > n_starts:
                             points += 1
