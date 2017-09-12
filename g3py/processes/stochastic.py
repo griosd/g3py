@@ -82,7 +82,7 @@ class StochasticProcess(PlotModel):#TheanoBlackBox
         with self.model:
             self._check_hypers()
             self.th_define_process()
-            self.active.compile_transformations()
+            self.active.compile_components()
         #print('set_space')
         self.set_space(space=space, hidden=hidden, order=order, inputs=inputs, outputs=outputs, index=index)
         #print('_compile_methods')
