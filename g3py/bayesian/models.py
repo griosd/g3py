@@ -206,7 +206,7 @@ class GraphicalModel:
         th_vars = self.model.vars
         for pot in self.model.potentials:
             self.potentials[str(pot)] = makefn(th_vars, pot, bijection=None)
-            self.potentials['array_' + str(pot)] = self.compiles[str(pot)].clone(self.bijection.rmap)
+            self.potentials['array_' + str(pot)] = self.potentials[str(pot)].clone(self.bijection.rmap)
 
     def transform_params(self, params, to_dict=True, to_transformed=True, complete=False):
         if not isinstance(params, dict):
