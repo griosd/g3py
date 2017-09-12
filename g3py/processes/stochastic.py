@@ -20,6 +20,7 @@ from matplotlib import cm
 from numba import jit
 # from ..bayesian.models import TheanoBlackBox
 
+zero32 = np.float32(0.0)
 
 class StochasticProcess(PlotModel):#TheanoBlackBox
 
@@ -493,7 +494,7 @@ class StochasticProcess(PlotModel):#TheanoBlackBox
             return params, points_list
 
     def sample_hypers(self, start=None, samples=1000, chains=None, ntemps=None, raw=False, noise_mult=0.1, noise_sum=0.01,
-                      burnin_tol=0.001, burnin_method='multi-sum', outlayer_percentile=0.0005):
+                      burnin_tol=0.001, burnin_method='multi-sum', outlayer_percentile=0.0005, prior=False):
         if start is None:
             start = self.find_MAP()
         if isinstance(start, dict):
@@ -510,21 +511,33 @@ class StochasticProcess(PlotModel):#TheanoBlackBox
 
         if self.active.fixed_datatrace is None:
             if ntemps is None:
-                logp = lambda p: self.compiles.array_posterior_logp(p, self.space, self.inputs, self.outputs)
+                if prior is False:
+                    logp = lambda p: self.compiles.array_posterior_logp(p, self.space, self.inputs, self.outputs)
+                else:
+                    logp = lambda p: self.compiles.array_prior_logp(p, self.space, self.inputs, self.outputs)
                 loglike = None
                 logprior = None
             else:
                 logp = None
-                loglike = lambda p: self.compiles.array_posterior_loglike(p, self.space, self.inputs, self.outputs)
                 logprior = lambda p: self.compiles.array_prior_logp(p, self.space, self.inputs, self.outputs)
+                if prior is False:
+                    loglike = lambda p: self.compiles.array_posterior_loglike(p, self.space, self.inputs, self.outputs)
+                else:
+                    loglike = lambda p: zero32
         else:
             if ntemps is None:
-                logp = self.fixed_logp
+                if prior is False:
+                    logp = self.fixed_logp
+                else:
+                    logp = self.fixed_logprior
                 loglike = None
                 logprior = None
             else:
                 logp = None
-                loglike = self.fixed_loglike
+                if prior is False:
+                    loglike = self.fixed_loglike
+                else:
+                    loglike = lambda p: zero32
                 logprior = self.fixed_logprior
 
         lnprob, echain = mcmc_ensemble(ndim, samples=samples, chains=chains, ntemps=ntemps, start=start,
