@@ -28,7 +28,6 @@ def debug(x, name='', force=False):
     else:
         return x
 
-
 class makefn:
     def __init__(self, th_vars, fn, givens=None, bijection=None, precompile=False):
         self.th_vars = th_vars
@@ -49,7 +48,12 @@ class makefn:
             #print(self.th_vars, self.fn)
             self.compiled = th.function(self.th_vars, self.fn, givens=self.givens, allow_input_downcast=True,
                                         on_unused_input='ignore')
-        if vector is None:
+        if self.givens is None:
+            if self.bijection is None:
+                return self.compiled( **params)
+            else:
+                return self.compiled(**self.bijection(params))
+        elif vector is None:
             if self.bijection is None:
                 return self.compiled(space, inputs, outputs, **params)
             else:
