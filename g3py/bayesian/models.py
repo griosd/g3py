@@ -205,7 +205,7 @@ class GraphicalModel:
                                                        allow_input_downcast=True, on_unused_input='ignore')
         th_vars = self.model.vars
         for pot in self.model.potentials:
-            self.potentials[str(pot)] = self.makefn(th_vars, pot, bijection=None)
+            self.potentials[str(pot)] = makefn(th_vars, pot, bijection=None)
             self.potentials['array_' + str(pot)] = self.compiles[str(pot)].clone(self.bijection.rmap)
 
     def transform_params(self, params, to_dict=True, to_transformed=True, complete=False):
