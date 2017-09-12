@@ -262,7 +262,7 @@ class StochasticProcess(PlotModel):#TheanoBlackBox
         try:
             _ = self.dlogp(array=True)
         except Exception as m:
-            print(m)
+            print('Compiling dlogp', m)
 
     def _method_name(self, method=None):
         def _method(self, params=None, space=None, inputs=None, outputs=None, vector=None, prior=False, noise=False, array=False, *args, **kwargs):

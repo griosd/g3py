@@ -201,7 +201,8 @@ class GraphicalModel:
             self.transformations[str(v.transformed)] = th.function(th_vars, dist.transform_used.backward(self.th_vector),
                                                                    allow_input_downcast=True, on_unused_input='ignore')
             # makefn(th_vars, dist.transform_used.forward(self.th_vector), precompile)
-            self.transformations[str(v)] = th.function(th_vars, dist.transform_used.forward(self.th_vector),
+            self.transformations[str(v
+                                     )] = th.function(th_vars, dist.transform_used.forward(self.th_vector),
                                                        allow_input_downcast=True, on_unused_input='ignore')
         th_vars = self.model.vars
         for pot in self.model.potentials:
@@ -218,13 +219,19 @@ class GraphicalModel:
         if to_transformed:
             for k, v in params.items():
                 if k in self.original_to_transformed_names:
-                    r[self.original_to_transformed_names[k]] = self.transformations[k](v)
+                    try:
+                        r[self.original_to_transformed_names[k]] = self.transformations[k](v)
+                    except:
+                        r[self.original_to_transformed_names[k]] = self.transformations[k](np.array([v]))
                 else:
                     r[k] = v
         else:
             for k, v in params.items():
                 if k in self.transformed_to_original_names:
-                    r[self.transformed_to_original_names[k]] = self.transformations[k](v)
+                    try:
+                        r[self.transformed_to_original_names[k]] = self.transformations[k](v)
+                    except:
+                        r[self.transformed_to_original_names[k]] = self.transformations[k](np.array([v]))
                 else:
                     r[k] = v
 
