@@ -505,14 +505,12 @@ class StochasticProcess(PlotModel):#TheanoBlackBox
             start = self.active.dict_to_array(start)
 
         ndim = len(self.active.sampling_dims)
-
         if len(start.shape) == 1:
             start = start[self.active.sampling_dims]
         elif len(start.shape) == 2:
             start = start[:, self.active.sampling_dims]
         elif len(start.shape) == 3:
-            start = start[:, 0, self.active.sampling_dims]
-
+            start = start[:, :, self.active.sampling_dims]
         if self.active.fixed_datatrace is None:
             if ntemps is None:
                 if prior is False:
