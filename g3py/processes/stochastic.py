@@ -22,6 +22,7 @@ from numba import jit
 
 zero32 = np.float32(0.0)
 
+
 class StochasticProcess(PlotModel):#TheanoBlackBox
 
     def __init__(self, space=None, order=None, inputs=None, outputs=None, hidden=None, index=None,
@@ -241,6 +242,7 @@ class StochasticProcess(PlotModel):#TheanoBlackBox
         return tt.add(*map(tt.sum, factors))
 
     def _compile_methods(self):
+        self.compiles = DictObj()
         self.mean = types.MethodType(self._method_name('th_mean'), self)
         self.median = types.MethodType(self._method_name('th_median'), self)
         self.variance = types.MethodType(self._method_name('th_variance'), self)
