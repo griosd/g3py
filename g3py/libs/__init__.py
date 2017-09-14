@@ -5,6 +5,7 @@ from copy import copy
 from pprint import pprint
 from .data import *
 from .plots import *
+from .lagrange import *
 #from .tensors import *
 #from .traces import *
 #from .experiments import *

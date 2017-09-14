@@ -112,6 +112,11 @@ class GraphicalModel:
             r = pickle.load(f)
             print('Loaded model ' + path)
         r.activate()
+        for k,v in r.components.items():
+            try:
+                v._compile_methods()
+            except Exception as m:
+                print(m)
         return r
 
     def reset(self, path=None):
@@ -416,7 +421,7 @@ class PlotModel:
     def params_widget(self):
         if self.widget_params is None:
             return self.params
-        return clone(self.widget_params)
+        return DictObj(self.widget_params)
 
     def predict(self):
         pass
@@ -446,7 +451,7 @@ class PlotModel:
         return scores
 
     def eval_params(self, params=None):
-        r = params.clone()
+        r = params.copy()
         r['_ll'] = self.logp(params)
         r.update(self.scores(params))
         return r

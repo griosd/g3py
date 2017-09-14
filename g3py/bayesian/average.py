@@ -131,12 +131,12 @@ def datatrace_to_kde(process, dt, kernel='tophat', bandwidth=0.02, min_ll=-1e6):
 
 def kde_to_datatrace(process, kde, nsamples=1000, prior=False):
     samples = kde.sample(n_samples=1)
-    ll = process.logp_chain(samples, prior = prior)
+    ll = process.logp_chain(samples, prior=prior)
     samples, ll = samples[ll > kde.min_ll], ll[ll > kde.min_ll]
 
     while len(samples) < nsamples:
         new_samples = kde.sample(n_samples=nsamples-len(samples))
-        new_ll = process.logp_chain(new_samples, prior = prior)
+        new_ll = process.logp_chain(new_samples, prior=prior)
         new_samples, new_ll = new_samples[new_ll > kde.min_ll], new_ll[new_ll > kde.min_ll]
         samples = np.concatenate([samples, new_samples])
         ll = np.concatenate([ll, new_ll])

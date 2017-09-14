@@ -264,8 +264,12 @@ class StochasticProcess(PlotModel):#TheanoBlackBox
         except Exception as m:
             print('Compiling dlogp', m)
 
-    def _method_name(self, method=None):
-        def _method(self, params=None, space=None, inputs=None, outputs=None, vector=None, prior=False, noise=False, array=False, *args, **kwargs):
+    def lambda_method(self, *args, **kwargs):
+        pass
+
+    @staticmethod
+    def _method_name(method=None):
+        def lambda_method(self, params=None, space=None, inputs=None, outputs=None, vector=None, prior=False, noise=False, array=False, *args, **kwargs):
             if params is None:
                 if array:
                     params = self.active.dict_to_array(self.params)
@@ -304,7 +308,7 @@ class StochasticProcess(PlotModel):#TheanoBlackBox
                     self.compiles['array_' + name] = self.compiles[name].clone(self.active.bijection.rmap)
                 name = 'array_' + name
             return self.compiles[name](params, space, inputs, outputs, vector)
-        return _method
+        return lambda_method
 
     @property
     def executed(self):
@@ -357,10 +361,10 @@ class StochasticProcess(PlotModel):#TheanoBlackBox
         return values
 
     #TODO: Vectorized
-    def logp_chain(self, chain):
+    def logp_chain(self, chain, prior=False):
         out = np.empty(len(chain))
         for i in range(len(out)):
-            out[i] = self.logp(chain[i], array=True)
+            out[i] = self.logp(chain[i], array=True, prior=prior)
         return out
 
     #@jit
