@@ -552,7 +552,7 @@ class StochasticProcess(PlotModel):#TheanoBlackBox
         complete_chain[:, :, self.active.sampling_dims] = echain
         if self.active.fixed_datatrace is not None:
             print("TODO: Check THIS complete_chain with MEAN")
-            complete_chain[:, :, self.active.fixed_dims] = self.fixed_chain[:, self.active.fixed_dims].mean(axis=0)
+            complete_chain[:, :, self.active.fixed_dims] = self.active.fixed_chain[:, self.active.fixed_dims].mean(axis=0)
         if raw:
             return complete_chain, lnprob
         else:
