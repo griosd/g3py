@@ -6,7 +6,7 @@ import pymc3 as pm
 import theano as th
 import theano.tensor as tt
 import matplotlib.pyplot as plt
-from ..libs import clone, DictObj
+from ..libs import clone, DictObj, save_pkl, load_pkl
 from ..libs.tensors import makefn, tt_to_num
 from ..libs.plots import figure, plot, show, plot_text
 from .. import config
@@ -108,9 +108,8 @@ class GraphicalModel:
 
     @classmethod
     def load(cls, path):
-        with open(path, 'rb') as f:
-            r = pickle.load(f)
-            print('Loaded model ' + path)
+        r = load_pkl(path)
+        print('Loaded model ' + path)
         r.activate()
         for k,v in r.components.items():
             try:
@@ -136,8 +135,7 @@ class GraphicalModel:
             if os.path.isfile(path):
                 os.remove(path)
             with self.model:
-                with open(path, 'wb') as f:
-                    pickle.dump(self, f, protocol=-1)
+                save_pkl(self, path)
             print('Saved model '+path)
         except Exception as details:
             print('Error saving model '+path, details)
@@ -197,6 +195,20 @@ class GraphicalModel:
 
     def params_serie(self, serie):
         return DictObj(self.model.bijection.rmap(serie))
+
+    def params_process(self, process=None, params=None, current=None, fixed=False):
+        if process is None:
+            process = self
+        if params is None:
+            params = process.params
+        if current is None:
+            current = self.params
+        params_transform = {k.replace(process.name, self.name, 1): v for k, v in params.items()}
+        params_return = DictObj({k: v for k, v in params_transform.items() if k in current.keys()})
+        params_return.update({k: v for k, v in current.items() if k not in params_transform.keys()})
+        if fixed:
+            params_return.update(self.params_fixed)
+        return params_return
 
     def compile_components(self, precompile=False):
         th_vars = [self.th_vector]
@@ -431,10 +443,10 @@ class PlotModel:
                          median=False, quantiles=False, quantiles_noise=False, samples=samples, prior=prior, noise=noise)
         return S['samples']
 
-    def scores(self, params=None, space=None, hidden=None, inputs=None, outputs=None, logp=False, bias=True, variance=False, median=False, *args, **kwargs):
+    def scores(self, params=None, space=None, hidden=None, inputs=None, outputs=None, logpred=False, bias=True, variance=False, median=False, *args, **kwargs):
         if hidden is None:
             hidden = self.hidden
-        pred = self.predict(params=params, space=space, inputs=inputs, outputs=outputs, var=variance, median=median, distribution=logp)
+        pred = self.predict(params=params, space=space, inputs=inputs, outputs=outputs, var=variance, median=median, distribution=logpred)
         scores = DictObj()
         if bias:
             scores['_l1'] = np.mean(np.abs(pred.mean - hidden))
@@ -445,9 +457,9 @@ class PlotModel:
         if median:
             scores['_median_l1'] = np.mean(np.abs(pred.median - hidden))
             scores['_median_l2'] = np.mean((pred.median - hidden)**2)
-        if logp:
+        if logpred:
             #scores['_nll'] = - pred.logp(hidden) / len(hidden)
-            scores['_nlpd'] = - pred.logpred(hidden) / len(hidden)
+            scores['_nlpd'] = - pred.logpredictive(hidden) / len(hidden)
         return scores
 
     def eval_params(self, params=None):

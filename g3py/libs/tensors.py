@@ -19,7 +19,7 @@ def gradient(f, wrt=None):
     if wrt:
         return tt.concatenate([gradient1(f, v) for v in wrt], axis=0)
     else:
-        return tt.zeros(0, dtype='float32')
+        return tt.zeros(0.0, dtype='float32')
 
 
 def debug(x, name='', force=False):

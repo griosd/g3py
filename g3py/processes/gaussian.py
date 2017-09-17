@@ -39,11 +39,11 @@ class GaussianProcess(EllipticalProcess):
         debug_p('variance' + str(prior) + str(noise))
         return self.th_kernel_diag(prior=prior, noise=noise)
 
-    def th_predictive(self, prior=False, noise=False):
-        return tt.exp(WarpedGaussianDistribution.logp_cho(value=self.th_vector,
-                                                          mu = self.th_location(prior=prior, noise=noise),
-                                                          cho=self.th_cholesky(prior=prior, noise=noise),
-                                                          mapping=self.f_mapping).sum())
+    def th_logpredictive(self, prior=False, noise=False):
+        return WarpedGaussianDistribution.logp_cho(value=self.th_vector,
+                                                   mu=self.th_location(prior=prior, noise=noise),
+                                                   cho=self.th_kernel_sd(prior=prior, noise=True, cholesky=True),
+                                                   mapping=self.f_mapping)
 
     def quantiler(self, params=None, space=None, inputs=None, outputs=None, q=0.975, prior=False, noise=False):
         #debug_p('quantiler' + str(q) + str(prior) + str(noise))
@@ -125,8 +125,12 @@ class WarpedGaussianDistribution(pm.Continuous):
 
         cond1 = tt.or_(tt.any(tt.isinf_(delta)), tt.any(tt.isnan_(delta)))
         cond2 = tt.or_(tt.any(tt.isinf_(det_m)), tt.any(tt.isnan_(det_m)))
-        cond3 = tt.or_(tt.any(tt.isinf_(lcho)), tt.any(tt.isnan_(lcho)))
-        return ifelse(cond1, np.float32(-1e30), ifelse(cond2, np.float32(-1e30), ifelse(cond3, np.float32(-1e30), r)))
+        cond3 = tt.or_(tt.any(tt.isinf_(cho)), tt.any(tt.isnan_(cho)))
+        cond4 = tt.or_(tt.any(tt.isinf_(lcho)), tt.any(tt.isnan_(lcho)))
+        return ifelse(cond1, np.float32(-1e30),
+                      ifelse(cond2, np.float32(-1e30),
+                             ifelse(cond3, np.float32(-1e30),
+                                    ifelse(cond4, np.float32(-1e30), r))))
 
     def logp(self, value):
         return self.logp_cho(value, self.mu, self.cho, self.mapping)
