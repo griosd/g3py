@@ -130,6 +130,9 @@ class StochasticProcess(PlotModel):#TheanoBlackBox
     def params_process(self, *args, **kwargs):
         return self.active.params_process(*args, **kwargs)
 
+    def transform_params(self, *args, **kwargs):
+        return self.active.transform_params(*args, **kwargs)
+
     def set_space(self, space=None, hidden=None, order=None, inputs=None, outputs=None, index=None):
         if space is not None:
             if len(space.shape) < 2:
@@ -282,6 +285,12 @@ class StochasticProcess(PlotModel):#TheanoBlackBox
         factors = [var.logpt for var in self.model.observed_RVs]
         return tt.add(*map(tt.sum, factors))
 
+    def th_error_l1(self, prior=False, noise=False):
+        return tt.mean(tt.abs_(self.th_vector - self.th_outputs))
+
+    def th_error_l2(self, prior=False, noise=False):
+        return tt.mean(tt.pow(self.th_vector - self.th_outputs, 2))
+
     def _compile_methods(self):
         reset_space = self.space
         reset_hidden = self.hidden
@@ -298,6 +307,10 @@ class StochasticProcess(PlotModel):#TheanoBlackBox
         self.std = types.MethodType(self._method_name('th_std'), self)
         self.covariance = types.MethodType(self._method_name('th_covariance'), self)
         self.logpredictive = types.MethodType(self._method_name('th_logpredictive'), self)
+
+        self.error_l1 = types.MethodType(self._method_name('th_error_l1'), self)
+        self.error_l2 = types.MethodType(self._method_name('th_error_l2'), self)
+
         # self.density = types.MethodType(self._method_name('th_density'), self)
 
         #self.quantiler = types.MethodType(self._method_name('_quantiler'), self)
@@ -320,6 +333,9 @@ class StochasticProcess(PlotModel):#TheanoBlackBox
     def lambda_method(self, *args, **kwargs):
         pass
 
+    def filter_params(self, params):
+        return {k: v for k, v in params.items() if k in self.params}
+
     @staticmethod
     def _method_name(method=None):
         def lambda_method(self, params=None, space=None, inputs=None, outputs=None, vector=None, prior=False, noise=False, array=False, *args, **kwargs):
@@ -328,6 +344,8 @@ class StochasticProcess(PlotModel):#TheanoBlackBox
                     params = self.active.dict_to_array(self.params)
                 else:
                     params = self.params
+            elif not array:
+                params = self.filter_params(params)
             if space is None:
                 space = self.space
             if inputs is None:
@@ -349,7 +367,7 @@ class StochasticProcess(PlotModel):#TheanoBlackBox
                 name += str(kwargs)
             if not hasattr(self.compiles, name):
                 #print(method)
-                if method is 'th_logpredictive':
+                if method in ['th_logpredictive', 'th_error_l1', 'th_error_l2']:
                     th_vars = [self.th_space_, self.th_inputs_, self.th_outputs_, self.th_vector] + self.model.vars
                 else:
                     th_vars = [self.th_space_, self.th_inputs_, self.th_outputs_] + self.model.vars
@@ -551,7 +569,7 @@ class StochasticProcess(PlotModel):#TheanoBlackBox
             return params, points_list
 
     def sample_hypers(self, start=None, samples=1000, chains=None, ntemps=None, raw=False, noise_mult=0.1, noise_sum=0.01,
-                      burnin_tol=0.001, burnin_method='multi-sum', outlayer_percentile=0.0005, prior=False):
+                      burnin_tol=0.001, burnin_method='multi-sum', outlayer_percentile=0.0005, prior=False, parallel=False):
         if start is None:
             start = self.find_MAP()
         if isinstance(start, dict):
@@ -595,9 +613,22 @@ class StochasticProcess(PlotModel):#TheanoBlackBox
                     loglike = lambda p: zero32
                 logprior = self.fixed_logprior
 
-        lnprob, echain = mcmc_ensemble(ndim, samples=samples, chains=chains, ntemps=ntemps, start=start,
-                                       logp=logp, loglike=loglike, logprior=logprior,
-                                       noise_mult=noise_mult, noise_sum=noise_sum)
+        def parallel_mcmc(nchains):
+            return mcmc_ensemble(ndim, samples=samples, chains=nchains, ntemps=ntemps, start=start,
+                                           logp=logp, loglike=loglike, logprior=logprior,
+                                           noise_mult=noise_mult, noise_sum=noise_sum)
+
+        if parallel in [None, 0, 1]:
+            lnprob, echain = parallel_mcmc(nchains=chains)
+        else:
+            import multiprocessing as mp
+            p = mp.Pool(parallel)
+            r = p.map(parallel_mcmc, list([chains/parallel]*parallel))
+            lnprob, echain = [], []
+            for k in r:
+                lk, le = k
+                lnprob = np.concatenate([lnprob, lk])
+                echain = np.concatenate([echain, le])
 
         complete_chain = np.empty((echain.shape[0], echain.shape[1], self.ndim))
         complete_chain[:, :, self.active.sampling_dims] = echain
@@ -780,7 +811,7 @@ class EllipticalProcess(StochasticProcess):
             mean = np.mean(outputs)
             std = np.std(outputs)
             domain = np.linspace(mean - 2 * std, mean + 2 * std, neval)
-            #domain = np.linspace(outputs.min(), outputs.max(), neval)
+            domain = np.linspace(outputs.min(), outputs.max(), neval)
         #plt.plot(self.mapping(params=params, outputs=domain, inputs=inputs), domain, label=label)
         plt.plot(domain, self.mapping_inv(params=params, outputs=domain, inputs=inputs), label=label)
 

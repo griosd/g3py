@@ -175,7 +175,8 @@ class GraphicalModel:
     def params_default(self):
         default = self.params_test
         for name, component in self.components.items():
-            for k, v in transformed_hypers(component.default_hypers()).items():
+            d = transformed_hypers(component.default_hypers())
+            for k, v in d.items():
                 if k in self.model.vars:
                     default[k.name] = v
         return default
@@ -443,7 +444,7 @@ class PlotModel:
                          median=False, quantiles=False, quantiles_noise=False, samples=samples, prior=prior, noise=noise)
         return S['samples']
 
-    def scores(self, params=None, space=None, hidden=None, inputs=None, outputs=None, logpred=False, bias=True, variance=False, median=False, *args, **kwargs):
+    def scores(self, params=None, space=None, hidden=None, inputs=None, outputs=None, logp=False, logpred=False, bias=True, variance=False, median=False, *args, **kwargs):
         if hidden is None:
             hidden = self.hidden
         pred = self.predict(params=params, space=space, inputs=inputs, outputs=outputs, var=variance, median=median, distribution=logpred)
@@ -457,15 +458,22 @@ class PlotModel:
         if median:
             scores['_median_l1'] = np.mean(np.abs(pred.median - hidden))
             scores['_median_l2'] = np.mean((pred.median - hidden)**2)
+        if logp:
+            scores['_logp'] = self.logp(params)
+            scores['_loglike'] = self.loglike(params)
+            scores['_logprior'] = self.logp(params, prior=True)
         if logpred:
-            #scores['_nll'] = - pred.logp(hidden) / len(hidden)
             scores['_nlpd'] = - pred.logpredictive(hidden) / len(hidden)
         return scores
 
+    def filter_params(self, params):
+        return {k: v for k, v in params.items() if k in self.params}
+
     def eval_params(self, params=None):
         r = params.copy()
-        r['_ll'] = self.logp(params)
+        r['_ll'] = self.logp(self.filter_params(params))
         r.update(self.scores(params))
+        r.update(self.transform_params(r, to_transformed=False))
         return r
 
     def average(self, datatrace, scores=True, *args, **kwargs):

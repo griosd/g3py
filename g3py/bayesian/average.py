@@ -15,6 +15,7 @@ from tqdm import tqdm
 
 # SAMPLING
 
+@jit
 def mcmc_ensemble(ndim, samples=1000, chains=None, ntemps=None, start=None, logp=None, loglike=None, logprior=None,
                   noise_mult=0.1, noise_sum=0.01):
 
@@ -53,7 +54,7 @@ def mcmc_ensemble(ndim, samples=1000, chains=None, ntemps=None, start=None, logp
 # DATATRACE
 
 def chains_to_datatrace(process, chains, ll=None, transforms=True, burnin_tol=0.01, burnin_method='multi-sum', burnin_dims=None,
-                        outlayer_percentile=0.001):
+                        burnin_default=0.1, outlayer_percentile=0.001):
     columns = list()
     for v in process.model.bijection.ordering.vmap:
         columns += pm.backends.tracetab.create_flat_names(v.var, v.shp)
@@ -74,6 +75,8 @@ def chains_to_datatrace(process, chains, ll=None, transforms=True, burnin_tol=0.
         pdchain['_nchain'] = nchain
         pdchain['_niter'] = pdchain.index
         if burnin_tol is not None:
+            #if nburn == 0:
+            #    nburn = int(pdchain['_niter'].max()*burnin_default)
             pdchain['_burnin'] = pdchain['_niter'] > nburn
         if ll is not None:
             pdchain['_ll'] = ll[nchain]
@@ -161,10 +164,10 @@ def cluster_datatrace(process, dt, n_components=5, bayesian=True, burnin=True, n
     gm = cluster_method(n_components=n_components, covariance_type='full', max_iter=max_iter, n_init=n_init).fit(datatrace_filter)
     cluster_gm = gm.predict(datatrace_filter)
     argsort = np.argsort(np.bincount(cluster_gm))
-    argsorted = sorted(np.unique(cluster_gm), reverse=True)
+    argsorted = sorted(np.arange(n_components), reverse=True)
 
     def _cluster(datatrace):
-        datatrace['_cluster'] = (gm.predict(datatrace.iloc[:, :process.ndim]) == argsort[:, None]).T.dot(argsorted)
+        datatrace['_cluster'] = (gm.predict(datatrace.iloc[:, :process.ndim].values) == argsort[:, None]).T.dot(argsorted)
     _cluster(dt)
     process._cluster = _cluster
     return _cluster
