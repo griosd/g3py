@@ -2,6 +2,7 @@ import time
 import numpy as np
 import scipy as sp
 import pandas as pd
+import seaborn as sb
 import matplotlib.pyplot as plt
 from datetime import datetime as dt
 from tqdm import tqdm
@@ -19,17 +20,30 @@ def optimize(logp, start, dlogp=None, fmin=None, max_time=None, *args, **kwargs)
         callback = None
     else:
         callback = MaxTime(max_time)
+
+    def f(x):
+        try:
+            return nan_to_high(-logp(x))
+        except:
+            return np.float32(1e32)
+
+    def df(x):
+        try:
+            return np.nan_to_num(-dlogp(x))
+        except:
+            return np.float32(1e32)
+
     if ('fprime' in signature(fmin).parameters) and (dlogp is not None):
-        r = fmin(lambda x: nan_to_high(-logp(x)), start, #process.model.bijection.map(start)[process.sampling_dims],
-                 fprime=lambda x: np.nan_to_num(-dlogp(x)), callback=callback, *args, **kwargs)
+        r = fmin(f,  start, #process.model.bijection.map(start)[process.sampling_dims],
+                 fprime=df, callback=callback, *args, **kwargs)
     else:
-        r = fmin(lambda x: nan_to_high(-logp(x)), start, #process.model.bijection.map(start)[process.sampling_dims],
+        r = fmin(f, start, #process.model.bijection.map(start)[process.sampling_dims],
                  callback=callback, *args, **kwargs)
     return r
 
 
 #TODO: Probar
-class CrossValidation:
+class Experiment:
     def __init__(self, models=None, file=None, load=True):
         self.file = file
         if self.file is not None and load:
@@ -55,7 +69,7 @@ class CrossValidation:
         self.scores_mean = True
         self.scores_median = True
         self.scores_variance = True
-        self.scores_logp = True
+        self.scores_logpred = True
         self.scores_time = True
 
         self.find_MAP = None
@@ -137,14 +151,14 @@ class CrossValidation:
             valid_j, x_valid, y_valid = None, None, None
         return obs_j, x_obs, y_obs, valid_j, x_valid, y_valid, test_j, x_test, y_test
 
-    def scores(self, logp=True, mean=True, median=False, variance=False):
+    def scores(self, logpred=True, mean=True, median=False, variance=False):
         self.scores_mean = mean
         self.scores_median = median
         self.scores_variance = variance
-        self.scores_logp = logp
+        self.scores_logpred = logpred
 
     def calc_scores(self, sp, params):
-        return sp.scores(params, logp=self.scores_logp, bias=self.scores_mean, median=self.scores_median,
+        return sp.scores(params, logpred=self.scores_logpred, bias=self.scores_mean, median=self.scores_median,
                          variance=self.scores_variance)
 
     def model_selection(self, find_MAP=True, points=2, powell=True, starts='default', master=None, holdout=None, holdout_p=0, max_time=None):
@@ -160,30 +174,31 @@ class CrossValidation:
     def select_model(self, sp, x_valid=None, y_valid=None):
         if self.find_MAP:
             if self.starts is 'default':
-                start = [sp.get_params_test(),
-                         sp.get_params_default(),
-                         sp.get_params_random(mean=sp.get_params_test(), sigma=0.1, prop=False),
-                         sp.get_params_random(mean=sp.get_params_default(), sigma=0.1, prop=True),
-                         sp.get_params_random(mean=sp.get_params_test(), sigma=0.2, prop=False),
-                         sp.get_params_random(mean=sp.get_params_default(), sigma=0.2, prop=True)]
+                start = [sp.params_test,
+                         sp.params_default,
+                         sp.params_random(mean=sp.params_test, sigma=0.1, prop=False),
+                         sp.params_random(mean=sp.params_default, sigma=0.1, prop=True),
+                         sp.params_random(mean=sp.params_test, sigma=0.2, prop=False),
+                         sp.params_random(mean=sp.params_default, sigma=0.2, prop=True)]
             elif self.starts is 'mcmc':
-                lnp, chain = sp.ensemble_hypers(start=sp.get_params_default(), samples=25)
+                lnp, chain = sp.ensemble_hypers(start=sp.params_default, samples=25)
                 step = -1
                 start = list()
                 for k in range(min(chain.shape[0], self.points)):
                     start.append(sp.model.bijection.rmap(chain[k, step, :]))
             else:
-                start = sp.get_params_default()
+                start = sp.params_default
             if self.master is not None and self.master != sp:
-                start = [sp.get_params_process(self.master, params=self.master.get_params_test()),
-                         sp.get_params_process(self.master, params=self.master.get_params_default())] + start
+                start = [sp.params_process(self.master, params=self.master.params_test),
+                         sp.params_process(self.master, params=self.master.params_default)] + start
 
             params, points_list = sp.find_MAP(start=start, points=self.points, powell=self.powell, max_time=self.max_time, return_points=True)
             selected = 'find_MAP'
+
             if (self.holdout_p > 0) and (x_valid is not None) and (y_valid is not None):
                 sp.set_space(x_valid, y_valid)
                 params_scores = self.calc_scores(sp, params)
-                params_scores['_nll'] = -sp.logp_dict(params).max()
+                params_scores['_nll'] = -sp.logp(params).max()
                 for (n, l, p) in points_list:
                     try:
                         scores = self.calc_scores(sp, p)
@@ -197,7 +212,7 @@ class CrossValidation:
                         pass
                 print('Selected: '+selected, params_scores)
         else:
-            params = sp.get_params_default()
+            params = sp.params_default
         return selected, start, params
 
     def run(self, n_simulations=1, repeat=[], plot=False):
@@ -213,9 +228,11 @@ class CrossValidation:
                 print('*' * 70)
             else:
                 obs_j, valid_j, test_j = self.simulations_raw.loc[n_sim]['obs'], self.simulations_raw.loc[n_sim]['valid'], self.simulations_raw.loc[n_sim]['test']
-                x_obs, y_obs, x_valid, y_valid, x_test, y_test = self.data_x[obs_j], self.data_y[obs_j], \
-                                                                 self.data_x[valid_j], self.data_y[valid_j], \
-                                                                 self.data_x[test_j], self.data_y[test_j]
+                x_obs, y_obs,  x_test, y_test = self.data_x[obs_j], self.data_y[obs_j], self.data_x[test_j], self.data_y[test_j]
+                if valid_j is not None:
+                    x_valid, y_valid, = self.data_x[valid_j], self.data_y[valid_j]
+                else:
+                    x_valid, y_valid = None, None
                 print('\n' * 2 + '*' * 60 + '\n' + '*' * 60 + '\nRepetition #' + str(n_sim) + '\n' + '*' * 60)
 
             for sp in tqdm(self.models, total = len(self.models)):
@@ -233,6 +250,7 @@ class CrossValidation:
                     sp.plot_model(params)
                 sp.set_params(params)
                 sp.set_space(x_obs, y_obs, obs_j)
+
                 scores_obs = self.calc_scores(sp, params)
                 time_scores_obs, tictoc = time.time() - tictoc, time.time()
                 if valid_j is not None:
@@ -242,7 +260,10 @@ class CrossValidation:
                     scores_valid = {}
                 time_scores_valid, tictoc = time.time() - tictoc, time.time()
 
-                sp.observed(np.concatenate([x_obs, x_valid]), np.concatenate([y_obs, y_valid]))
+                if x_valid is not None:
+                    sp.observed(np.concatenate([x_obs, x_valid]), np.concatenate([y_obs, y_valid]))
+                else:
+                    sp.observed(x_obs, y_obs)
                 sp.set_space(x_test, y_test, test_j)
                 scores_test = self.calc_scores(sp, params)
                 time_scores_test, tictoc = time.time() - tictoc, time.time()

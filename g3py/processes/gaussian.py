@@ -7,7 +7,7 @@ import theano.tensor.slinalg as tsl
 import theano.tensor.nlinalg as tnl
 from scipy import stats
 from theano.ifelse import ifelse
-from .stochastic import EllipticalProcess
+from .elliptical import EllipticalProcess, debug_p
 from .hypers.mappings import Identity
 from ..libs.tensors import cholesky_robust, debug, tt_to_bounded, tt_eval
 
@@ -27,23 +27,11 @@ class GaussianProcess(EllipticalProcess):
                                                        observed=self.th_outputs, testval=self.outputs,
                                                        dtype=th.config.floatX)
 
-    def th_median(self, prior=False, noise=False):
-        debug_p('median' + str(prior) + str(noise))
-        return self.f_mapping(self.th_location(prior=prior, noise=noise))
-
-    def th_mean(self, prior=False, noise=False):
-        debug_p('mean' + str(prior) + str(noise))
-        return self.f_mapping(self.th_location(prior=prior, noise=noise))
-
-    def th_variance(self, prior=False, noise=False):
-        debug_p('variance' + str(prior) + str(noise))
-        return self.th_kernel_diag(prior=prior, noise=noise)
-
-    def th_predictive(self, prior=False, noise=False):
-        return tt.exp(WarpedGaussianDistribution.logp_cho(value=self.th_vector,
-                                                          mu = self.th_location(prior=prior, noise=noise),
-                                                          cho=self.th_cholesky(prior=prior, noise=noise),
-                                                          mapping=self.f_mapping).sum())
+    def th_logpredictive(self, prior=False, noise=False):
+        return WarpedGaussianDistribution.logp_cho(value=self.th_vector,
+                                                   mu=self.th_location(prior=prior, noise=noise),
+                                                   cho=self.th_kernel_sd(prior=prior, noise=True, cholesky=True),
+                                                   mapping=self.f_mapping)
 
     def quantiler(self, params=None, space=None, inputs=None, outputs=None, q=0.975, prior=False, noise=False):
         #debug_p('quantiler' + str(q) + str(prior) + str(noise))
@@ -68,9 +56,6 @@ class GaussianProcess(EllipticalProcess):
         return self.prior_location_space + cross_kernel.cov(self.th_space_, self.th_inputs_).dot(
             tsl.solve(self.prior_kernel_inputs, self.mapping_outputs - self.prior_location_inputs))
 
-def debug_p(*args, **kwargs):
-    pass#print(*args, **kwargs)#pass#
-
 
 class WarpedGaussianProcess(GaussianProcess):
 
@@ -88,12 +73,15 @@ class WarpedGaussianProcess(GaussianProcess):
                                   self.th_kernel_sd(prior=prior, noise=noise), a, w)
 
     def th_variance(self, prior=False, noise=False, n=10):
-        debug_p('mean')
+        debug_p('variance')
         _a, _w = np.polynomial.hermite.hermgauss(n)
         a = th.shared(_a.astype(th.config.floatX), borrow=False).dimshuffle([0, 'x'])
         w = th.shared(_w.astype(th.config.floatX), borrow=False)
         return self.gauss_hermite(lambda v: self.f_mapping(v) ** 2, self.th_location(prior=prior, noise=noise),
                                   self.th_kernel_sd(prior=prior, noise=noise), a, w) - self.th_mean(prior=prior, noise=noise) ** 2
+
+    def th_covariance(self, prior=False, noise=False):
+        pass
 
     @classmethod
     def gauss_hermite(cls, f, mu, sigma, a, w):
@@ -125,8 +113,12 @@ class WarpedGaussianDistribution(pm.Continuous):
 
         cond1 = tt.or_(tt.any(tt.isinf_(delta)), tt.any(tt.isnan_(delta)))
         cond2 = tt.or_(tt.any(tt.isinf_(det_m)), tt.any(tt.isnan_(det_m)))
-        cond3 = tt.or_(tt.any(tt.isinf_(lcho)), tt.any(tt.isnan_(lcho)))
-        return ifelse(cond1, np.float32(-1e30), ifelse(cond2, np.float32(-1e30), ifelse(cond3, np.float32(-1e30), r)))
+        cond3 = tt.or_(tt.any(tt.isinf_(cho)), tt.any(tt.isnan_(cho)))
+        cond4 = tt.or_(tt.any(tt.isinf_(lcho)), tt.any(tt.isnan_(lcho)))
+        return ifelse(cond1, np.float32(-1e30),
+                      ifelse(cond2, np.float32(-1e30),
+                             ifelse(cond3, np.float32(-1e30),
+                                    ifelse(cond4, np.float32(-1e30), r))))
 
     def logp(self, value):
         return self.logp_cho(value, self.mu, self.cho, self.mapping)

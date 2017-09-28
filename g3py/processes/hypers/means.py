@@ -26,6 +26,8 @@ class Mean(Hypers):
     def __call__(self, x):
         return self.eval(x[:, self.dims])
 
+Location = Mean
+
 
 class BlackBox(Mean):
     def __init__(self, element, x=None, name=None):
@@ -157,3 +159,24 @@ class Linear(Mean):
         return self.constant + tt.dot(x, self.coeff) #TODO: check dims
 
 
+class Power(Mean):
+    def __init__(self, x=None, name=None, constant=None, coeff=None, n=2):
+        super().__init__(x, name)
+        self.constant = constant
+        self.coeff = coeff
+        self.n = n
+
+    def check_hypers(self, parent=''):
+        super().check_hypers(parent=parent)
+        if self.constant is None:
+            self.constant = Hypers.Flat(parent+self.name+'_Constant')
+        if self.coeff is None:
+            self.coeff = Hypers.Flat(parent+self.name+'_Coeff', shape=self.shape)
+        self.hypers += [self.constant, self.coeff]
+
+    def default_hypers(self, x=None, y=None):
+        return {self.constant: y.mean().astype(th.config.floatX),
+                self.coeff: y.mean()/(x**self.n).mean(axis=0)}
+
+    def eval(self, x):
+        return self.constant + tt.dot(x**self.n, self.coeff) #TODO: check dims

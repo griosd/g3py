@@ -29,11 +29,14 @@ def data_co2(source='sklearn'):
     return x, y
 
 
-def data_engel():
+def data_engel(dataframe = False):
     import statsmodels.api as sm
     data = sm.datasets.engel.load_pandas().data
     print(sm.datasets.engel.NOTE)
-    return data
+    if dataframe:
+        return data
+    else:
+        return data.index.values, data['income'].values
 
 
 def data_heart():

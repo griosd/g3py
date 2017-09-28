@@ -6,7 +6,7 @@ import pymc3 as pm
 import theano as th
 import theano.tensor as tt
 import matplotlib.pyplot as plt
-from ..libs import clone, DictObj
+from ..libs import clone, DictObj, save_pkl, load_pkl
 from ..libs.tensors import makefn, tt_to_num
 from ..libs.plots import figure, plot, show, plot_text
 from .. import config
@@ -108,9 +108,8 @@ class GraphicalModel:
 
     @classmethod
     def load(cls, path):
-        with open(path, 'rb') as f:
-            r = pickle.load(f)
-            print('Loaded model ' + path)
+        r = load_pkl(path)
+        print('Loaded model ' + path)
         r.activate()
         for k,v in r.components.items():
             try:
@@ -136,8 +135,7 @@ class GraphicalModel:
             if os.path.isfile(path):
                 os.remove(path)
             with self.model:
-                with open(path, 'wb') as f:
-                    pickle.dump(self, f, protocol=-1)
+                save_pkl(self, path)
             print('Saved model '+path)
         except Exception as details:
             print('Error saving model '+path, details)
@@ -177,7 +175,8 @@ class GraphicalModel:
     def params_default(self):
         default = self.params_test
         for name, component in self.components.items():
-            for k, v in transformed_hypers(component.default_hypers()).items():
+            d = transformed_hypers(component.default_hypers())
+            for k, v in d.items():
                 if k in self.model.vars:
                     default[k.name] = v
         return default
@@ -431,10 +430,10 @@ class PlotModel:
                          median=False, quantiles=False, quantiles_noise=False, samples=samples, prior=prior, noise=noise)
         return S['samples']
 
-    def scores(self, params=None, space=None, hidden=None, inputs=None, outputs=None, logp=False, bias=True, variance=False, median=False, *args, **kwargs):
+    def scores(self, params=None, space=None, hidden=None, inputs=None, outputs=None, logp=False, logpred=False, bias=True, variance=False, median=False, *args, **kwargs):
         if hidden is None:
             hidden = self.hidden
-        pred = self.predict(params=params, space=space, inputs=inputs, outputs=outputs, var=variance, median=median, distribution=logp)
+        pred = self.predict(params=params, space=space, inputs=inputs, outputs=outputs, var=variance, median=median, distribution=logpred)
         scores = DictObj()
         if bias:
             scores['_l1'] = np.mean(np.abs(pred.mean - hidden))
@@ -446,14 +445,21 @@ class PlotModel:
             scores['_median_l1'] = np.mean(np.abs(pred.median - hidden))
             scores['_median_l2'] = np.mean((pred.median - hidden)**2)
         if logp:
-            #scores['_nll'] = - pred.logp(hidden) / len(hidden)
-            scores['_nlpd'] = - pred.logpred(hidden) / len(hidden)
+            scores['_logp'] = self.logp(params)
+            scores['_loglike'] = self.loglike(params)
+            scores['_logprior'] = self.logp(params, prior=True)
+        if logpred:
+            scores['_nlpd'] = - pred.logpredictive(hidden) / len(hidden)
         return scores
+
+    def filter_params(self, params):
+        return {k: v for k, v in params.items() if k in self.params}
 
     def eval_params(self, params=None):
         r = params.copy()
-        r['_ll'] = self.logp(params)
+        r['_ll'] = self.logp(self.filter_params(params))
         r.update(self.scores(params))
+        r.update(self.transform_params(r, to_transformed=False))
         return r
 
     def average(self, datatrace, scores=True, *args, **kwargs):
@@ -531,7 +537,7 @@ class PlotModel:
 
     def plot(self, params=None, space=None, inputs=None, outputs=None, mean=True, std=True, var=False, cov=False,
              median=False, quantiles=True, quantiles_noise=True, samples=0, prior=False, noise=False,
-             values=None, data=True, big=None, plot_space=False, title=None, loc=1):
+             values=None, data=True, big=None, plot_space=False, title=None, loc='best'):
         if values is None:
             values = self.predict(params=params, space=space, inputs=inputs, outputs=outputs, mean=mean, std=std,
                                   var=var, cov=cov, median=median, quantiles=quantiles, quantiles_noise=quantiles_noise,
@@ -548,8 +554,12 @@ class PlotModel:
         if median:
             plot(self.order, values['median'], label='Median')
         if quantiles:
-            plt.fill_between(self.order, values['quantile_up'], values['quantile_down'], alpha=0.1, label='95%')
+            plot(self.order, values['quantile_up'], '--k', alpha=0.2, label='95%')
+            plot(self.order, values['quantile_down'], '--k', alpha=0.2)
+            plt.fill_between(self.order, values['quantile_up'], values['quantile_down'], alpha=0.1)
         if quantiles_noise:
+            #plot(self.order, values['noise_up'], '--k', alpha=0.2, label='noise')
+            #plot(self.order, values['noise_down'], '--k', alpha=0.2)
             plt.fill_between(self.order, values['noise_up'], values['noise_down'], alpha=0.1, label='noise')
         if samples > 0:
             plot(self.order, values['samples'], alpha=0.4)

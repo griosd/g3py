@@ -19,12 +19,16 @@ def gradient(f, wrt=None):
     if wrt:
         return tt.concatenate([gradient1(f, v) for v in wrt], axis=0)
     else:
-        return tt.zeros(0, dtype='float32')
+        return tt.zeros(0.0, dtype='float32')
 
 
 def debug(x, name='', force=False):
     if th.config.mode in ['NanGuardMode', 'DebugMode'] or force:
-        return th.printing.Print(name)(x)
+        try:
+            return th.printing.Print(name)(x)
+        except Exception as m:
+            print(name, m)
+            return x
     else:
         return x
 
