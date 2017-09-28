@@ -197,13 +197,13 @@ def marginal_datatrace(dt, items=None, like=None, regex=None, drop=None, samples
     else:
         return df.sample(samples)
 
-def marginal(dt, items=None, like=None, regex=None, drop=None, samples=None):
-    return marginal_datatrace(dt, items=None, like=None, regex=None, drop=None, samples=None)
-
 def conditional_datatrace(dt, lambda_df):
     conditional_traces = dt.loc[lambda_df, :]
     print('#' + str(len(conditional_traces)) + " (" + str(100 * len(conditional_traces) / len(dt)) + " %)")
     return conditional_traces
+
+def marginal(dt, items=None, like=None, regex=None, drop=None, samples=None):
+    return marginal_datatrace(dt, items=None, like=None, regex=None, drop=None, samples=None)
 
 def conditional(dt, lambda_df):
     return conditional_datatrace(dt, lambda_df)
