@@ -8,8 +8,10 @@ import theano.tensor as tt
 import pymc3 as pm
 from ...libs import DictObj
 
+
 def modelcontext(model=None):
     return pm.modelcontext(model)
+
 
 def get_hypers_floatX(params):
     paramsX = DictObj()
@@ -17,12 +19,14 @@ def get_hypers_floatX(params):
         paramsX[k] = np.float32(v)
     return paramsX
 
+
 def zeros(shape):
     return np.zeros(shape, dtype=th.config.floatX)
 
 
 def ones(shape):
     return np.ones(shape, dtype=th.config.floatX)
+
 
 def cvalues(shape, val):
     return np.float32(np.ones(shape, dtype=th.config.floatX) *val)
@@ -135,7 +139,7 @@ class Hypers:
 
 
 class Freedom(Hypers):
-    def __init__(self, x=None, name=None, degree=None, bound=2):
+    def __init__(self, x=None, name=None, degree=None, bound=np.float32(2.0)):
         super().__init__(x, name)
         self.degree = degree
         self.bound = bound

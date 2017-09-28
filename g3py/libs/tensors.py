@@ -24,7 +24,11 @@ def gradient(f, wrt=None):
 
 def debug(x, name='', force=False):
     if th.config.mode in ['NanGuardMode', 'DebugMode'] or force:
-        return th.printing.Print(name)(x)
+        try:
+            return th.printing.Print(name)(x)
+        except Exception as m:
+            print(name, m)
+            return x
     else:
         return x
 

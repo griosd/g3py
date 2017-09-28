@@ -197,20 +197,6 @@ class GraphicalModel:
     def params_serie(self, serie):
         return DictObj(self.model.bijection.rmap(serie))
 
-    def params_process(self, process=None, params=None, current=None, fixed=False):
-        if process is None:
-            process = self
-        if params is None:
-            params = process.params
-        if current is None:
-            current = self.params
-        params_transform = {k.replace(process.name, self.name, 1): v for k, v in params.items()}
-        params_return = DictObj({k: v for k, v in params_transform.items() if k in current.keys()})
-        params_return.update({k: v for k, v in current.items() if k not in params_transform.keys()})
-        if fixed:
-            params_return.update(self.params_fixed)
-        return params_return
-
     def compile_components(self, precompile=False):
         th_vars = [self.th_vector]
         for v in self.model.deterministics:
@@ -551,7 +537,7 @@ class PlotModel:
 
     def plot(self, params=None, space=None, inputs=None, outputs=None, mean=True, std=True, var=False, cov=False,
              median=False, quantiles=True, quantiles_noise=True, samples=0, prior=False, noise=False,
-             values=None, data=True, big=None, plot_space=False, title=None, loc=1):
+             values=None, data=True, big=None, plot_space=False, title=None, loc='best'):
         if values is None:
             values = self.predict(params=params, space=space, inputs=inputs, outputs=outputs, mean=mean, std=std,
                                   var=var, cov=cov, median=median, quantiles=quantiles, quantiles_noise=quantiles_noise,
@@ -568,8 +554,12 @@ class PlotModel:
         if median:
             plot(self.order, values['median'], label='Median')
         if quantiles:
-            plt.fill_between(self.order, values['quantile_up'], values['quantile_down'], alpha=0.1, label='95%')
+            plot(self.order, values['quantile_up'], '--k', alpha=0.2, label='95%')
+            plot(self.order, values['quantile_down'], '--k', alpha=0.2)
+            plt.fill_between(self.order, values['quantile_up'], values['quantile_down'], alpha=0.1)
         if quantiles_noise:
+            #plot(self.order, values['noise_up'], '--k', alpha=0.2, label='noise')
+            #plot(self.order, values['noise_down'], '--k', alpha=0.2)
             plt.fill_between(self.order, values['noise_up'], values['noise_down'], alpha=0.1, label='noise')
         if samples > 0:
             plot(self.order, values['samples'], alpha=0.4)

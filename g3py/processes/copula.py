@@ -1,6 +1,11 @@
-from .stochastic import EllipticalProcess, CopulaProcess
-from .gaussian import GaussianProcess
-from .studentT import StudentTProcess
+from .stochastic import StochasticProcess
+from .marginal import MarginalProcess
+
+
+class CopulaProcess(StochasticProcess):
+    def __init__(self, copula: StochasticProcess=None, marginal: MarginalProcess=None):
+        self.copula = copula
+        self.marginal = marginal
 
 
 class CopulaGaussianProcess(CopulaProcess):
@@ -9,7 +14,6 @@ class CopulaGaussianProcess(CopulaProcess):
 
 class CopulaStudentTProcess(CopulaProcess):
     pass
-
 
 
 class TransformedStudentTProcess(CopulaProcess):

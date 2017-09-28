@@ -1,10 +1,13 @@
 from .stochastic import StochasticProcess
 from .gaussian import GaussianProcess, WarpedGaussianProcess
-from .studentT import StudentTProcess
+from .studentT import StudentTProcess, WarpedStudentTProcess
 from .copula import CopulaGaussianProcess, CopulaStudentTProcess
 
 GP = GaussianProcess
 WGP = WarpedGaussianProcess
-STP = StudentTProcess
+
+TP = StudentTProcess
+WTP = WarpedStudentTProcess
+
 CGP = CopulaGaussianProcess
 CSTP = CopulaStudentTProcess
