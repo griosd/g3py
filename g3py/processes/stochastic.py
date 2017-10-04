@@ -348,7 +348,7 @@ class StochasticProcess(PlotModel):#TheanoBlackBox
 
     @staticmethod
     def _method_name(method=None):
-        def lambda_method(self, params=None, space=None, inputs=None, outputs=None, vector=None, prior=False, noise=False, array=False, *args, **kwargs):
+        def lambda_method(self, params=None, space=None, inputs=None, outputs=None, vector=[], prior=False, noise=False, array=False, *args, **kwargs):
             if params is None:
                 if array:
                     params = self.active.dict_to_array(self.params)
@@ -379,10 +379,10 @@ class StochasticProcess(PlotModel):#TheanoBlackBox
                 name += str(kwargs)
             if not hasattr(self.compiles, name):
                 #print(method)
-                if method in ['th_logpredictive', 'th_error_l1', 'th_error_l2']:
-                    th_vars = [self.th_space_, self.th_inputs_, self.th_outputs_, self.th_vector] + self.model.vars
-                else:
-                    th_vars = [self.th_space_, self.th_inputs_, self.th_outputs_] + self.model.vars
+                #if method in ['th_logpredictive', 'th_error_l1', 'th_error_l2']:
+                #    th_vars = [self.th_space_, self.th_inputs_, self.th_outputs_, self.th_vector] + self.model.vars
+                #else:
+                th_vars = [self.th_space_, self.th_inputs_, self.th_outputs_, self.th_vector] + self.model.vars
                 self.compiles[name] = self.makefn(th_vars, getattr(self, method)(prior=prior, noise=noise, *args, **kwargs),
                                              givens = [(self.th_space, self.th_space_), (self.th_inputs, self.th_inputs_), (self.th_outputs, self.th_outputs_)],
                                              bijection=None, precompile=self.precompile)

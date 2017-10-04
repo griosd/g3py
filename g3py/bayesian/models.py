@@ -426,7 +426,7 @@ class PlotModel:
         pass
 
     def sample(self, params=None, space=None, inputs=None, outputs=None, samples=1, prior=False, noise=False):
-        S = self.predict(params=params, space=space, inputs=inputs, outputs=outputs, mean=False, var=False, cov=False,
+        S = self.predict(params=params, space=space, inputs=inputs, outputs=outputs, mean=False, std=False, var=False, cov=False,
                          median=False, quantiles=False, quantiles_noise=False, samples=samples, prior=prior, noise=noise)
         return S['samples']
 
