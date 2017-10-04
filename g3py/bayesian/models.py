@@ -521,9 +521,9 @@ class PlotModel:
         if big is None:
             big = config.plot_big
         if big and self.hidden is not None:
-            plot(self.order, self.hidden, linewidth=4, label='Hidden Processes')
+            plot(self.order, self.hidden, linewidth=4, label='Hidden Process')
         elif self.hidden is not None:
-            plot(self.order, self.hidden,  label='Hidden Processes')
+            plot(self.order, self.hidden,  label='Hidden Process')
 
     def plot_observations(self, big=None):
         if big is None:
@@ -535,40 +535,52 @@ class PlotModel:
             plot(self.index, self.outputs, '.k', ms=10)
             plot(self.index, self.outputs, '.r', ms=6, label='Observations')
 
-    def plot(self, params=None, space=None, inputs=None, outputs=None, mean=True, std=True, var=False, cov=False,
+    def plot(self, params=None, space=None, inputs=None, outputs=None, mean=True, std=False, cov=False,
              median=False, quantiles=True, quantiles_noise=True, samples=0, prior=False, noise=False,
-             values=None, data=True, big=None, plot_space=False, title=None, loc='best'):
+             values=None, data=True, logp=False, big=None, plot_space=False, title=None, labels={}, loc='best', ncol=3):
         if values is None:
             values = self.predict(params=params, space=space, inputs=inputs, outputs=outputs, mean=mean, std=std,
-                                  var=var, cov=cov, median=median, quantiles=quantiles, quantiles_noise=quantiles_noise,
+                                  cov=cov, median=median, quantiles=quantiles, quantiles_noise=quantiles_noise,
                                   samples=samples, prior=prior, noise=noise)
+        if data and self.is_observed:
+            self.plot_observations(big)
         if data:
             self.plot_hidden(big)
         if mean:
-            plot(self.order, values['mean'], label='Mean')
-        if var:
-            plot(self.order, values['mean'] + 2.0 * values['std'], '--k', alpha=0.2, label='4.0 std')
+            if 'mean' not in labels:
+                labels['mean'] = 'Mean'
+            plot(self.order, values['mean'], label=labels['mean'])
+        if std:
+            if 'std' not in labels:
+                labels['std'] = '4.0 Std'
+            plot(self.order, values['mean'] + 2.0 * values['std'], '--k', alpha=0.2, label=labels['std'])
             plot(self.order, values['mean'] - 2.0 * values['std'], '--k', alpha=0.2)
         if cov:
             pass
         if median:
-            plot(self.order, values['median'], label='Median')
+            if 'median' not in labels:
+                labels['median'] = 'Median'
+            plot(self.order, values['median'], label=labels['median'])
         if quantiles:
-            plot(self.order, values['quantile_up'], '--k', alpha=0.2, label='95%')
+            if 'quantiles' not in labels:
+                labels['quantiles'] = '95% CI'
+            plot(self.order, values['quantile_up'], '--k', alpha=0.2, label=labels['quantiles'])
             plot(self.order, values['quantile_down'], '--k', alpha=0.2)
             plt.fill_between(self.order, values['quantile_up'], values['quantile_down'], alpha=0.1)
         if quantiles_noise:
-            #plot(self.order, values['noise_up'], '--k', alpha=0.2, label='noise')
-            #plot(self.order, values['noise_down'], '--k', alpha=0.2)
-            plt.fill_between(self.order, values['noise_up'], values['noise_down'], alpha=0.1, label='noise')
+            if 'quantiles_noise' not in labels:
+                labels['quantiles_noise'] = '95% CI + Noise'
+            plt.fill_between(self.order, values['noise_up'], values['noise_down'], alpha=0.1, label=labels['quantiles_noise'] )
         if samples > 0:
             plot(self.order, values['samples'], alpha=0.4)
         if title is None:
             title = self.description['title']
-        if data and self.is_observed:
-            self.plot_observations(big)
+        if logp:
+            if params is None:
+                params = self.params
+            title += ' (logp: {0:.3f})'.format(np.float32(self.logp(params)))
         if loc is not None:
-            plot_text(title, self.description['x'], self.description['y'], loc=loc)
+            plot_text(title, self.description['x'], self.description['y'], loc=loc, ncol=ncol)
         if plot_space:
             show()
             self.plot_space()

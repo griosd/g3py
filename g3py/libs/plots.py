@@ -56,7 +56,7 @@ def style_big():
     plt.rcParams['ytick.labelsize'] = 36  # x-numbers size
     plt.rcParams['axes.labelsize'] = 36  # xy-label size
     plt.rcParams['axes.titlesize'] = 36  # xy-label size
-    plt.rcParams['legend.fontsize'] = 20  # legend size
+    plt.rcParams['legend.fontsize'] = 30  # legend size
     config.plot_big = True
 
 
@@ -70,6 +70,10 @@ def style_big_seaborn():
     config.plot_big = True
 
 
+def style_text(size=36):
+    plt.rcParams['legend.fontsize'] = size  # legend size
+
+
 def style_widget():
     return display.display(display.HTML('''<style>
                 .widget-label { min-width: 30ex !important; }
@@ -78,7 +82,7 @@ def style_widget():
             </style>'''))
 
 
-def plot_text(title="title", x="xlabel", y="ylabel", ncol=3, loc=8, axis=None, legend=True):
+def plot_text(title="title", x="xlabel", y="ylabel", ncol=3, loc='best', axis=None, legend=True):
     plt.axis('tight')
     plt.title(title)
     plt.xlabel(x)
