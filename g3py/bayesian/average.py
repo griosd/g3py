@@ -407,6 +407,7 @@ def hist_datatrace(dt, reference=None, items=None, like=None, drop=['_burnin', '
 
 
 
+
 def scatter_datatrace(dt, items=None, like=None, drop=['_burnin', '_outlayer', '_nchain', '_niter'], regex=None, samples=100000, burnin=True, outlayer=True, cluster=None, figsize=(15, 15), bins=200, s=4, cmap=cm.rainbow_r, *args, **kwargs):
     if burnin and hasattr(dt, '_burnin'):
         dt = dt[dt._burnin]
