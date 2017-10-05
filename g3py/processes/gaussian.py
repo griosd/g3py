@@ -64,7 +64,7 @@ class WarpedGaussianProcess(GaussianProcess):
             kwargs['name'] = 'WGP'
         super().__init__(*args, **kwargs)
 
-    def th_mean(self, prior=False, noise=False, n=10):
+    def th_mean(self, prior=False, noise=False, simulations=None, n=10):
         debug_p('mean')
         _a, _w = np.polynomial.hermite.hermgauss(n)
         a = th.shared(_a.astype(th.config.floatX), borrow=False).dimshuffle([0, 'x'])
@@ -101,14 +101,31 @@ class WarpedGaussianDistribution(pm.Continuous):
         #print(value.tag.test_value)
         #print(mu.tag.test_value)
         #print(mapping.inv(value).tag.test_value)
+        #mu = debug(mu, 'mu', force=True)
         delta = mapping.inv(value) - mu
 
-        lcho = tsl.solve_lower_triangular(cho, delta)
+        #delta = debug(delta, 'delta', force=True)
+        #cho = debug(cho, 'cho', force=True)
+        lcho = tsl.solve_lower_triangular(cho.T, delta)
+        #lcho = debug(lcho, 'lcho', force=True)
+
+        lcho2 = lcho.T.dot(lcho)
+        #lcho2 = debug(lcho2, 'lcho2', force=True)
 
         npi = np.float32(-0.5) * cho.shape[0].astype(th.config.floatX) * tt.log(np.float32(2.0 * np.pi))
-        dot2 = np.float32(-0.5) * lcho.T.dot(lcho)
+        dot2 = np.float32(-0.5) * lcho2
+
+        #diag = debug(tnl.diag(cho), 'diag', force=True)
+        #_log= debug(tt.log(diag), 'log', force=True)
+
         det_k = - tt.sum(tt.log(tnl.diag(cho)))
         det_m = mapping.logdet_dinv(value)
+
+        npi = debug(npi, 'npi', force=False)
+        dot2 = debug(dot2, 'dot2', force=False)
+        det_k = debug(det_k, 'det_k', force=False)
+        det_m = debug(det_m, 'det_m', force=False)
+
         r = npi + dot2 + det_k + det_m
 
         cond1 = tt.or_(tt.any(tt.isinf_(delta)), tt.any(tt.isnan_(delta)))

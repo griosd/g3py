@@ -88,6 +88,7 @@ def inf_to_num(r, neg=-np.float32(1e20), pos=np.float32(1e20)):
 
 
 def tt_to_num(r, nan=np.float32(0), inf=np.float32(1e10)):
+    r = r.astype(th.config.floatX)
     return tt.switch(tt.isnan(r), np.float32(nan), tt.switch(tt.isinf(r), np.nan_to_num(np.float32(inf)), r))
 
 

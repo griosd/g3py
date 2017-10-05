@@ -258,7 +258,7 @@ class StochasticProcess(PlotModel):#TheanoBlackBox
     def th_median(self, prior=False, noise=False):
         pass
 
-    def th_mean(self, prior=False, noise=False):
+    def th_mean(self, prior=False, noise=False, simulations=None):
         pass
 
     def th_variance(self, prior=False, noise=False):
@@ -309,15 +309,22 @@ class StochasticProcess(PlotModel):#TheanoBlackBox
         self.set_space(space=self.th_space_.tag.test_value, hidden=self.th_vector.tag.test_value,
                        inputs=self.th_inputs_.tag.test_value, outputs=self.th_outputs_.tag.test_value)
         self.compiles = DictObj()
-        self.mean = types.MethodType(self._method_name('th_mean'), self)
-        self.median = types.MethodType(self._method_name('th_median'), self)
-        self.variance = types.MethodType(self._method_name('th_variance'), self)
-        self.std = types.MethodType(self._method_name('th_std'), self)
-        self.covariance = types.MethodType(self._method_name('th_covariance'), self)
-        self.logpredictive = types.MethodType(self._method_name('th_logpredictive'), self)
-
-        self.error_l1 = types.MethodType(self._method_name('th_error_l1'), self)
-        self.error_l2 = types.MethodType(self._method_name('th_error_l2'), self)
+        if not hasattr(self, 'mean'):
+            self.mean = types.MethodType(self._method_name('th_mean'), self)
+        if not hasattr(self, 'median'):
+            self.median = types.MethodType(self._method_name('th_median'), self)
+        if not hasattr(self, 'variance'):
+            self.variance = types.MethodType(self._method_name('th_variance'), self)
+        if not hasattr(self, 'std'):
+            self.std = types.MethodType(self._method_name('th_std'), self)
+        if not hasattr(self, 'covariance'):
+            self.covariance = types.MethodType(self._method_name('th_covariance'), self)
+        if not hasattr(self, 'logpredictive'):
+            self.logpredictive = types.MethodType(self._method_name('th_logpredictive'), self)
+        if not hasattr(self, 'error_l1'):
+            self.error_l1 = types.MethodType(self._method_name('th_error_l1'), self)
+        if not hasattr(self, 'error_l2'):
+            self.error_l2 = types.MethodType(self._method_name('th_error_l2'), self)
 
         # self.density = types.MethodType(self._method_name('th_density'), self)
 
@@ -406,7 +413,8 @@ class StochasticProcess(PlotModel):#TheanoBlackBox
         return self.active.potentials
 
     def predict(self, params=None, space=None, inputs=None, outputs=None, mean=True, std=True, var=False, cov=False,
-                median=False, quantiles=False, quantiles_noise=False, samples=0, distribution=False, prior=False, noise=False):
+                median=False, quantiles=False, quantiles_noise=False, samples=0, distribution=False,
+                prior=False, noise=False, simulations=100):
         if params is None:
             params = self.params
         if not self.is_observed:
@@ -419,11 +427,11 @@ class StochasticProcess(PlotModel):#TheanoBlackBox
             outputs = self.outputs
         values = DictObj()
         if mean:
-            values['mean'] = self.mean(params, space, inputs, outputs, prior=prior, noise=noise)
+            values['mean'] = self.mean(params, space, inputs, outputs, prior=prior, noise=noise, simulations=simulations)
         if var:
-            values['variance'] = self.variance(params, space, inputs, outputs, prior=prior, noise=noise)
+            values['variance'] = self.variance(params, space, inputs, outputs, prior=prior, noise=noise, simulations=simulations)
         if std:
-            values['std'] = self.std(params, space, inputs, outputs, prior=prior, noise=noise)
+            values['std'] = self.std(params, space, inputs, outputs, prior=prior, noise=noise, simulations=simulations)
         if cov:
             values['covariance'] = self.covariance(params, space, inputs, outputs, prior=prior, noise=noise)
         if median:

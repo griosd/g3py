@@ -38,8 +38,8 @@ class Transport(Hypers):
             return TransportComposed(self, other)
         else:
             return TransportComposed(self, other)
-    __imatmul__ = __matmul__
-    __rmatmul__ = __matmul__
+    #__imatmul__ = __matmul__
+    #__rmatmul__ = __matmul__
 
 
 class TransportOperation(Transport):
@@ -121,7 +121,7 @@ class TLocation(TElemwise):
         return outputs - self.location(inputs)
 
     def logdet_dinv(self, inputs, outputs):
-        return tt.ones((), dtype=th.config.floatX)
+        return tt.zeros((), dtype=th.config.floatX)
 
 
 class TScale(TElemwise):
@@ -137,7 +137,10 @@ class TScale(TElemwise):
         return outputs / self.scale(inputs)
 
     def logdet_dinv(self, inputs, outputs):
-        return -tt.sum(tt.log(self.scale(inputs)))
+        _scale = debug(self.scale(inputs), 'scale', force=False)
+        _log = debug(tt.log(_scale), 'log', force=False)
+        _sum = debug(tt.sum(_log), 'log', force=False)
+        return -_sum
 
 
 class TMapping(TElemwise):
@@ -171,7 +174,7 @@ class TKernel(TLinear):
         return tsl.solve_lower_triangular(cho, outputs)
 
     def logdet_dinv(self, inputs, outputs):
-        cho = cholesky_robust(self.kernel.cov(inputs)).T
+        cho = cholesky_robust(self.kernel.cov(inputs))
         return - tt.sum(tt.log(tnl.diag(cho)))
 
 

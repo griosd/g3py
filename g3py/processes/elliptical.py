@@ -141,7 +141,7 @@ class EllipticalProcess(StochasticProcess):
         debug_p('median' + str(prior) + str(noise))
         return self.f_mapping(self.th_location(prior=prior, noise=noise))
 
-    def th_mean(self, prior=False, noise=False):
+    def th_mean(self, prior=False, noise=False, simulations=None):
         debug_p('mean' + str(prior) + str(noise))
         return self.f_mapping(self.th_location(prior=prior, noise=noise))
 

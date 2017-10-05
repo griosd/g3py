@@ -11,7 +11,7 @@ from theano.ifelse import ifelse
 from .elliptical import debug_p
 from .stochastic import StochasticProcess
 from .hypers.transports import Transport, ID
-from ..libs.tensors import cholesky_robust, tt_to_num
+from ..libs.tensors import debug
 
 
 class TransportProcess(StochasticProcess):
@@ -58,7 +58,7 @@ class TransportProcess(StochasticProcess):
         debug_p('median' + str(prior) + str(noise))
         return self.transport_outputs_space#self.f_transport(self.th_space, self.th_vector)
 
-    def th_mean(self, prior=False, noise=False):
+    def th_mean(self, prior=False, noise=False, simulations=None):
         pass
 
     def th_variance(self, prior=False, noise=False):
@@ -98,7 +98,7 @@ class TransportGaussianProcess(TransportProcess):
                                                           observed=self.th_outputs, inputs=self.th_inputs,
                                                           testval=self.outputs, dtype=th.config.floatX)
 
-    def th_mean(self, prior=False, noise=False, n=10):
+    def th_mean(self, prior=False, noise=False, simulations=None, n=10):
         #debug_p('mean')
         #_a, _w = np.polynomial.hermite.hermgauss(n)
         #a = th.shared(_a.astype(th.config.floatX), borrow=False).dimshuffle([0, 'x'])
@@ -107,12 +107,13 @@ class TransportGaussianProcess(TransportProcess):
         pass
 
     def th_variance(self, prior=False, noise=False, n=10):
-        debug_p('variance')
-        _a, _w = np.polynomial.hermite.hermgauss(n)
-        a = th.shared(_a.astype(th.config.floatX), borrow=False).dimshuffle([0, 'x'])
-        w = th.shared(_w.astype(th.config.floatX), borrow=False)
-        return self.transport_gauss_hermite(lambda i, v: self.f_transport(i, v)**2, self.th_space, a, w) \
-               - self.th_mean(prior=prior, noise=noise) ** 2
+        #debug_p('variance')
+        #_a, _w = np.polynomial.hermite.hermgauss(n)
+        #a = th.shared(_a.astype(th.config.floatX), borrow=False).dimshuffle([0, 'x'])
+        #w = th.shared(_w.astype(th.config.floatX), borrow=False)
+        #return self.transport_gauss_hermite(lambda i, v: self.f_transport(i, v)**2, self.th_space, a, w) \
+        #       - self.th_mean(prior=prior, noise=noise) ** 2
+        pass
 
     def th_covariance(self, prior=False, noise=False):
         pass
@@ -121,6 +122,14 @@ class TransportGaussianProcess(TransportProcess):
     def transport_gauss_hermite(cls, f, i, a, w):
         grille = np.sqrt(2).astype(th.config.floatX) * a
         return tt.dot(w, f(i, grille.flatten()).reshape(grille.shape)) / np.sqrt(np.pi).astype(th.config.floatX)
+
+    def mean(self, params=None, space=None, inputs=None, outputs=None, prior=False, noise=False, simulations=10):
+        return self.sampler(params=params, space=space, inputs=inputs, outputs=outputs, samples=simulations,
+                            prior=prior, noise=noise).mean(axis=1)
+
+    def std(self, params=None, space=None, inputs=None, outputs=None, prior=False, noise=False, simulations=10):
+        return self.sampler(params=params, space=space, inputs=inputs, outputs=outputs, samples=simulations,
+                            prior=prior, noise=noise).std(axis=1)
 
     def quantiler(self, params=None, space=None, inputs=None, outputs=None, q=0.975, prior=False, noise=False):
         #debug_p('quantiler' + str(q) + str(prior) + str(noise))
@@ -153,6 +162,10 @@ class TransportGaussianDistribution(pm.Continuous):
 
         npi = np.float32(-0.5) * value.shape[0].astype(th.config.floatX) * tt.log(np.float32(2.0 * np.pi))
         dot2 = np.float32(-0.5) * delta.T.dot(delta)
+
+        npi = debug(npi, 'npi', force=False)
+        dot2 = debug(dot2, 'dot2', force=False)
+        det_m = debug(det_m, 'det_m', force=False)
 
         r = npi + dot2 + det_m
 
