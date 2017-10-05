@@ -12,6 +12,7 @@ from .processes.hypers.means import *
 from .processes.hypers.metrics import *
 from .processes.hypers.kernels import *
 from .processes.hypers.mappings import *
+from .processes.hypers.transports import *
 
 
 def version(file=None):
