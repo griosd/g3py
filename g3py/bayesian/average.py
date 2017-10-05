@@ -374,19 +374,38 @@ def hist_datatrace(dt, reference=None, items=None, like=None, drop=['_burnin', '
         dt = dt.drop(drop, axis=1)
     marginal = marginal_datatrace(dt, items=items, like=like, regex=regex, samples=samples)
     marginal.hist(bins=bins, layout=layout, figsize=figsize)
+
     if reference is not None:
-        columns = sorted(marginal.columns)
-        i = 1
-        for k in columns:
-            plt.subplot(layout[0], layout[1], i)
-            i += 1
-            try:
-                plt.axvline(x=reference[k], color='r', linestyle='--')
-            except:
+        if type(reference) == dict:
+            columns = sorted(marginal.columns)
+            i = 1
+            for k in columns:
+                plt.subplot(layout[0], layout[1], i)
+                i += 1
                 try:
-                    plt.axvline(x=reference[k[:-3]][int(k[-1])], color='r', linestyle='--')
+                    plt.axvline(x=reference[k], color='r', linestyle='--')
                 except:
-                    pass
+                    try:
+                        plt.axvline(x=reference[k[:-3]][int(k[-1])], color='r', linestyle='--')
+                    except:
+                        pass
+
+        if type(reference) == list:
+            for ref in reference:
+                columns = sorted(marginal.columns)
+                i = 1
+                for k in columns:
+                    plt.subplot(layout[0], layout[1], i)
+                    i += 1
+                    try:
+                        plt.axvline(x=ref[k], color='r', linestyle='--')
+                    except:
+                        try:
+                            plt.axvline(x=ref[k[:-3]][int(k[-1])], color='r', linestyle='--')
+                        except:
+                            pass
+
+
 
 
 def scatter_datatrace(dt, items=None, like=None, drop=['_burnin', '_outlayer', '_nchain', '_niter'], regex=None, samples=100000, burnin=True, outlayer=True, cluster=None, figsize=(15, 15), bins=200, s=4, cmap=cm.rainbow_r, *args, **kwargs):
