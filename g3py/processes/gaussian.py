@@ -30,7 +30,7 @@ class GaussianProcess(EllipticalProcess):
     def th_logpredictive(self, prior=False, noise=False):
         return WarpedGaussianDistribution.logp_cho(value=self.th_vector,
                                                    mu=self.th_location(prior=prior, noise=noise),
-                                                   cho=self.th_kernel_sd(prior=prior, noise=True, cholesky=True),
+                                                   cho=self.th_cholesky_diag(prior=prior, noise=True),
                                                    mapping=self.f_mapping)
 
     def quantiler(self, params=None, space=None, inputs=None, outputs=None, q=0.975, prior=False, noise=False):

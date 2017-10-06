@@ -350,9 +350,6 @@ class StochasticProcess(PlotModel):#TheanoBlackBox
     def lambda_method(self, *args, **kwargs):
         pass
 
-    def filter_params(self, params):
-        return {k: v for k, v in params.items() if k in self.params}
-
     @staticmethod
     def _method_name(method=None):
         def lambda_method(self, params=None, space=None, inputs=None, outputs=None, vector=[], prior=False, noise=False, array=False, *args, **kwargs):
