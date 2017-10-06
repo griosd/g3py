@@ -102,12 +102,14 @@ class WarpedGaussianDistribution(pm.Continuous):
         #print(mu.tag.test_value)
         #print(mapping.inv(value).tag.test_value)
         #mu = debug(mu, 'mu', force=True)
+
+        value = debug(value, 'value', force=False)
         delta = mapping.inv(value) - mu
 
         #delta = debug(delta, 'delta', force=True)
-        #cho = debug(cho, 'cho', force=True)
+        cho = debug(cho, 'cho', force=False)
         lcho = tsl.solve_lower_triangular(cho.T, delta)
-        #lcho = debug(lcho, 'lcho', force=True)
+        lcho = debug(lcho, 'lcho', force=False)
 
         lcho2 = lcho.T.dot(lcho)
         #lcho2 = debug(lcho2, 'lcho2', force=True)

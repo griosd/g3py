@@ -15,6 +15,9 @@ class Transport(Hypers):
     def __call__(self, inputs, outputs):
         pass
 
+    def diag(self, inputs, outputs):
+        return self(inputs, outputs)
+
     def inv(self, inputs, outputs):
         pass
 
@@ -73,6 +76,9 @@ class TransportComposed(TransportOperation):
 
     def __call__(self, t, x):
         return self.t1(t, self.t2(t, x))
+
+    def diag(self, t, x):
+        return self.t1.diag(t, self.t2.diag(t, x))
 
     def inv(self, t, y):
         return self.t2.inv(t, self.t1.inv(t, y))
@@ -166,16 +172,23 @@ class TKernel(TLinear):
         self.parametrics.append(self.kernel)
 
     def __call__(self, inputs, outputs):
-        cho = cholesky_robust(self.kernel.cov(inputs)).T
+        # cho = cholesky_robust(tnl.diag(tnl.diag(self.kernel.cov(inputs))))
+        cho = cholesky_robust(self.kernel.cov(inputs))
+        return cho.dot(outputs)
+
+    def diag(self, inputs, outputs):
+        cho = tnl.diag(tt.sqrt(tnl.diag(self.kernel.cov(inputs))))
+        # cho = cholesky_robust(self.kernel.cov(inputs))
         return cho.dot(outputs)
 
     def inv(self, inputs, outputs):
-        cho = cholesky_robust(self.kernel.cov(inputs)).T
-        return tsl.solve_lower_triangular(cho, outputs)
+        cho = cholesky_robust(self.kernel.cov(inputs))
+        #cho = debug(cho, 'cho', force=False)
+        return tsl.solve_lower_triangular(cho.T, outputs)
 
     def logdet_dinv(self, inputs, outputs):
         cho = cholesky_robust(self.kernel.cov(inputs))
-        return - tt.sum(tt.log(tnl.diag(cho)))
+        return - tt.sum(tt.log(tnl.diag(cho.T)))
 
 
 class TTriangular(TNoLinear):
