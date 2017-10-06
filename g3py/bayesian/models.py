@@ -453,7 +453,8 @@ class PlotModel:
         return scores
 
     def filter_params(self, params):
-        return {k: v for k, v in params.items() if k in self.params}
+        #return {k: v for k, v in params.items() if k in self.params}
+        return {k: params[k] for k in self.model.test_point}
 
     def eval_params(self, params=None):
         r = params.copy()
