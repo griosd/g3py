@@ -27,6 +27,7 @@ class StochasticProcess(PlotModel):#TheanoBlackBox
                 self.__dict__.update(load.__dict__)
                 self._compile_methods()
                 print('Loaded model ' + file)
+                self.set_space(space=space, hidden=hidden, order=order, inputs=inputs, outputs=outputs, index=index)
                 return
             except:
                 print('Model Not Found in '+str(file))
@@ -261,7 +262,7 @@ class StochasticProcess(PlotModel):#TheanoBlackBox
     def th_mean(self, prior=False, noise=False, simulations=None):
         pass
 
-    def th_variance(self, prior=False, noise=False):
+    def th_variance(self, prior=False, noise=False, simulations=None):
         pass
 
     def th_covariance(self, prior=False, noise=False):
@@ -274,7 +275,10 @@ class StochasticProcess(PlotModel):#TheanoBlackBox
         pass
 
     def th_std(self, *args, **kwargs):
-        return tt.sqrt(self.th_variance(*args, **kwargs))
+        if self.th_variance(*args, **kwargs) is not None:
+            return tt.sqrt(self.th_variance(*args, **kwargs))
+        else:
+            return None
 
     def th_logp(self, prior=False, noise=False):
         if prior:
@@ -309,21 +313,21 @@ class StochasticProcess(PlotModel):#TheanoBlackBox
         self.set_space(space=self.th_space_.tag.test_value, hidden=self.th_vector.tag.test_value,
                        inputs=self.th_inputs_.tag.test_value, outputs=self.th_outputs_.tag.test_value)
         self.compiles = DictObj()
-        if not hasattr(self, 'mean'):
+        if self.th_mean() is not None:
             self.mean = types.MethodType(self._method_name('th_mean'), self)
-        if not hasattr(self, 'median'):
+        if self.th_median() is not None:
             self.median = types.MethodType(self._method_name('th_median'), self)
-        if not hasattr(self, 'variance'):
+        if self.th_variance() is not None:
             self.variance = types.MethodType(self._method_name('th_variance'), self)
-        if not hasattr(self, 'std'):
+        if self.th_std() is not None:
             self.std = types.MethodType(self._method_name('th_std'), self)
-        if not hasattr(self, 'covariance'):
+        if self.th_covariance() is not None:
             self.covariance = types.MethodType(self._method_name('th_covariance'), self)
-        if not hasattr(self, 'logpredictive'):
+        if self.th_logpredictive() is not None:
             self.logpredictive = types.MethodType(self._method_name('th_logpredictive'), self)
-        if not hasattr(self, 'error_l1'):
+        if self.th_error_l1() is not None:
             self.error_l1 = types.MethodType(self._method_name('th_error_l1'), self)
-        if not hasattr(self, 'error_l2'):
+        if self.th_error_l2() is not None:
             self.error_l2 = types.MethodType(self._method_name('th_error_l2'), self)
 
         # self.density = types.MethodType(self._method_name('th_density'), self)

@@ -195,7 +195,7 @@ class EllipticalProcess(StochasticProcess):
         debug_p('mean' + str(prior) + str(noise))
         return self.f_mapping(self.th_location(prior=prior, noise=noise))
 
-    def th_variance(self, prior=False, noise=False):
+    def th_variance(self, prior=False, noise=False, simulations=None):
         debug_p('variance' + str(prior) + str(noise))
         return self.th_kernel_diag(prior=prior, noise=noise)
 

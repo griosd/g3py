@@ -173,15 +173,6 @@ def cluster_datatrace(process, dt, n_components=5, bayesian=True, burnin=True, n
     return _cluster
 
 
-def save_datatrace(dt, path='datatrace.h5'):
-    if path.rfind('/') > -1:
-        os.makedirs(path[:path.rfind('/')], exist_ok=True)
-    dt.to_hdf(path, 'datatrace', mode='w')
-
-
-def load_datatrace(path='datatrace.h5'):
-    return pd.read_hdf(path)
-
 
 # SELECTION
 

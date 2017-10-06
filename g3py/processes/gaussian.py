@@ -108,7 +108,7 @@ class WarpedGaussianDistribution(pm.Continuous):
 
         #delta = debug(delta, 'delta', force=True)
         #cho = debug(cho, 'cho', force=False)
-        lcho = tsl.solve_lower_triangular(cho, delta)
+        lcho = tsl.solve_lower_triangular(cho.T, delta)
         #lcho = debug(lcho, 'lcho', force=False)
 
         lcho2 = lcho.T.dot(lcho)

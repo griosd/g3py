@@ -286,7 +286,7 @@ class GraphicalModel:
             r[self.model[k]] = v
         return r
 
-
+# TODO: Check
 class OldGraphicalModel:
 
     def __init__(self):
@@ -433,7 +433,7 @@ class PlotModel:
     def scores(self, params=None, space=None, hidden=None, inputs=None, outputs=None, logp=False, logpred=False, bias=True, variance=False, median=False, *args, **kwargs):
         if hidden is None:
             hidden = self.hidden
-        pred = self.predict(params=params, space=space, inputs=inputs, outputs=outputs, var=variance, median=median, distribution=logpred)
+        pred = self.predict(params=params, space=space, inputs=inputs, outputs=outputs, mean=True, var=variance, median=median, distribution=logpred)
         scores = DictObj()
         if bias:
             scores['_l1'] = np.mean(np.abs(pred.mean - hidden))
