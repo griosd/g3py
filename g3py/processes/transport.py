@@ -11,7 +11,7 @@ from theano.ifelse import ifelse
 from .elliptical import debug_p
 from .stochastic import StochasticProcess
 from .hypers.transports import Transport, ID
-from ..libs.tensors import cholesky_robust, tt_to_num
+from ..libs.tensors import debug
 
 
 class TransportProcess(StochasticProcess):
@@ -36,10 +36,13 @@ class TransportProcess(StochasticProcess):
         # Basic Tensors
         self.transport_outputs_inputs = self.f_transport(self.th_inputs, self.th_vector)
         self.transport_latent_inputs = self.f_transport.inv(self.th_inputs, self.th_outputs)
+
         self.transport_outputs_space = self.f_transport(self.th_space, self.th_vector)
+        self.transport_diag_space = self.f_transport.diag(self.th_space, self.th_vector)
         self.transport_latent_space = self.f_transport.inv(self.th_space, self.th_vector)
         # TODO: Check this
         self.transport_outputs_posterior = self.f_transport(self.th_space, self.th_vector)
+        self.transport_diag_posterior = self.f_transport.diag(self.th_space, self.th_vector)
         self.transport_latent_posterior = self.f_transport.inv(self.th_space, self.th_vector)
 
     def th_transport(self, prior=False, noise=False):
@@ -47,6 +50,12 @@ class TransportProcess(StochasticProcess):
             return self.transport_outputs_space
         else:
             return self.transport_outputs_posterior
+
+    def th_transport_diag(self, prior=False, noise=False):
+        if prior:
+            return self.transport_diag_space
+        else:
+            return self.transport_diag_posterior
 
     def th_transport_inv(self, prior=False, noise=False):
         if prior:
@@ -56,9 +65,9 @@ class TransportProcess(StochasticProcess):
 
     def th_median(self, prior=False, noise=False):
         debug_p('median' + str(prior) + str(noise))
-        return self.transport_outputs_space#self.f_transport(self.th_space, self.th_vector)
+        return self.transport_diag_space#self.f_transport(self.th_space, self.th_vector)
 
-    def th_mean(self, prior=False, noise=False):
+    def th_mean(self, prior=False, noise=False, simulations=None):
         pass
 
     def th_variance(self, prior=False, noise=False):
@@ -70,6 +79,7 @@ class TransportProcess(StochasticProcess):
     def _compile_methods(self):
         super()._compile_methods()
         self.transport = types.MethodType(self._method_name('th_transport'), self)
+        self.transport_diag = types.MethodType(self._method_name('th_transport_diag'), self)
         self.transport_inv = types.MethodType(self._method_name('th_transport_inv'), self)
 
     def plot_transport(self, params=None, space=None, inputs=None, prior=True, noise=False, centers=[1/10, 1/2, 9/10]):
@@ -98,7 +108,7 @@ class TransportGaussianProcess(TransportProcess):
                                                           observed=self.th_outputs, inputs=self.th_inputs,
                                                           testval=self.outputs, dtype=th.config.floatX)
 
-    def th_mean(self, prior=False, noise=False, n=10):
+    def th_mean(self, prior=False, noise=False, simulations=None, n=10):
         #debug_p('mean')
         #_a, _w = np.polynomial.hermite.hermgauss(n)
         #a = th.shared(_a.astype(th.config.floatX), borrow=False).dimshuffle([0, 'x'])
@@ -107,12 +117,13 @@ class TransportGaussianProcess(TransportProcess):
         pass
 
     def th_variance(self, prior=False, noise=False, n=10):
-        debug_p('variance')
-        _a, _w = np.polynomial.hermite.hermgauss(n)
-        a = th.shared(_a.astype(th.config.floatX), borrow=False).dimshuffle([0, 'x'])
-        w = th.shared(_w.astype(th.config.floatX), borrow=False)
-        return self.transport_gauss_hermite(lambda i, v: self.f_transport(i, v)**2, self.th_space, a, w) \
-               - self.th_mean(prior=prior, noise=noise) ** 2
+        #debug_p('variance')
+        #_a, _w = np.polynomial.hermite.hermgauss(n)
+        #a = th.shared(_a.astype(th.config.floatX), borrow=False).dimshuffle([0, 'x'])
+        #w = th.shared(_w.astype(th.config.floatX), borrow=False)
+        #return self.transport_gauss_hermite(lambda i, v: self.f_transport(i, v)**2, self.th_space, a, w) \
+        #       - self.th_mean(prior=prior, noise=noise) ** 2
+        pass
 
     def th_covariance(self, prior=False, noise=False):
         pass
@@ -122,11 +133,19 @@ class TransportGaussianProcess(TransportProcess):
         grille = np.sqrt(2).astype(th.config.floatX) * a
         return tt.dot(w, f(i, grille.flatten()).reshape(grille.shape)) / np.sqrt(np.pi).astype(th.config.floatX)
 
+    def mean(self, params=None, space=None, inputs=None, outputs=None, prior=False, noise=False, simulations=10):
+        return self.sampler(params=params, space=space, inputs=inputs, outputs=outputs, samples=simulations,
+                            prior=prior, noise=noise).mean(axis=1)
+
+    def std(self, params=None, space=None, inputs=None, outputs=None, prior=False, noise=False, simulations=10):
+        return self.sampler(params=params, space=space, inputs=inputs, outputs=outputs, samples=simulations,
+                            prior=prior, noise=noise).std(axis=1)
+
     def quantiler(self, params=None, space=None, inputs=None, outputs=None, q=0.975, prior=False, noise=False):
         #debug_p('quantiler' + str(q) + str(prior) + str(noise))
         p = stats.norm.ppf(q)
-        return self.transport(params, space, inputs, outputs, vector=np.ones(len(space))*p,
-                       prior=prior, noise=noise)
+        return self.transport_diag(params, space, inputs, outputs, vector=np.ones(len(space))*p,
+                                   prior=prior, noise=noise)
 
     def sampler(self, params=None, space=None, inputs=None, outputs=None, samples=1, prior=False, noise=False):
         #debug_p('sampler' + str(samples) + str(prior) + str(noise)+str(len(self.space)))
@@ -148,11 +167,18 @@ class TransportGaussianDistribution(pm.Continuous):
         #print(value.tag.test_value)
         #print(mu.tag.test_value)
         #print(mapping.inv(value).tag.test_value)
+
+        value = debug(value, 'value', force=False)
         delta = transport.inv(inputs, value)
         det_m = transport.logdet_dinv(inputs, value)
+        delta = debug(delta, 'delta', force=False)
 
         npi = np.float32(-0.5) * value.shape[0].astype(th.config.floatX) * tt.log(np.float32(2.0 * np.pi))
         dot2 = np.float32(-0.5) * delta.T.dot(delta)
+
+        npi = debug(npi, 'npi', force=False)
+        dot2 = debug(dot2, 'dot2', force=False)
+        det_m = debug(det_m, 'det_m', force=False)
 
         r = npi + dot2 + det_m
 

@@ -27,6 +27,7 @@ class StochasticProcess(PlotModel):#TheanoBlackBox
                 self.__dict__.update(load.__dict__)
                 self._compile_methods()
                 print('Loaded model ' + file)
+                self.set_space(space=space, hidden=hidden, order=order, inputs=inputs, outputs=outputs, index=index)
                 return
             except:
                 print('Model Not Found in '+str(file))
@@ -258,10 +259,10 @@ class StochasticProcess(PlotModel):#TheanoBlackBox
     def th_median(self, prior=False, noise=False):
         pass
 
-    def th_mean(self, prior=False, noise=False):
+    def th_mean(self, prior=False, noise=False, simulations=None):
         pass
 
-    def th_variance(self, prior=False, noise=False):
+    def th_variance(self, prior=False, noise=False, simulations=None):
         pass
 
     def th_covariance(self, prior=False, noise=False):
@@ -274,7 +275,10 @@ class StochasticProcess(PlotModel):#TheanoBlackBox
         pass
 
     def th_std(self, *args, **kwargs):
-        return tt.sqrt(self.th_variance(*args, **kwargs))
+        if self.th_variance(*args, **kwargs) is not None:
+            return tt.sqrt(self.th_variance(*args, **kwargs))
+        else:
+            return None
 
     def th_logp(self, prior=False, noise=False):
         if prior:
@@ -309,15 +313,22 @@ class StochasticProcess(PlotModel):#TheanoBlackBox
         self.set_space(space=self.th_space_.tag.test_value, hidden=self.th_vector.tag.test_value,
                        inputs=self.th_inputs_.tag.test_value, outputs=self.th_outputs_.tag.test_value)
         self.compiles = DictObj()
-        self.mean = types.MethodType(self._method_name('th_mean'), self)
-        self.median = types.MethodType(self._method_name('th_median'), self)
-        self.variance = types.MethodType(self._method_name('th_variance'), self)
-        self.std = types.MethodType(self._method_name('th_std'), self)
-        self.covariance = types.MethodType(self._method_name('th_covariance'), self)
-        self.logpredictive = types.MethodType(self._method_name('th_logpredictive'), self)
-
-        self.error_l1 = types.MethodType(self._method_name('th_error_l1'), self)
-        self.error_l2 = types.MethodType(self._method_name('th_error_l2'), self)
+        if self.th_mean() is not None:
+            self.mean = types.MethodType(self._method_name('th_mean'), self)
+        if self.th_median() is not None:
+            self.median = types.MethodType(self._method_name('th_median'), self)
+        if self.th_variance() is not None:
+            self.variance = types.MethodType(self._method_name('th_variance'), self)
+        if self.th_std() is not None:
+            self.std = types.MethodType(self._method_name('th_std'), self)
+        if self.th_covariance() is not None:
+            self.covariance = types.MethodType(self._method_name('th_covariance'), self)
+        if self.th_logpredictive() is not None:
+            self.logpredictive = types.MethodType(self._method_name('th_logpredictive'), self)
+        if self.th_error_l1() is not None:
+            self.error_l1 = types.MethodType(self._method_name('th_error_l1'), self)
+        if self.th_error_l2() is not None:
+            self.error_l2 = types.MethodType(self._method_name('th_error_l2'), self)
 
         # self.density = types.MethodType(self._method_name('th_density'), self)
 
@@ -342,9 +353,6 @@ class StochasticProcess(PlotModel):#TheanoBlackBox
 
     def lambda_method(self, *args, **kwargs):
         pass
-
-    def filter_params(self, params):
-        return {k: v for k, v in params.items() if k in self.params}
 
     @staticmethod
     def _method_name(method=None):
@@ -406,7 +414,8 @@ class StochasticProcess(PlotModel):#TheanoBlackBox
         return self.active.potentials
 
     def predict(self, params=None, space=None, inputs=None, outputs=None, mean=True, std=True, var=False, cov=False,
-                median=False, quantiles=False, quantiles_noise=False, samples=0, distribution=False, prior=False, noise=False):
+                median=False, quantiles=False, quantiles_noise=False, samples=0, distribution=False,
+                prior=False, noise=False, simulations=100):
         if params is None:
             params = self.params
         if not self.is_observed:
@@ -419,11 +428,11 @@ class StochasticProcess(PlotModel):#TheanoBlackBox
             outputs = self.outputs
         values = DictObj()
         if mean:
-            values['mean'] = self.mean(params, space, inputs, outputs, prior=prior, noise=noise)
+            values['mean'] = self.mean(params, space, inputs, outputs, prior=prior, noise=noise, simulations=simulations)
         if var:
-            values['variance'] = self.variance(params, space, inputs, outputs, prior=prior, noise=noise)
+            values['variance'] = self.variance(params, space, inputs, outputs, prior=prior, noise=noise, simulations=simulations)
         if std:
-            values['std'] = self.std(params, space, inputs, outputs, prior=prior, noise=noise)
+            values['std'] = self.std(params, space, inputs, outputs, prior=prior, noise=noise, simulations=simulations)
         if cov:
             values['covariance'] = self.covariance(params, space, inputs, outputs, prior=prior, noise=noise)
         if median:

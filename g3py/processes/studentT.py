@@ -77,7 +77,7 @@ class WarpedStudentTProcess(StudentTProcess):
         super().__init__(*args, **kwargs)
 
     #TODO: fix mean
-    def th_mean(self, prior=False, noise=False, n=10):
+    def th_mean(self, prior=False, noise=False, simulations=None, n=10):
         debug_p('mean')
         _a, _w = np.polynomial.hermite.hermgauss(n)
         a = th.shared(_a.astype(th.config.floatX), borrow=False).dimshuffle([0, 'x'])
@@ -86,7 +86,7 @@ class WarpedStudentTProcess(StudentTProcess):
                                   self.th_kernel_sd(prior=prior, noise=noise), a, w)
 
     #TODO: fix variance
-    def th_variance(self, prior=False, noise=False, n=10):
+    def th_variance(self, prior=False, noise=False, simulations=None, n=10):
         debug_p('variance')
         _a, _w = np.polynomial.hermite.hermgauss(n)
         a = th.shared(_a.astype(th.config.floatX), borrow=False).dimshuffle([0, 'x'])

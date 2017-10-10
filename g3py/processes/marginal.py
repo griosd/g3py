@@ -92,7 +92,7 @@ class MarginalProcess(StochasticProcess):
     def th_median(self, prior=False, noise=False):
         return self.f_density.th_median(self.th_space)
 
-    def th_mean(self, prior=False, noise=False):
+    def th_mean(self, prior=False, noise=False, simulations=None):
         return self.f_density.th_mean(self.th_space)
 
     def th_variance(self, prior=False, noise=False):

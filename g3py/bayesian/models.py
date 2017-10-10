@@ -286,7 +286,7 @@ class GraphicalModel:
             r[self.model[k]] = v
         return r
 
-
+# TODO: Check
 class OldGraphicalModel:
 
     def __init__(self):
@@ -433,7 +433,7 @@ class PlotModel:
     def scores(self, params=None, space=None, hidden=None, inputs=None, outputs=None, logp=False, logpred=False, bias=True, variance=False, median=False, *args, **kwargs):
         if hidden is None:
             hidden = self.hidden
-        pred = self.predict(params=params, space=space, inputs=inputs, outputs=outputs, var=variance, median=median, distribution=logpred)
+        pred = self.predict(params=params, space=space, inputs=inputs, outputs=outputs, mean=True, var=variance, median=median, distribution=logpred)
         scores = DictObj()
         if bias:
             scores['_l1'] = np.mean(np.abs(pred.mean - hidden))
@@ -453,7 +453,8 @@ class PlotModel:
         return scores
 
     def filter_params(self, params):
-        return {k: v for k, v in params.items() if k in self.params}
+        #return {k: v for k, v in params.items() if k in self.params}
+        return {k: params[k] for k in self.model.test_point}
 
     def eval_params(self, params=None):
         r = params.copy()
@@ -536,12 +537,12 @@ class PlotModel:
             plot(self.index, self.outputs, '.r', ms=6, label='Observations')
 
     def plot(self, params=None, space=None, inputs=None, outputs=None, mean=True, std=False, cov=False,
-             median=False, quantiles=True, quantiles_noise=True, samples=0, prior=False, noise=False,
+             median=False, quantiles=True, quantiles_noise=True, samples=0, prior=False, noise=False, simulations=1000,
              values=None, data=True, logp=False, big=None, plot_space=False, title=None, labels={}, loc='best', ncol=3):
         if values is None:
             values = self.predict(params=params, space=space, inputs=inputs, outputs=outputs, mean=mean, std=std,
                                   cov=cov, median=median, quantiles=quantiles, quantiles_noise=quantiles_noise,
-                                  samples=samples, prior=prior, noise=noise)
+                                  samples=samples, prior=prior, noise=noise, simulations=simulations)
         if data and self.is_observed:
             self.plot_observations(big)
         if data:

@@ -91,6 +91,21 @@ class EllipticalProcess(StochasticProcess):
             tsl.solve(self.prior_kernel_inputs, self.cross_kernel_f_space_inputs.T))
         self.posterior_cholesky_f_space = cholesky_robust(self.posterior_kernel_f_space)
 
+        self.prior_kernel_diag_space = tt_to_bounded(tnl.extract_diag(self.prior_kernel_space), zero32)
+        self.prior_kernel_diag_f_space = tt_to_bounded(tnl.extract_diag(self.prior_kernel_f_space), zero32)
+        self.posterior_kernel_diag_space = tt_to_bounded(tnl.extract_diag(self.posterior_kernel_space), zero32)
+        self.posterior_kernel_diag_f_space = tt_to_bounded(tnl.extract_diag(self.posterior_kernel_f_space), zero32)
+
+        self.prior_kernel_sd_space = tt.sqrt(self.prior_kernel_diag_space)
+        self.prior_kernel_sd_f_space = tt.sqrt(self.prior_kernel_diag_f_space)
+        self.posterior_kernel_sd_space = tt.sqrt(self.posterior_kernel_diag_space)
+        self.posterior_kernel_sd_f_space = tt.sqrt(self.posterior_kernel_diag_f_space)
+
+        self.prior_cholesky_diag_space = tnl.alloc_diag(self.prior_kernel_sd_space)
+        self.prior_cholesky_diag_f_space = tnl.alloc_diag(self.prior_kernel_sd_f_space)
+        self.posterior_cholesky_diag_space = tnl.alloc_diag(self.posterior_kernel_sd_space)
+        self.posterior_cholesky_diag_f_space = tnl.alloc_diag(self.posterior_kernel_sd_f_space)
+
     def th_freedom(self, prior=False, noise=False):
         if prior:
             return self.f_degree()
@@ -125,27 +140,62 @@ class EllipticalProcess(StochasticProcess):
                 return self.posterior_kernel_f_space
 
     def th_cholesky(self, prior=False, noise=False):
-        return cholesky_robust(self.th_kernel(prior=prior, noise=noise))
+        if prior:
+            if noise:
+                return self.prior_cholesky_space
+            else:
+                return self.prior_cholesky_f_space
+        else:
+            if noise:
+                return self.posterior_cholesky_space
+            else:
+                return self.posterior_cholesky_f_space
 
     def th_kernel_diag(self, prior=False, noise=False):
-        return tt_to_bounded(tnl.extract_diag(self.th_kernel(prior=prior, noise=noise)), zero32)
-
-    def th_kernel_sd(self, prior=False, noise=False, cholesky=False):
-        r = self.th_kernel_diag(prior=prior, noise=noise)
-        if cholesky:
-            return cholesky_robust(tt.nlinalg.alloc_diag(r))
+        if prior:
+            if noise:
+                return self.prior_kernel_diag_space
+            else:
+                return self.prior_kernel_diag_f_space
         else:
-            return tt.sqrt(r)
+            if noise:
+                return self.posterior_kernel_diag_space
+            else:
+                return self.posterior_kernel_diag_f_space
+
+    def th_kernel_sd(self, prior=False, noise=False):
+        if prior:
+            if noise:
+                return self.prior_kernel_sd_space
+            else:
+                return self.prior_kernel_sd_f_space
+        else:
+            if noise:
+                return self.posterior_kernel_sd_space
+            else:
+                return self.posterior_kernel_sd_f_space
+
+    def th_cholesky_diag(self, prior=False, noise=False):
+        if prior:
+            if noise:
+                return self.prior_cholesky_diag_space
+            else:
+                return self.prior_cholesky_diag_f_space
+        else:
+            if noise:
+                return self.posterior_cholesky_diag_space
+            else:
+                return self.posterior_cholesky_diag_f_space
 
     def th_median(self, prior=False, noise=False):
         debug_p('median' + str(prior) + str(noise))
         return self.f_mapping(self.th_location(prior=prior, noise=noise))
 
-    def th_mean(self, prior=False, noise=False):
+    def th_mean(self, prior=False, noise=False, simulations=None):
         debug_p('mean' + str(prior) + str(noise))
         return self.f_mapping(self.th_location(prior=prior, noise=noise))
 
-    def th_variance(self, prior=False, noise=False):
+    def th_variance(self, prior=False, noise=False, simulations=None):
         debug_p('variance' + str(prior) + str(noise))
         return self.th_kernel_diag(prior=prior, noise=noise)
 
@@ -163,6 +213,7 @@ class EllipticalProcess(StochasticProcess):
         self.cholesky = types.MethodType(self._method_name('th_cholesky'), self)
         self.kernel_diag = types.MethodType(self._method_name('th_kernel_diag'), self)
         self.kernel_sd = types.MethodType(self._method_name('th_kernel_sd'), self)
+        self.cholesky_diag = types.MethodType(self._method_name('th_cholesky_diag'), self)
         self.cross_mean = types.MethodType(self._method_name('th_cross_mean'), self)
 
     def plot_kernel(self, params=None, space=None, inputs=None, prior=True, noise=False, centers=[1/10, 1/2, 9/10]):

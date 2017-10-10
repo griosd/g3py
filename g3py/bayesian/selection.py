@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 from datetime import datetime as dt
 from tqdm import tqdm
 from inspect import signature
-from ..libs import random_obs, uniform_obs, save_pkl, load_pkl, nan_to_high, MaxTime
+from ..libs import random_obs, uniform_obs, save_pkl, load_pkl, save_datatrace, load_datatrace, nan_to_high, MaxTime
 from .average import marginal_datatrace
 
 
@@ -42,7 +42,6 @@ def optimize(logp, start, dlogp=None, fmin=None, max_time=None, *args, **kwargs)
     return r
 
 
-#TODO: Probar
 class Experiment:
     def __init__(self, models=None, file=None, load=True):
         self.file = file
@@ -80,7 +79,6 @@ class Experiment:
         self.max_time = None
         self.holdout = None
         self.holdout_p = 0
-
         try:
             self.simulations_raw = self.load_simulations()
             self.results_raw = self.load_results()
@@ -92,26 +90,46 @@ class Experiment:
     def save(self, file=None):
         if file is not None:
             self.file = file
-        if self.file is not None:
-            save_pkl(self, self.file)
+        self.save_simulations()
+        self.save_results()
+        try:
+            if self.file is not None:
+                save_pkl(self, self.file)
+        except Exception as m:
+            print(m)
+
+    def load(self):
+        try:
+            return load_pkl(self.file)
+        except:
+            return None
 
     def save_simulations(self):
         if self.file is not None:
-            save_pkl(self.simulations_raw, self.file + '.s')
+            save_datatrace(self.simulations_raw, self.file + '.s')
 
     def save_results(self):
         if self.file is not None:
-            save_pkl(self.results_raw, self.file + '.r')
-
-    def load(self):
-        return load_pkl(self.file)
+            save_datatrace(self.results_raw, self.file + '.r')
 
     def load_simulations(self):
-        self.simulations_raw = load_pkl(self.file + '.s')
+        try:
+            try:
+                self.simulations_raw = load_datatrace(self.file + '.s')
+            except:
+                self.simulations_raw = load_pkl(self.file + '.s')
+        except:
+            pass
         return self.simulations_raw
 
     def load_results(self):
-        self.results_raw = load_pkl(self.file + '.r')
+        try:
+            try:
+                self.results_raw = load_datatrace(self.file + '.r')
+            except:
+                self.results_raw = load_pkl(self.file + '.r')
+        except:
+            pass
         return self.results_raw
 
     def add_simulation(self, index, obs, valid, test):
@@ -139,9 +157,10 @@ class Experiment:
             self.data_method = uniform_obs
         self.data_min = include_min
 
-    def new_data(self):
+    def new_data(self, plot=False):
         obs_j, x_obs, y_obs, test_j, x_test, y_test = self.data_method(x=self.data_x, y=self.data_y, p=self.data_p,
-                                                                       s=self.data_limit, include_min=self.data_min)
+                                                                       s=self.data_limit, include_min=self.data_min,
+                                                                       plot=plot)
         if self.holdout_p > 0:
             valid_j, x_valid, y_valid, sub_obs_j, sub_x_obs, sub_y_obs = self.data_method(x=obs_j, y=obs_j, p=self.holdout_p, include_min=self.data_min)
             obs_j, valid_j = obs_j[sub_obs_j], obs_j[valid_j]
@@ -219,11 +238,11 @@ class Experiment:
         total_sims = len(self.simulations_raw)
         if type(repeat) is int:
             repeat = list(range(repeat))
-        print('Simulations: n=', n_simulations, ' repeat=', repeat)
+        print('Simulations: n =', n_simulations, ', repeat =', repeat)
         for n_sim in tqdm(list(range(total_sims, total_sims+n_simulations)) + repeat, total=n_simulations+len(repeat)):
             if n_sim not in self.simulations_raw.index:
                 print('\n' * 2 + '*' * 70+'\n' + '*' * 70 + '\nSimulation #'+str(n_sim) )
-                obs_j, x_obs, y_obs, valid_j, x_valid, y_valid, test_j, x_test, y_test = self.new_data()
+                obs_j, x_obs, y_obs, valid_j, x_valid, y_valid, test_j, x_test, y_test = self.new_data(plot=plot)
                 self.add_simulation(n_sim, obs_j, valid_j, test_j)
                 print('*' * 70)
             else:
