@@ -191,8 +191,13 @@ class GraphicalModel:
                 mean[k] = v + sigma * np.random.randn(v.size).reshape(v.shape).astype(th.config.floatX)
         return mean
 
-    def params_datatrace(self, dt, loc):
-        return DictObj(self.model.bijection.rmap(dt.loc[loc]))
+    def params_datatrace(self, dt, loc=None, iloc=None):
+        if loc is not None:
+            return DictObj(self.model.bijection.rmap(dt.loc[loc]))
+        if iloc is not None:
+            return DictObj(self.model.bijection.rmap(dt.iloc[iloc]))
+        else:
+            return DictObj(self.model.bijection.rmap(dt.mean(axis=0)))
 
     def params_serie(self, serie):
         return DictObj(self.model.bijection.rmap(serie))
@@ -518,62 +523,102 @@ class PlotModel:
             else:
                 plot(self.index, self.inputs, '.k')
 
-    def plot_hidden(self, big=None):
+    def plot_hidden(self, order=None, hidden=None, big=None):
+        if order is None:
+            order = self.order
+        if hidden is None:
+            hidden = self.hidden
         if big is None:
             big = config.plot_big
-        if big and self.hidden is not None:
-            plot(self.order, self.hidden, linewidth=4, label='Hidden Process')
-        elif self.hidden is not None:
-            plot(self.order, self.hidden,  label='Hidden Process')
+        if big and hidden is not None:
+            plot(order, hidden, '-k', alpha=1.0, lw=4)
+            plot(order, hidden, '-w', alpha=0.9, lw=3, label='Hidden Process')
+        elif hidden is not None:
+            plot(order, hidden,  'w', alpha=0.5, lw=2, label='Hidden Process')
 
-    def plot_observations(self, big=None):
+    def plot_observations(self, index=None, outputs=None, big=None):
+        if index is None:
+            index = self.index
+        if outputs is None:
+            outputs = self.outputs
         if big is None:
             big = config.plot_big
-        if big and self.outputs is not None:
-            plot(self.index, self.outputs, '.k', ms=20)
-            plot(self.index, self.outputs, '.r', ms=15, label='Observations')
-        elif self.outputs is not None:
-            plot(self.index, self.outputs, '.k', ms=10)
-            plot(self.index, self.outputs, '.r', ms=6, label='Observations')
+        if big and outputs is not None:
+            #plot(self.index, self.outputs, 'ow', ms=10, alpha=0.9, label='Observations')
+            plot(index, outputs, 'Xw', ms=12)
+            plot(index, outputs, 'Xk', ms=10, label='Observations')
+        elif outputs is not None:
+            #plot(self.index, self.outputs, 'ow', ms=5, alpha=0.8, label='Observations')
+            plot(index, outputs, 'Xw', ms=12)
+            plot(index, outputs, 'Xk', ms=10, label='Observations')
 
-    def plot(self, params=None, space=None, inputs=None, outputs=None, mean=True, std=False, cov=False,
-             median=False, quantiles=True, quantiles_noise=True, samples=0, prior=False, noise=False, simulations=1000,
+    def plot(self, params=None, space=None, inputs=None, outputs=None, hidden=True, order=None, mean=True, std=False, cov=False,
+             median=False, quantiles=True, quantiles_noise=True, samples=0, palette="Blues", prior=False, noise=False, simulations=1000,
              values=None, data=True, logp=False, big=None, plot_space=False, title=None, labels={}, loc='best', ncol=3):
         if values is None:
             values = self.predict(params=params, space=space, inputs=inputs, outputs=outputs, mean=mean, std=std,
                                   cov=cov, median=median, quantiles=quantiles, quantiles_noise=quantiles_noise,
                                   samples=samples, prior=prior, noise=noise, simulations=simulations)
-        if data and self.is_observed:
-            self.plot_observations(big)
-        if data:
-            self.plot_hidden(big)
-        if mean:
-            if 'mean' not in labels:
-                labels['mean'] = 'Mean'
-            plot(self.order, values['mean'], label=labels['mean'])
-        if std:
-            if 'std' not in labels:
-                labels['std'] = '4.0 Std'
-            plot(self.order, values['mean'] + 2.0 * values['std'], '--k', alpha=0.2, label=labels['std'])
-            plot(self.order, values['mean'] - 2.0 * values['std'], '--k', alpha=0.2)
-        if cov:
-            pass
-        if median:
-            if 'median' not in labels:
-                labels['median'] = 'Median'
-            plot(self.order, values['median'], label=labels['median'])
+
+        cmap = plt.get_cmap(palette)
+        percs = np.linspace(51, 99, 40)
+        colors = (percs - np.min(percs)) / (np.max(percs) - np.min(percs))
+
+        if order is None:
+            order = self.order
+        if space is None:
+            space = self.space
+
+        if len(order) != len(space):
+            if len(space.shape) == 1:
+                order = space
+            elif space.shape[1] == 1:
+                order = space[:, 0]
+            else:
+                order = np.arange(len(space))
+        if samples > 0 and palette is not None:
+            if 'samples' not in labels:
+                labels['samples'] = None
+            plot(order, values['samples'][:, 0], color=cmap(0.9), alpha=0.15, linewidth='1.0', label=labels['samples'])
+            plot(order, values['samples'], color=cmap(0.9), alpha=0.15, linewidth='1.0')
         if quantiles:
             if 'quantiles' not in labels:
                 labels['quantiles'] = '95% CI'
-            plot(self.order, values['quantile_up'], '--k', alpha=0.2, label=labels['quantiles'])
-            plot(self.order, values['quantile_down'], '--k', alpha=0.2)
-            plt.fill_between(self.order, values['quantile_up'], values['quantile_down'], alpha=0.1)
+            plot(order, values['quantile_up'], '-.', color=cmap(1.0), alpha=0.5, lw=3, label=labels['quantiles'])
+            plot(order, values['quantile_down'], '-.', color=cmap(1.0), alpha=0.5, lw=3)
+            plt.fill_between(order, values['quantile_up'], values['quantile_down'], color=cmap(1.0), alpha=0.1)
         if quantiles_noise:
             if 'quantiles_noise' not in labels:
                 labels['quantiles_noise'] = '95% CI + Noise'
-            plt.fill_between(self.order, values['noise_up'], values['noise_down'], alpha=0.1, label=labels['quantiles_noise'] )
-        if samples > 0:
-            plot(self.order, values['samples'], alpha=0.4)
+            plt.fill_between(order, values['noise_up'], values['noise_down'],  color=cmap(1.0), alpha=0.1, label=labels['quantiles_noise'] )
+        if data and hidden is not False:
+            self.plot_hidden(big=big)
+        if mean:
+            if 'mean' not in labels:
+                labels['mean'] = 'Mean'
+            plot(order, values['mean'], '-w', alpha=1.0, lw=5)
+            plot(order, values['mean'], '-k',  lw=4)
+            plot(order, values['mean'],  '-', color=cmap(1.0), alpha=0.8, lw=4, label=labels['mean'])
+        if median:
+            if 'median' not in labels:
+                labels['median'] = 'Median'
+            plot(order, values['median'], '--w', alpha=1.0, lw=5)
+            plot(order, values['median'], '--k', lw=4)
+            plot(order, values['median'], '--', color=cmap(1.0), alpha=0.8, lw=4, label=labels['median'])
+        if std:
+            if 'std' not in labels:
+                labels['std'] = '4.0 Std'
+            plot(order, values['mean'] + 2.0 * values['std'], '--k', alpha=0.2, label=labels['std'])
+            plot(order, values['mean'] - 2.0 * values['std'], '--k', alpha=0.2)
+        if cov:
+            pass
+        if samples > 0 and palette is None:
+            if 'samples' not in labels:
+                labels['samples'] = None
+            plot(order, values['samples'][:, 0], alpha=0.4, label=labels['samples'])
+            plot(order, values['samples'], alpha=0.4)
+        if data and self.is_observed:
+            self.plot_observations(index=inputs, outputs=outputs, big=big)
         if title is None:
             title = self.description['title']
         if logp:
@@ -584,7 +629,7 @@ class PlotModel:
             plot_text(title, self.description['x'], self.description['y'], loc=loc, ncol=ncol)
         if plot_space:
             show()
-            self.plot_space()
+            self.plot_space(space)
             plot_text('Space X', 'Index', 'Value', legend=False)
 
     def plot_datatrace(self, datatrace, overlap=False, limit=10, scores=True, *args, **kwargs):
@@ -597,7 +642,9 @@ class PlotModel:
                     name = str(k)
                 plot_text(name, self.description['x'], self.description['y'])
                 show()
-            if limit > 1:
+            if limit is None:
+                pass
+            elif limit > 1:
                 limit -= 1
             else:
                 break
