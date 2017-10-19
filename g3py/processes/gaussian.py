@@ -33,7 +33,7 @@ class GaussianProcess(EllipticalProcess):
                                                    cho=self.th_cholesky_diag(prior=prior, noise=True),
                                                    mapping=self.f_mapping)
 
-    def quantiler(self, params=None, space=None, inputs=None, outputs=None, q=0.975, prior=False, noise=False):
+    def quantiler(self, params=None, space=None, inputs=None, outputs=None, q=0.975, prior=False, noise=False, simulations=None):
         #debug_p('quantiler' + str(q) + str(prior) + str(noise))
         p = stats.norm.ppf(q)
         gp_quantiler = self.location(params, space, inputs, outputs, prior=prior, noise=noise) + p*self.kernel_sd(params, space, inputs, outputs, prior=prior, noise=noise)
@@ -107,8 +107,8 @@ class WarpedGaussianDistribution(pm.Continuous):
         delta = mapping.inv(value) - mu
 
         #delta = debug(delta, 'delta', force=True)
-        #cho = debug(cho, 'cho', force=False)
-        lcho = tsl.solve_lower_triangular(cho.T, delta)
+        #cho = debug(cho, 'cho', force=True)
+        lcho = tsl.solve_lower_triangular(cho, delta)
         #lcho = debug(lcho, 'lcho', force=False)
 
         lcho2 = lcho.T.dot(lcho)
