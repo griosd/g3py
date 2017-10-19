@@ -72,10 +72,10 @@ def load_pkl(path='file.pkl'):
         return pickle.load(f)
 
 
-def save_datatrace(dt, path='datatrace.h5'):
+def save_datatrace(dt, path='datatrace.h5', key='datatrace', mode='w'):
     if path.rfind('/') > -1:
         os.makedirs(path[:path.rfind('/')], exist_ok=True)
-    dt.to_hdf(path, 'datatrace', mode='w')
+    dt.to_hdf(path, key, mode=mode)
 
 
 def load_datatrace(path='datatrace.h5'):

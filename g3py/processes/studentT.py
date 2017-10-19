@@ -48,7 +48,7 @@ class StudentTProcess(EllipticalProcess):
     def th_covariance(self, prior=False, noise=False):
         return super().th_covariance(prior=prior, noise=noise) * self.th_scaling(prior=prior, noise=noise)
 
-    def quantiler(self, params=None, space=None, inputs=None, outputs=None, q=0.975, prior=False, noise=False):
+    def quantiler(self, params=None, space=None, inputs=None, outputs=None, q=0.975, prior=False, noise=False, simulations=None):
         debug_p('quantiler')
         p = stats.t.ppf(q, df=self.freedom(params=params, space=space, inputs=inputs, outputs=outputs, prior=prior, noise=noise))
         gp_quantiler = self.location(params, space, inputs, outputs, prior=prior, noise=noise) + p*self.kernel_sd(params, space, inputs, outputs, prior=prior, noise=noise)

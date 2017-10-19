@@ -3,6 +3,7 @@ import theano.tensor as tt
 import theano.tensor.slinalg as tsl
 import theano.tensor.nlinalg as tnl
 from . import Hypers
+from .kernels import KernelSum, KernelNoise
 from ...libs.tensors import cholesky_robust, debug
 
 
@@ -12,14 +13,35 @@ class Transport(Hypers):
         super().__init__(*args, **kwargs)
         self.parametrics = []
 
-    def __call__(self, inputs, outputs):
+    def __call__(self, inputs, outputs, noise=False):
         pass
 
-    def diag(self, inputs, outputs):
-        return self(inputs, outputs)
+    def diag(self, inputs, outputs, noise=False):
+        return self(inputs, outputs, noise=noise)
 
-    def inv(self, inputs, outputs):
+    def inv(self, inputs, outputs, noise=False):
         pass
+
+    def posterior(self, space, pred, inputs, outputs, noise_pred=False, noise_obs=True, diag=False, inv=False):
+        outputs_inv = self.inv(inputs, outputs, noise=True)
+        inputs_space = tt.concatenate([inputs, space])
+        outputs_space = tt.concatenate([outputs_inv, pred])
+        pred_full = self.__call__(inputs_space, outputs_space, noise=True)
+        return pred_full[inputs.shape[0]:]
+
+        if not inv:
+            outputs_inv = self.inv(inputs, outputs, noise=noise_obs)
+            inputs_space = tt.concatenate([inputs, space])
+            outputs_space = tt.concatenate([outputs_inv, pred])
+            if diag:
+                pred_full = self.diag(inputs_space, outputs_space, noise=noise_pred)
+            else:
+                pred_full = self.__call__(inputs_space, outputs_space, noise=noise_pred)
+        else:
+            inputs_space = tt.concatenate([inputs, space])
+            outputs_space = tt.concatenate([outputs, pred])
+            pred_full = self.inv(inputs_space, outputs_space, noise=noise_obs)
+        return pred_full[inputs.shape[0]:]
 
     def logdet_dinv(self, inputs, outputs):
         pass
@@ -74,25 +96,30 @@ class TransportComposed(TransportOperation):
         self.op = '@'
         self.name = self.t1.name + " " + self.t2.name
 
-    def __call__(self, t, x):
-        return self.t1(t, self.t2(t, x))
+    def __call__(self, inputs, outputs, noise=False):
+        return self.t1(inputs, self.t2(inputs, outputs, noise=noise), noise=noise)
 
-    def diag(self, t, x):
-        return self.t1.diag(t, self.t2.diag(t, x))
+    def diag(self, inputs, outputs, noise=False):
+        return self.t1.diag(inputs, self.t2(inputs, outputs, noise=noise), noise=noise)
 
-    def inv(self, t, y):
-        return self.t2.inv(t, self.t1.inv(t, y))
+    def inv(self, inputs, outputs, noise=False):
+        return self.t2.inv(inputs, self.t1.inv(inputs, outputs, noise=noise), noise=noise)
 
-    def logdet_dinv(self, t, y):
-        #TODO: Check
-        return self.t2.logdet_dinv(t, self.t1.inv(t, y)) + self.t1.logdet_dinv(t, y)
+    def logdet_dinv(self, inputs, outputs):
+        return self.t2.logdet_dinv(inputs, self.t1.inv(inputs, outputs, noise=True)) + self.t1.logdet_dinv(inputs, outputs)
 
+    def posterior(self, space, pred, inputs, outputs, noise_pred=False, noise_obs=True, diag=False, inv=False):
+        outputs_inv = self.inv(inputs, outputs, noise=True)
+        inputs_space = tt.concatenate([inputs, space])
+        outputs_space = tt.concatenate([outputs_inv, pred])
+        pred_full = self.__call__(inputs_space, outputs_space, noise=True)
+        return pred_full[inputs.shape[0]:]
 
 class ID(Transport):
-    def __call__(self, inputs, outputs):
+    def __call__(self, inputs, outputs, noise=False):
         return outputs
 
-    def inv(self, inputs, outputs):
+    def inv(self, inputs, outputs, noise=False):
         return outputs
 
     def logdet_dinv(self, inputs, outputs):
@@ -100,7 +127,8 @@ class ID(Transport):
 
 
 class TElemwise(Transport):
-    pass
+    def posterior(self, space, pred, inputs=None, outputs=None, noise_pred=False, noise_obs=True, diag=False, inv=False):
+        return self(space, pred, noise=noise_pred)
 
 
 class TLinear(Transport):
@@ -117,13 +145,13 @@ class TLocation(TElemwise):
         self.location = location
         self.parametrics.append(self.location)
 
-    def __call__(self, inputs, outputs):
+    def __call__(self, inputs, outputs, noise=False):
         #debug(outputs, name='outputs', force=True)
         #debug(inputs, name='inputs', force=True)
         #debug(self.location(inputs), name='location', force=True)
         return outputs + self.location(inputs)
 
-    def inv(self, inputs, outputs):
+    def inv(self, inputs, outputs, noise=False):
         return outputs - self.location(inputs)
 
     def logdet_dinv(self, inputs, outputs):
@@ -136,10 +164,10 @@ class TScale(TElemwise):
         self.scale = scale
         self.parametrics.append(self.scale)
 
-    def __call__(self, inputs, outputs):
+    def __call__(self, inputs, outputs, noise=False):
         return outputs * self.scale(inputs)
 
-    def inv(self, inputs, outputs):
+    def inv(self, inputs, outputs, noise=False):
         return outputs / self.scale(inputs)
 
     def logdet_dinv(self, inputs, outputs):
@@ -155,10 +183,10 @@ class TMapping(TElemwise):
         self.mapping = mapping
         self.parametrics.append(self.mapping)
 
-    def __call__(self, inputs, outputs):
+    def __call__(self, inputs, outputs, noise=False):
         return self.mapping(outputs)
 
-    def inv(self, inputs, outputs):
+    def inv(self, inputs, outputs, noise=False):
         return self.mapping.inv(outputs)
 
     def logdet_dinv(self, inputs, outputs):
@@ -166,29 +194,51 @@ class TMapping(TElemwise):
 
 
 class TKernel(TLinear):
-    def __init__(self, kernel = None, x = None, name = None):
+    def __init__(self, kernel, noisy=False, x = None, name = None):
         super().__init__(x, name)
-        self.kernel = kernel
-        self.parametrics.append(self.kernel)
+        if noisy:
+            self.kernel = kernel
+            self.noisy = KernelSum(self.kernel, KernelNoise(name='Noise'+kernel.name))
 
-    def __call__(self, inputs, outputs):
+        else:
+            self.kernel = kernel
+            self.noisy = kernel
+        self.parametrics.append(self.noisy)
+
+    def __call__(self, inputs, outputs, noise=False):
         # cho = cholesky_robust(tnl.diag(tnl.diag(self.kernel.cov(inputs))))
-        cho = cholesky_robust(self.kernel.cov(inputs))
+        if noise:
+            cho = cholesky_robust(self.noisy.cov(inputs))
+        else:
+            cho = cholesky_robust(self.kernel.cov(inputs))
         return cho.dot(outputs)
 
-    def diag(self, inputs, outputs):
-        cho = tnl.diag(tt.sqrt(tnl.diag(self.kernel.cov(inputs))))
-        # cho = cholesky_robust(self.kernel.cov(inputs))
-        return cho.dot(outputs)
+    def diag(self, inputs, outputs, noise=False):
+        if noise:
+            cho = tt.sqrt(tnl.diag(self.noisy.cov(inputs)))
+            #cho = cholesky_robust(self.noisy.cov(inputs))
+        else:
+            cho = tt.sqrt(tnl.diag(self.kernel.cov(inputs)))
+            #cho = cholesky_robust(self.kernel.cov(inputs))
+        return cho * outputs
 
-    def inv(self, inputs, outputs):
-        cho = cholesky_robust(self.kernel.cov(inputs))
-        #cho = debug(cho, 'cho', force=False)
-        return tsl.solve_lower_triangular(cho.T, outputs)
+    def inv(self, inputs, outputs, noise=False):
+        if noise:
+            cho = cholesky_robust(self.noisy.cov(inputs))
+        else:
+            cho = cholesky_robust(self.kernel.cov(inputs))
+        return tsl.solve(cho.T, outputs)
 
     def logdet_dinv(self, inputs, outputs):
-        cho = cholesky_robust(self.kernel.cov(inputs))
-        return - tt.sum(tt.log(tnl.diag(cho.T)))
+        cho = cholesky_robust(self.noisy.cov(inputs))
+        return - tt.sum(tt.log(tnl.diag(cho)))
+
+    def posterior(self, space, pred, inputs, outputs, noise_pred=False, noise_obs=True, diag=False, inv=False):
+        outputs_inv = self.inv(inputs, outputs, noise=True)
+        inputs_space = tt.concatenate([inputs, space])
+        outputs_space = tt.concatenate([outputs_inv, pred])
+        pred_full = self.__call__(inputs_space, outputs_space, noise=False)
+        return pred_full[inputs.shape[0]:]
 
 
 class TTriangular(TNoLinear):

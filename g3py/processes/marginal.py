@@ -89,7 +89,7 @@ class MarginalProcess(StochasticProcess):
     def th_freedom(self, prior=False, noise=False):
         return self.f_density.th_freedom(self.th_space)
 
-    def th_median(self, prior=False, noise=False):
+    def th_median(self, prior=False, noise=False, simulations=None):
         return self.f_density.th_median(self.th_space)
 
     def th_mean(self, prior=False, noise=False, simulations=None):
@@ -101,7 +101,7 @@ class MarginalProcess(StochasticProcess):
     def th_covariance(self, prior=False, noise=False):
         return tnl.diag(self.f_density.th_variance(self.th_space))
 
-    def quantiler(self, params=None, space=None, inputs=None, outputs=None, q=0.975, prior=False, noise=False):
+    def quantiler(self, params=None, space=None, inputs=None, outputs=None, q=0.975, prior=False, noise=False, simulations=None):
         if space is None:
             space = self.space
         if isinstance(self.f_density, StudentT):

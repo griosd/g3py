@@ -34,38 +34,62 @@ class TransportProcess(StochasticProcess):
     def th_define_process(self):
         #print('stochastic_define_process')
         # Basic Tensors
-        self.transport_outputs_inputs = self.f_transport(self.th_inputs, self.th_vector)
-        self.transport_latent_inputs = self.f_transport.inv(self.th_inputs, self.th_outputs)
+        self.prior_transport = self.f_transport(self.th_space, self.th_vector, noise=False)
+        self.prior_transport_noise = self.f_transport(self.th_space, self.th_vector, noise=True)
+        self.posterior_transport = self.f_transport.posterior(self.th_space, self.th_vector, self.th_inputs, self.th_outputs, noise_pred=False, noise_obs=True)
+        #self.posterior_transport = value = debug(self.posterior_transport, 'posterior_transport', force=True)
 
-        self.transport_outputs_space = self.f_transport(self.th_space, self.th_vector)
-        self.transport_diag_space = self.f_transport.diag(self.th_space, self.th_vector)
-        self.transport_latent_space = self.f_transport.inv(self.th_space, self.th_vector)
-        # TODO: Check this
-        self.transport_outputs_posterior = self.f_transport(self.th_space, self.th_vector)
-        self.transport_diag_posterior = self.f_transport.diag(self.th_space, self.th_vector)
-        self.transport_latent_posterior = self.f_transport.inv(self.th_space, self.th_vector)
+        self.posterior_transport_noise = self.f_transport.posterior(self.th_space, self.th_vector, self.th_inputs, self.th_outputs, noise_pred=True, noise_obs=True)
+
+        self.diag_prior_transport = self.f_transport.diag(self.th_space, self.th_vector, noise=False)
+        self.diag_prior_transport_noise = self.f_transport.diag(self.th_space, self.th_vector, noise=True)
+
+        self.diag_posterior_transport = self.f_transport.posterior(self.th_space, self.th_vector, self.th_inputs, self.th_outputs, noise_pred=False, noise_obs=True, diag=True)
+        self.diag_posterior_transport_noise = self.f_transport.posterior(self.th_space, self.th_vector, self.th_inputs, self.th_outputs, noise_pred=True, noise_obs=True, diag=True)
+
+        self.inv_prior_transport = self.f_transport.inv(self.th_space, self.th_vector, noise=False)
+        self.inv_prior_transport_noise = self.f_transport.inv(self.th_space, self.th_vector, noise=True)
+        self.inv_posterior_transport = self.f_transport.posterior(self.th_space, self.th_vector, self.th_inputs, self.th_outputs, noise_pred=False, noise_obs=True, inv=True)
+        self.inv_posterior_transport_noise = self.f_transport.posterior(self.th_space, self.th_vector, self.th_inputs, self.th_outputs, noise_pred=True, noise_obs=True, inv=True)
 
     def th_transport(self, prior=False, noise=False):
         if prior:
-            return self.transport_outputs_space
+            if noise:
+                return self.prior_transport_noise
+            else:
+                return self.prior_transport
         else:
-            return self.transport_outputs_posterior
+            if noise:
+                return self.posterior_transport_noise
+            else:
+                return self.posterior_transport
 
     def th_transport_diag(self, prior=False, noise=False):
         if prior:
-            return self.transport_diag_space
+            if noise:
+                return self.diag_prior_transport_noise
+            else:
+                return self.diag_prior_transport
         else:
-            return self.transport_diag_posterior
+            if noise:
+                return self.diag_posterior_transport_noise
+            else:
+                return self.diag_posterior_transport
 
     def th_transport_inv(self, prior=False, noise=False):
         if prior:
-            return self.transport_latent_space
+            if noise:
+                return self.inv_prior_transport_noise
+            else:
+                return self.inv_prior_transport
         else:
-            return self.transport_latent_posterior
+            if noise:
+                return self.inv_posterior_transport_noise
+            else:
+                return self.inv_posterior_transport
 
-    def th_median(self, prior=False, noise=False):
-        debug_p('median' + str(prior) + str(noise))
-        return self.transport_diag_space#self.f_transport(self.th_space, self.th_vector)
+    def th_median(self, prior=False, noise=False, simulations=None):
+        pass
 
     def th_mean(self, prior=False, noise=False, simulations=None):
         pass
@@ -133,22 +157,40 @@ class TransportGaussianProcess(TransportProcess):
         grille = np.sqrt(2).astype(th.config.floatX) * a
         return tt.dot(w, f(i, grille.flatten()).reshape(grille.shape)) / np.sqrt(np.pi).astype(th.config.floatX)
 
-    def mean(self, params=None, space=None, inputs=None, outputs=None, prior=False, noise=False, simulations=10):
-        return self.sampler(params=params, space=space, inputs=inputs, outputs=outputs, samples=simulations,
-                            prior=prior, noise=noise).mean(axis=1)
+    def mean(self, params=None, space=None, inputs=None, outputs=None, prior=False, noise=False, simulations=None):
+        if simulations is None:
+            simulations = 30
 
-    def std(self, params=None, space=None, inputs=None, outputs=None, prior=False, noise=False, simulations=10):
-        return self.sampler(params=params, space=space, inputs=inputs, outputs=outputs, samples=simulations,
-                            prior=prior, noise=noise).std(axis=1)
-
-    def quantiler(self, params=None, space=None, inputs=None, outputs=None, q=0.975, prior=False, noise=False):
-        #debug_p('quantiler' + str(q) + str(prior) + str(noise))
-        p = stats.norm.ppf(q)
-        return self.transport_diag(params, space, inputs, outputs, vector=np.ones(len(space))*p,
+        if type(simulations) is int:
+            samples = self.sampler(params=params, space=space, inputs=inputs, outputs=outputs, samples=simulations,
                                    prior=prior, noise=noise)
+        else:
+            samples = simulations
+        return samples.mean(axis=1)
+
+    def std(self, params=None, space=None, inputs=None, outputs=None, prior=False, noise=False, simulations=None):
+        if simulations is None:
+            simulations = 30
+
+        if type(simulations) is int:
+            samples = self.sampler(params=params, space=space, inputs=inputs, outputs=outputs, samples=simulations,
+                                   prior=prior, noise=noise)
+        else:
+            samples = simulations
+        return samples.std(axis=1)
+
+    def quantiler(self, params=None, space=None, inputs=None, outputs=None, q=0.975, prior=False, noise=False, simulations=None):
+        if simulations is None:
+            simulations = 30
+
+        if type(simulations) is int:
+            samples = self.sampler(params=params, space=space, inputs=inputs, outputs=outputs, samples=simulations,
+                     prior=prior, noise=noise)
+        else:
+            samples = simulations
+        return np.nanpercentile(samples, 100*q, axis=1)
 
     def sampler(self, params=None, space=None, inputs=None, outputs=None, samples=1, prior=False, noise=False):
-        #debug_p('sampler' + str(samples) + str(prior) + str(noise)+str(len(self.space)))
         if space is None:
             space = self.space
         rand = np.random.randn(len(space), samples)
@@ -169,12 +211,12 @@ class TransportGaussianDistribution(pm.Continuous):
         #print(mapping.inv(value).tag.test_value)
 
         value = debug(value, 'value', force=False)
-        delta = transport.inv(inputs, value)
+        delta = transport.inv(inputs, value, noise=True)
         det_m = transport.logdet_dinv(inputs, value)
         delta = debug(delta, 'delta', force=False)
 
         npi = np.float32(-0.5) * value.shape[0].astype(th.config.floatX) * tt.log(np.float32(2.0 * np.pi))
-        dot2 = np.float32(-0.5) * delta.T.dot(delta)
+        dot2 = np.float32(-0.5) * delta.dot(delta.T)
 
         npi = debug(npi, 'npi', force=False)
         dot2 = debug(dot2, 'dot2', force=False)

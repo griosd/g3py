@@ -195,7 +195,7 @@ class CholeskyRobust(th.gof.Op):
         return th.gof.Apply(self, [x], [x.type()])
 
     def _cholesky(self, K):
-        L, info = sp.linalg.lapack.dpotrf(K, lower=1)
+        L, info = sp.linalg.lapack.dpotrf(K, lower=self.lower)
         if info == 0:
             return L
         # else:
@@ -207,7 +207,7 @@ class CholeskyRobust(th.gof.Op):
             #raise sp.linalg.LinAlgError("not positive-definite: negative diagonal element")
         for num_tries in range(self.maxtries):
             try:
-                return np.nan_to_num(sp.linalg.cholesky(K + dK, lower=True))
+                return np.nan_to_num(sp.linalg.cholesky(K + dK, lower=self.lower))
             except:
                 dK *= np.float32(10)
         raise sp.linalg.LinAlgError("not approximate positive-definite")
