@@ -6,10 +6,10 @@ import numpy as np
 import theano as th
 import theano.tensor as tt
 
-from ..bayesian.average import mcmc_ensemble, chains_to_datatrace
+from ..bayesian.average import mcmc_ensemble, chains_to_datatrace, plot_datatrace
 from ..bayesian.models import GraphicalModel, PlotModel
 from ..bayesian.selection import optimize
-from ..libs import DictObj, print, save_pkl, load_pkl
+from ..libs import DictObj, print, save_pkl, load_pkl, load_datatrace, save_datatrace
 from ..libs.tensors import tt_to_num, makefn, gradient
 
 # from ..bayesian.models import TheanoBlackBox
@@ -20,8 +20,8 @@ zero32 = np.float32(0.0)
 class StochasticProcess(PlotModel):#TheanoBlackBox
 
     def __init__(self, space=None, order=None, inputs=None, outputs=None, hidden=None, index=None,
-                 name='SP', distribution=None, active=False, precompile=False, file=None, *args, **kwargs):
-        if file is not None:
+                 name='SP', distribution=None, active=False, precompile=False, file=None, load=True, *args, **kwargs):
+        if file is not None and load:
             try:
                 load = load_pkl(file)
                 self.__dict__.update(load.__dict__)
@@ -122,6 +122,9 @@ class StochasticProcess(PlotModel):#TheanoBlackBox
 
     def params_random(self, *args, **kwargs):
         return self.active.params_random(*args, **kwargs)
+
+    def params_datatrace(self, *args, **kwargs):
+        return self.active.params_datatrace(*args, **kwargs)
 
     def transform_params(self, *args, **kwargs):
         return self.active.transform_params(*args, **kwargs)
@@ -250,13 +253,13 @@ class StochasticProcess(PlotModel):#TheanoBlackBox
     def th_define_process(self):
         pass
 
-    def quantiler(self, q=0.975, prior=False, noise=False):
-        pass
-
     def sampler(self, samples=1, prior=False, noise=False):
         pass
 
-    def th_median(self, prior=False, noise=False):
+    def quantiler(self, q=0.975, prior=False, noise=False, simulations=None):
+        pass
+
+    def th_median(self, prior=False, noise=False, simulations=None):
         pass
 
     def th_mean(self, prior=False, noise=False, simulations=None):
@@ -296,10 +299,13 @@ class StochasticProcess(PlotModel):#TheanoBlackBox
         return tt.add(*map(tt.sum, factors))
 
     def th_error_l1(self, prior=False, noise=False):
-        return tt.mean(tt.abs_(self.th_vector - self.th_outputs))
+        return tt.mean(tt.abs_(self.th_vector - self.th_mean(prior=prior, noise=noise)))
 
     def th_error_l2(self, prior=False, noise=False):
-        return tt.mean(tt.pow(self.th_vector - self.th_outputs, 2))
+        return tt.mean(tt.pow(self.th_vector - self.th_mean(prior=prior, noise=noise), 2))
+
+    def th_error_mse(self, prior=False, noise=False):
+        return tt.mean(tt.abs_(self.th_vector - self.th_outputs))**2 + tt.var(tt.abs_(self.th_vector - self.th_outputs))
 
     def _compile_methods(self):
         reset_space = self.space
@@ -329,7 +335,8 @@ class StochasticProcess(PlotModel):#TheanoBlackBox
             self.error_l1 = types.MethodType(self._method_name('th_error_l1'), self)
         if self.th_error_l2() is not None:
             self.error_l2 = types.MethodType(self._method_name('th_error_l2'), self)
-
+        if self.th_error_mse() is not None:
+            self.error_mse = types.MethodType(self._method_name('th_error_mse'), self)
         # self.density = types.MethodType(self._method_name('th_density'), self)
 
         #self.quantiler = types.MethodType(self._method_name('_quantiler'), self)
@@ -415,7 +422,7 @@ class StochasticProcess(PlotModel):#TheanoBlackBox
 
     def predict(self, params=None, space=None, inputs=None, outputs=None, mean=True, std=True, var=False, cov=False,
                 median=False, quantiles=False, quantiles_noise=False, samples=0, distribution=False,
-                prior=False, noise=False, simulations=100):
+                prior=False, noise=False, simulations=None):
         if params is None:
             params = self.params
         if not self.is_observed:
@@ -426,6 +433,11 @@ class StochasticProcess(PlotModel):#TheanoBlackBox
             inputs = self.inputs
         if outputs is None:
             outputs = self.outputs
+
+        n_simulations = 1
+        if type(simulations) is int:
+            n_simulations = simulations
+            simulations = self.sampler(params, space, inputs, outputs, prior=prior, noise=noise, samples=simulations)
         values = DictObj()
         if mean:
             values['mean'] = self.mean(params, space, inputs, outputs, prior=prior, noise=noise, simulations=simulations)
@@ -436,14 +448,15 @@ class StochasticProcess(PlotModel):#TheanoBlackBox
         if cov:
             values['covariance'] = self.covariance(params, space, inputs, outputs, prior=prior, noise=noise)
         if median:
-            values['median'] = self.median(params, space, inputs, outputs, prior=prior, noise=noise)
+            values['median'] = self.median(params, space, inputs, outputs, prior=prior, noise=noise, simulations=simulations)
         if quantiles:
-            values['quantile_up'] = self.quantiler(params, space, inputs, outputs, q=0.975, prior=prior, noise=noise)
-            values['quantile_down'] = self.quantiler(params, space, inputs, outputs, q=0.025, prior=prior, noise=noise)
+            values['quantile_up'] = self.quantiler(params, space, inputs, outputs, q=0.975, prior=prior, noise=noise, simulations=simulations)
+            values['quantile_down'] = self.quantiler(params, space, inputs, outputs, q=0.025, prior=prior, noise=noise, simulations=simulations)
         if quantiles_noise:
-            values['noise_std'] = self.std(params, space, inputs, outputs, prior=prior, noise=True)
-            values['noise_up'] = self.quantiler(params, space, inputs, outputs, q=0.975, prior=prior, noise=True)
-            values['noise_down'] = self.quantiler(params, space, inputs, outputs, q=0.025, prior=prior, noise=True)
+            simulations_noise = self.sampler(params, space, inputs, outputs, prior=prior, noise=True, samples=n_simulations)
+            values['noise_std'] = self.std(params, space, inputs, outputs, prior=prior, noise=True, simulations=simulations_noise)
+            values['noise_up'] = self.quantiler(params, space, inputs, outputs, q=0.975, prior=prior, noise=True, simulations=n_simulations)
+            values['noise_down'] = self.quantiler(params, space, inputs, outputs, q=0.025, prior=prior, noise=True, simulations=n_simulations)
         if samples > 0:
             values['samples'] = self.sampler(params, space, inputs, outputs, samples=samples, prior=prior, noise=noise)
         if distribution:
@@ -504,7 +517,7 @@ class StochasticProcess(PlotModel):#TheanoBlackBox
             return np.mean(r)
 
     def find_MAP(self, start=None, points=1, return_points=False, plot=False, display=True,
-                 powell=True, bfgs=True, init='bgfs', max_time=None):
+                 powell=True, bfgs=True, init='bfgs', max_time=None):
 
         points_list = list()
         if start is None:
@@ -515,6 +528,11 @@ class StochasticProcess(PlotModel):#TheanoBlackBox
         else:
             logp = self.fixed_logp
             dlogp = self.fixed_dlogp
+        try:
+            dlogp(self.active.sampling_params(start))
+        except Exception as m:
+            print(m)
+            dlogp = None
 
         if type(start) is list:
             i = 0
@@ -533,7 +551,7 @@ class StochasticProcess(PlotModel):#TheanoBlackBox
             plt.figure(0)
             self.plot(params=points_list[0][2], title='start')
             plt.show()
-        if init is not 'bfgs':
+        if init is 'bfgs':
             check = 0
         else:
             check = 1
@@ -590,13 +608,26 @@ class StochasticProcess(PlotModel):#TheanoBlackBox
             return params, points_list
 
     def sample_hypers(self, start=None, samples=1000, chains=None, ntemps=None, raw=False, noise_mult=0.1, noise_sum=0.01,
-                      burnin_tol=0.001, burnin_method='multi-sum', outlayer_percentile=0.0005, prior=False, parallel=False):
+                      burnin_tol=0.001, burnin_method='multi-sum', outlayer_percentile=0.0005, clusters=5, prior=False, parallel=False,
+                      plot=False, file=None, load=True):
+        ndim = len(self.active.sampling_dims)
+        if chains is None:
+            chains = 2*ndim
+        if file is not None and load:
+            try:
+                datatrace = load_datatrace(file)
+                if datatrace is not None:
+                    if (datatrace._niter.max() == samples-1) and (datatrace._nchain.max() == chains-1):
+                        if plot:
+                            plot_datatrace(datatrace)
+                        return datatrace
+            except Exception as m:
+                pass
         if start is None:
-            start = self.find_MAP()
+            start = self.find_MAP(display=False)
         if isinstance(start, dict):
             start = self.active.dict_to_array(start)
 
-        ndim = len(self.active.sampling_dims)
         if len(start.shape) == 1:
             start = start[self.active.sampling_dims]
         elif len(start.shape) == 2:
@@ -659,10 +690,14 @@ class StochasticProcess(PlotModel):#TheanoBlackBox
         if raw:
             return complete_chain, lnprob
         else:
-
-            return chains_to_datatrace(self, complete_chain, ll=lnprob, burnin_tol=burnin_tol,
+            datatrace = chains_to_datatrace(self, complete_chain, ll=lnprob, burnin_tol=burnin_tol,
                                        burnin_method=burnin_method, burnin_dims=self.active.sampling_dims,
-                                       outlayer_percentile=outlayer_percentile)
+                                       outlayer_percentile=outlayer_percentile, clusters=clusters)
+            if file is not None:
+                save_datatrace(datatrace, file)
+            if plot:
+                plot_datatrace(datatrace)
+            return datatrace
 
     @property
     def ndim(self):

@@ -187,7 +187,7 @@ class EllipticalProcess(StochasticProcess):
             else:
                 return self.posterior_cholesky_diag_f_space
 
-    def th_median(self, prior=False, noise=False):
+    def th_median(self, prior=False, noise=False, simulations=None):
         debug_p('median' + str(prior) + str(noise))
         return self.f_mapping(self.th_location(prior=prior, noise=noise))
 
