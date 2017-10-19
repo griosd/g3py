@@ -208,10 +208,10 @@ class BoxCoxLinear(Mapping):
 
     def inv(self, y):
         shifted = self.scale * (y + self.shift)
-        return th.ifelse.ifelse(self.power < 1e-5, tt.log(shifted), ((tt.sgn(shifted) * tt.abs_(shifted) ** self.power) - 1.0) / self.power)
+        return th.ifelse.ifelse(self.power < np.float32(1e-5), tt.log(shifted), ((tt.sgn(shifted) * tt.abs_(shifted) ** self.power) - 1.0) / self.power)
 
     def logdet_dinv(self, y):
-        return (self.power - 1.0) * tt.sum(tt.log(tt.abs_(self.scale * (y + self.shift)))) + y.shape[0].astype(th.config.floatX) * tt.log(
+        return (self.power - np.float32(1.0)) * tt.sum(tt.log(tt.abs_(self.scale * (y + self.shift)))) + y.shape[0].astype(th.config.floatX) * tt.log(
             self.scale)
 
 
@@ -237,16 +237,16 @@ class BoxCoxLinear2(Mapping):
                 self.power: np.float32(1.0)}
 
     def __call__(self, x):
-        scaled = self.power * x + 1.0
-        transformed = tt.sgn(scaled) * tt.abs_(scaled) ** (1.0 / self.power)
+        scaled = self.power * x + np.float32(1.0)
+        transformed = tt.sgn(scaled) * tt.abs_(scaled) ** (np.float32(1.0) / self.power)
         return (transformed - self.shift) / self.scale
 
     def inv(self, y):
         shifted = self.scale * y + self.shift
-        return th.ifelse.ifelse(self.power < 1e-5, tt.log(shifted), ((tt.sgn(shifted) * tt.abs_(shifted) ** self.power) - 1.0) / self.power)
+        return th.ifelse.ifelse(self.power < np.float32(1e-5), tt.log(shifted), ((tt.sgn(shifted) * tt.abs_(shifted) ** self.power) - np.float32(1.0)) / self.power)
 
     def logdet_dinv(self, y):
-        return th.ifelse.ifelse(self.power < 1e-5, -1.0, self.power - 1.0) * tt.sum(tt.log(tt.abs_(self.scale * y + self.shift))) + y.shape[0].astype(th.config.floatX) * tt.log(
+        return th.ifelse.ifelse(self.power < np.float32(1e-5), -np.float32(1.0), self.power - np.float32(1.0)) * tt.sum(tt.log(tt.abs_(self.scale * y + self.shift))) + y.shape[0].astype(th.config.floatX) * tt.log(
             self.scale)
 
 
