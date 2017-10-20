@@ -307,6 +307,7 @@ class StochasticProcess(PlotModel):#TheanoBlackBox
     def th_error_mse(self, prior=False, noise=False):
         return tt.mean(tt.abs_(self.th_vector - self.th_outputs))**2 + tt.var(tt.abs_(self.th_vector - self.th_outputs))
 
+
     def _compile_methods(self):
         reset_space = self.space
         reset_hidden = self.hidden
@@ -337,6 +338,7 @@ class StochasticProcess(PlotModel):#TheanoBlackBox
             self.error_l2 = types.MethodType(self._method_name('th_error_l2'), self)
         if self.th_error_mse() is not None:
             self.error_mse = types.MethodType(self._method_name('th_error_mse'), self)
+
         # self.density = types.MethodType(self._method_name('th_density'), self)
 
         #self.quantiler = types.MethodType(self._method_name('_quantiler'), self)
@@ -462,7 +464,7 @@ class StochasticProcess(PlotModel):#TheanoBlackBox
         if distribution:
             #values['logp'] = lambda x: self.compiles['posterior_logp'](x, space, inputs, outputs, **params)
             #values['logpred'] = lambda x: self.compiles['posterior_logpred'](x, space, inputs, outputs, **params)
-            values['logpredictive'] = lambda x: self.logpredictive(params, space, inputs, outputs, vector=x, prior=prior, noise=noise)
+            values['logpredictive'] = lambda x: self.logpredictive(params, space, inputs, outputs, vector=x, prior=prior, noise=True)
         return values
 
     #TODO: Vectorized

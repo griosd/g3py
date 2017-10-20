@@ -454,9 +454,8 @@ def hist_datatrace(dt, reference=None, items=None, like=None, drop=[], drop_defa
     #return marginal
 
 
-def scatter_datatrace(dt, items=None, like=None, drop=[], drop_default=['_burnin', '_outlayer', '_nchain', '_niter'], regex=None,
-                      samples=100000, burnin=True, outlayer=True, cluster=None, x_vars=None, y_vars=None,
-                      bins=200, s=4, cmap=cm.rainbow_r, *args, **kwargs):
+def scatter_datatrace(dt, items=None, like=None, drop=[], drop_default=['_burnin', '_outlayer', '_nchain', '_niter'],
+                      regex=None, samples=100000, burnin=True, outlayer=True, cluster=None, x_vars=None, y_vars=None):
     if burnin and hasattr(dt, '_burnin'):
         dt = dt[dt._burnin]
     if outlayer and hasattr(dt, '_outlayer'):
