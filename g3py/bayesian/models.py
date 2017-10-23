@@ -534,7 +534,8 @@ class PlotModel:
             plot(order, hidden, '-k', alpha=1.0, lw=4)
             plot(order, hidden, '-w', alpha=0.9, lw=3, label='Hidden Process')
         elif hidden is not None:
-            plot(order, hidden,  'w', alpha=0.5, lw=2, label='Hidden Process')
+            plot(order, hidden, 'w', alpha=0.8, lw=3)
+            plot(order, hidden,  'k', alpha=1.0, lw=2, label='Hidden Process')
 
     def plot_observations(self, index=None, outputs=None, big=None):
         if index is None:
@@ -576,35 +577,29 @@ class PlotModel:
                 order = space[:, 0]
             else:
                 order = np.arange(len(space))
-        if samples > 0 and palette is not None:
-            if 'samples' not in labels:
-                labels['samples'] = None
-            plot(order, values['samples'][:, 0], color=cmap(0.9), alpha=0.15, linewidth='1.0', label=labels['samples'])
-            plot(order, values['samples'], color=cmap(0.9), alpha=0.15, linewidth='1.0')
+        if mean:
+            if 'mean' not in labels:
+                labels['mean'] = 'Mean'
+            plot(order, values['mean'], '-w', alpha=1.0, lw=4)
+            #plot(order, values['mean'], '-k',  lw=4)
+            plot(order, values['mean'],  '-', color=cmap(1.0), alpha=0.8, lw=3, label=labels['mean'])
+        if median:
+            if 'median' not in labels:
+                labels['median'] = 'Median'
+            plot(order, values['median'], '--w', alpha=1.0, lw=4)
+            #plot(order, values['median'], '--k', lw=4)
+            plot(order, values['median'], '--', color=cmap(1.0), alpha=0.8, lw=3, label=labels['median'])
         if quantiles:
             if 'quantiles' not in labels:
                 labels['quantiles'] = '95% CI'
-            plot(order, values['quantile_up'], '-.', color=cmap(1.0), alpha=0.5, lw=3, label=labels['quantiles'])
-            plot(order, values['quantile_down'], '-.', color=cmap(1.0), alpha=0.5, lw=3)
+            plot(order, values['quantile_up'], '--', color=cmap(1.0), alpha=0.5, lw=2, label=labels['quantiles'])
+            plot(order, values['quantile_down'], '--', color=cmap(1.0), alpha=0.5, lw=2)
             plt.fill_between(order, values['quantile_up'], values['quantile_down'], color=cmap(1.0), alpha=0.1)
         if quantiles_noise:
             if 'quantiles_noise' not in labels:
                 labels['quantiles_noise'] = '95% CI + Noise'
             plt.fill_between(order, values['noise_up'], values['noise_down'],  color=cmap(1.0), alpha=0.1, label=labels['quantiles_noise'] )
-        if data and hidden is not False:
-            self.plot_hidden(big=big)
-        if mean:
-            if 'mean' not in labels:
-                labels['mean'] = 'Mean'
-            plot(order, values['mean'], '-w', alpha=1.0, lw=5)
-            plot(order, values['mean'], '-k',  lw=4)
-            plot(order, values['mean'],  '-', color=cmap(1.0), alpha=0.8, lw=4, label=labels['mean'])
-        if median:
-            if 'median' not in labels:
-                labels['median'] = 'Median'
-            plot(order, values['median'], '--w', alpha=1.0, lw=5)
-            plot(order, values['median'], '--k', lw=4)
-            plot(order, values['median'], '--', color=cmap(1.0), alpha=0.8, lw=4, label=labels['median'])
+
         if std:
             if 'std' not in labels:
                 labels['std'] = '4.0 Std'
@@ -617,6 +612,13 @@ class PlotModel:
                 labels['samples'] = None
             plot(order, values['samples'][:, 0], alpha=0.4, label=labels['samples'])
             plot(order, values['samples'], alpha=0.4)
+        if samples > 0 and palette is not None:
+            if 'samples' not in labels:
+                labels['samples'] = None
+            plot(order, values['samples'][:, 0], color=cmap(0.9), alpha=0.15, linewidth='1.0', label=labels['samples'])
+            plot(order, values['samples'], color=cmap(0.9), alpha=0.15, linewidth='1.0')
+        if data and hidden is not False:
+            self.plot_hidden(big=big)
         if data and self.is_observed:
             self.plot_observations(index=inputs, outputs=outputs, big=big)
         if title is None:

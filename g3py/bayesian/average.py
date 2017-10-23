@@ -181,7 +181,7 @@ def cluster_datatrace(process, dt, n_components=5, bayesian=True, burnin=True, o
     return _cluster
 
 
-def errors_datatrace(process, dt, inputs=None, outputs=None, space=None, hidden=None, l1=True, l2=True, mse=False):
+def errors_datatrace(process, dt, inputs=None, outputs=None, space=None, hidden=None, l1=True, l2=True, nlpd=False, mse=False):
     if l1:
         def error1(x):
             try:
@@ -197,6 +197,14 @@ def errors_datatrace(process, dt, inputs=None, outputs=None, space=None, hidden=
             except:
                 return np.nan
         dt['_l2'] = np.float32(dt.apply(error2, axis=1))
+
+    if nlpd:
+        def error_nlpd(x):
+            try:
+                return -process.logpredictive(x, space=space, vector=hidden, inputs=inputs, outputs=outputs, array=True, noise=True)/len(space)
+            except:
+                return np.nan
+        dt['_nlpd'] = np.float32(dt.apply(error_nlpd, axis=1))
 
     if mse:
         def error_mse(x):
@@ -232,7 +240,7 @@ def conditional(dt, lambda_df):
     return conditional_datatrace(dt, lambda_df)
 
 
-def find_candidates(dt, ll=1, l1=0, l2=0, mse=0, mean=False, median=False, by_cluster=True, rand=0):
+def find_candidates(dt, ll=1, l1=0, l2=0, nlpd=0, mse=0, mean=False, median=False, by_cluster=True, rand=0):
     # modes
     dt_full = dt.drop_duplicates(subset=[k for k in dt.columns if not k.startswith('_')])
     candidates = list()
@@ -254,6 +262,11 @@ def find_candidates(dt, ll=1, l1=0, l2=0, mse=0, mean=False, median=False, by_cl
         if '_l2' in dt:
             for index, row in dt.nsmallest(l2, '_l2').iterrows():
                 row.name = "l2"
+                row['n'] = index
+                candidates.append(row)
+        if '_nlpd' in dt:
+            for index, row in dt.nsmallest(nlpd, '_nlpd').iterrows():
+                row.name = "nlpd"
                 row['n'] = index
                 candidates.append(row)
         if '_mse' in dt:
@@ -406,12 +419,13 @@ def kde_datatrace(dt, items=None, size=6, n_levels=20, cmap="Blues_d"):
     return g
 
 
-def hist_datatrace(dt, reference=None, items=None, like=None, drop=['_burnin', '_outlayer', '_nchain', '_niter'],
+def hist_datatrace(dt, reference=None, items=None, like=None, drop=[], drop_default=['_burnin', '_outlayer', '_nchain', '_niter'],
                    regex=None, samples=None, bins=200, layout=(5, 5), figsize=(20, 20), burnin=True, outlayer=True):
     if burnin and hasattr(dt, '_burnin'):
         dt = dt[dt._burnin]
     if outlayer and hasattr(dt, '_outlayer'):
         dt = dt[dt._outlayer]
+    drop = drop + drop_default
     if drop is not None:
         dt = dt.drop(drop, axis=1)
     marginal = marginal_datatrace(dt, items=items, like=like, regex=regex, samples=samples)
@@ -440,8 +454,8 @@ def hist_datatrace(dt, reference=None, items=None, like=None, drop=['_burnin', '
     #return marginal
 
 
-def scatter_datatrace(dt, items=None, like=None, drop=[], drop_default=['_burnin', '_outlayer', '_nchain', '_niter'] , regex=None,
-                      samples=100000, burnin=True, outlayer=True, cluster=None, bins=200, s=4, cmap=cm.rainbow_r, *args, **kwargs):
+def scatter_datatrace(dt, items=None, like=None, drop=[], drop_default=['_burnin', '_outlayer', '_nchain', '_niter'],
+                      regex=None, samples=100000, burnin=True, outlayer=True, cluster=None, x_vars=None, y_vars=None):
     if burnin and hasattr(dt, '_burnin'):
         dt = dt[dt._burnin]
     if outlayer and hasattr(dt, '_outlayer'):
@@ -449,15 +463,17 @@ def scatter_datatrace(dt, items=None, like=None, drop=[], drop_default=['_burnin
     drop = drop + drop_default
     if drop is not None:
         dt = dt.drop(drop, axis=1)
-    dt = marginal_datatrace(dt, items=items, like=like, regex=regex, samples=samples)
     if cluster is None and hasattr(dt, '_cluster'):
         cluster = dt._cluster
+    dt = marginal_datatrace(dt, items=items, like=like, regex=regex, samples=samples)
     dt.columns = [c[c.find('_') + 1:] for c in dt.columns]
     if cluster is None:
-        sb.pairplot(dt, kind='scatter', diag_kind='kde')
+        sb.pairplot(dt, kind='scatter', diag_kind='kde', x_vars=x_vars, y_vars=y_vars)
         #pd.plotting.scatter_matrix(df, grid=True, hist_kwds={'normed': True, 'bins': bins}, figsize=figsize, s=s, *args, **kwargs)
     else:
-        sb.pairplot(dt, hue="cluster", kind='scatter', diag_kind='kde')
+        dt['cluster'] = cluster
+        sb.pairplot(dt, hue="cluster", kind='scatter', diag_kind='kde', x_vars=x_vars, y_vars=y_vars)
+        #sb.pairplot(dt, hue="cluster", kind='scatter', diag_kind='hist', diag_kws={'histtype': 'barstacked', 'normed': False})
         #pd.plotting.scatter_matrix(df, grid=True, hist_kwds={'normed': True, 'bins': bins}, figsize=figsize, s=s,
         #                           c=cluster[df.index], cmap=cmap, *args, **kwargs)
 
