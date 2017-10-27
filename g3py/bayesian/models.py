@@ -531,10 +531,10 @@ class PlotModel:
         if big is None:
             big = config.plot_big
         if big and hidden is not None:
-            plot(order, hidden, '-k', alpha=1.0, lw=4)
-            plot(order, hidden, '-w', alpha=0.9, lw=3, label='Hidden Process')
+            plot(order, hidden, 'w', alpha=1.0, lw=4, label='')
+            plot(order, hidden, 'k', alpha=0.9, lw=3, label='Hidden Process')
         elif hidden is not None:
-            plot(order, hidden, 'w', alpha=0.8, lw=3)
+            plot(order, hidden, 'w', alpha=0.8, lw=3, label='')
             plot(order, hidden,  'k', alpha=1.0, lw=2, label='Hidden Process')
 
     def plot_observations(self, index=None, outputs=None, big=None):
@@ -554,8 +554,8 @@ class PlotModel:
             plot(index, outputs, 'Xk', ms=10, label='Observations')
 
     def plot(self, params=None, space=None, inputs=None, outputs=None, hidden=True, order=None, mean=True, std=False, cov=False,
-             median=False, quantiles=True, quantiles_noise=True, samples=0, palette="Blues", prior=False, noise=False, simulations=1000,
-             values=None, data=True, logp=False, big=None, plot_space=False, title=None, labels={}, loc='best', ncol=3):
+             median=False, quantiles=True, quantiles_noise=True, samples=0, palette="Reds", prior=False, noise=False, simulations=100,
+             values=None, data=True, logp=True, big=None, plot_space=False, title=None, labels={}, loc='best', ncol=3):
         if values is None:
             values = self.predict(params=params, space=space, inputs=inputs, outputs=outputs, mean=mean, std=std,
                                   cov=cov, median=median, quantiles=quantiles, quantiles_noise=quantiles_noise,

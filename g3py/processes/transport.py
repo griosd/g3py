@@ -36,21 +36,34 @@ class TransportProcess(StochasticProcess):
         # Basic Tensors
         self.prior_transport = self.f_transport(self.th_space, self.th_vector, noise=False)
         self.prior_transport_noise = self.f_transport(self.th_space, self.th_vector, noise=True)
+
+        #print('posterior_transport')
         self.posterior_transport = self.f_transport.posterior(self.th_space, self.th_vector, self.th_inputs, self.th_outputs, noise_pred=False, noise_obs=True)
         #self.posterior_transport = value = debug(self.posterior_transport, 'posterior_transport', force=True)
 
+        #print('posterior_transport_noise')
         self.posterior_transport_noise = self.f_transport.posterior(self.th_space, self.th_vector, self.th_inputs, self.th_outputs, noise_pred=True, noise_obs=True)
+
 
         self.diag_prior_transport = self.f_transport.diag(self.th_space, self.th_vector, noise=False)
         self.diag_prior_transport_noise = self.f_transport.diag(self.th_space, self.th_vector, noise=True)
 
+        #print('diag_posterior_transport')
         self.diag_posterior_transport = self.f_transport.posterior(self.th_space, self.th_vector, self.th_inputs, self.th_outputs, noise_pred=False, noise_obs=True, diag=True)
+        #print('diag_posterior_transport_noise')
         self.diag_posterior_transport_noise = self.f_transport.posterior(self.th_space, self.th_vector, self.th_inputs, self.th_outputs, noise_pred=True, noise_obs=True, diag=True)
+
+
 
         self.inv_prior_transport = self.f_transport.inv(self.th_space, self.th_vector, noise=False)
         self.inv_prior_transport_noise = self.f_transport.inv(self.th_space, self.th_vector, noise=True)
+        #print('inv_posterior_transport')
         self.inv_posterior_transport = self.f_transport.posterior(self.th_space, self.th_vector, self.th_inputs, self.th_outputs, noise_pred=False, noise_obs=True, inv=True)
+        #print('inv_posterior_transport_noise')
         self.inv_posterior_transport_noise = self.f_transport.posterior(self.th_space, self.th_vector, self.th_inputs, self.th_outputs, noise_pred=True, noise_obs=True, inv=True)
+
+
+
 
     def th_transport(self, prior=False, noise=False):
         if prior:
