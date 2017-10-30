@@ -299,14 +299,17 @@ class StochasticProcess(PlotModel):#TheanoBlackBox
         return tt.add(*map(tt.sum, factors))
 
     def th_error_l1(self, prior=False, noise=False):
-        return tt.mean(tt.abs_(self.th_vector - self.th_mean(prior=prior, noise=noise)))
+        mean = self.th_mean(prior=prior, noise=noise)
+        if mean is not None:
+            return tt.mean(tt.abs_(self.th_vector - mean))
 
     def th_error_l2(self, prior=False, noise=False):
-        return tt.mean(tt.pow(self.th_vector - self.th_mean(prior=prior, noise=noise), 2))
+        mean = self.th_mean(prior=prior, noise=noise)
+        if mean is not None:
+            return tt.mean(tt.pow(self.th_vector - mean, 2))
 
     def th_error_mse(self, prior=False, noise=False):
         return tt.mean(tt.abs_(self.th_vector - self.th_outputs))**2 + tt.var(tt.abs_(self.th_vector - self.th_outputs))
-
 
     def _compile_methods(self):
         reset_space = self.space

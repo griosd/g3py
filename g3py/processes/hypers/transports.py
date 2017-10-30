@@ -3,7 +3,7 @@ import theano.tensor as tt
 import theano.tensor.slinalg as tsl
 import theano.tensor.nlinalg as tnl
 from . import Hypers
-from .kernels import KernelSum, KernelNoise
+from .kernels import KernelSum, KernelNoise, WN
 from ...libs.tensors import cholesky_robust, debug
 
 
@@ -109,11 +109,15 @@ class TransportComposed(TransportOperation):
         return self.t2.logdet_dinv(inputs, self.t1.inv(inputs, outputs, noise=True)) + self.t1.logdet_dinv(inputs, outputs)
 
     def posterior(self, space, pred, inputs, outputs, noise_pred=False, noise_obs=True, diag=False, inv=False):
-        outputs_inv = self.inv(inputs, outputs, noise=True)
-        inputs_space = tt.concatenate([inputs, space])
-        outputs_space = tt.concatenate([outputs_inv, pred])
-        pred_full = self.__call__(inputs_space, outputs_space, noise=True)
-        return pred_full[inputs.shape[0]:]
+        """La composición de las posteriores es la posterior de la composición
+        t |--GP--> X |--T2--> Z |--T1--> Y
+        """
+        return self.t1.posterior(space,
+                                 self.t2.posterior(space, pred, inputs,
+                                                   self.t1.inv(inputs, outputs, noise=noise_obs),
+                                                   noise_pred=noise_pred, noise_obs=noise_obs, diag=diag, inv=inv),
+                                 inputs, outputs, noise_pred=noise_pred, noise_obs=noise_obs, diag=diag, inv=inv)
+
 
 class ID(Transport):
     def __call__(self, inputs, outputs, noise=False):
@@ -227,17 +231,29 @@ class TKernel(TLinear):
             cho = cholesky_robust(self.noisy.cov(inputs))
         else:
             cho = cholesky_robust(self.kernel.cov(inputs))
-        return tsl.solve(cho.T, outputs)
+        return tsl.solve_lower_triangular(cho, outputs)
 
     def logdet_dinv(self, inputs, outputs):
         cho = cholesky_robust(self.noisy.cov(inputs))
         return - tt.sum(tt.log(tnl.diag(cho)))
 
     def posterior(self, space, pred, inputs, outputs, noise_pred=False, noise_obs=True, diag=False, inv=False):
-        outputs_inv = self.inv(inputs, outputs, noise=True)
-        inputs_space = tt.concatenate([inputs, space])
+        outputs_inv = self.inv(inputs, outputs, noise=noise_obs)
+        if noise_obs:
+            cov_inputs = self.noisy.cov(inputs)
+        else:
+            cov_inputs = self.kernel.cov(inputs)
+        if noise_pred:
+            cov_space = self.noisy.cov(space)
+        else:
+            cov_space = self.kernel.cov(space)
+        cov_space_inputs = self.kernel.cov(inputs, space)
+        cov_up = tt.concatenate([cov_inputs, cov_space_inputs], axis=1)
+        cov_down = tt.concatenate([cov_space_inputs.T, cov_space], axis=1)
+        cov = tt.concatenate([cov_up, cov_down])
+        cho = cholesky_robust(cov)
         outputs_space = tt.concatenate([outputs_inv, pred])
-        pred_full = self.__call__(inputs_space, outputs_space, noise=False)
+        pred_full = cho.dot(outputs_space)
         return pred_full[inputs.shape[0]:]
 
 
