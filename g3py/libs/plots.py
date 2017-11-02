@@ -97,12 +97,11 @@ def plot_save(file='example.pdf'):
     os.makedirs(file[:file.rfind('/')], exist_ok=True)
     plt.savefig(file, bbox_inches='tight')
 
-
 def plot_img(name='example', path='plots/', extension='png'):
     file = path + name+'.'+extension
     os.makedirs(file[:file.rfind('/')], exist_ok=True)
     plt.savefig(file, bbox_inches='tight')
-    return display.HTML('<img src=\'{}\'>'.format(file))
+    display.display(display.HTML('<img src=\'{}?{}\'>'.format(file, np.random.rand())))
 
 
 def grid2d(x, y):
