@@ -613,7 +613,7 @@ class StochasticProcess(PlotModel):#TheanoBlackBox
             return params, points_list
 
     def sample_hypers(self, start=None, samples=1000, chains=None, ntemps=None, raw=False, noise_mult=0.1, noise_sum=0.01,
-                      burnin_tol=0.001, burnin_method='multi-sum', outlayer_percentile=0.0005, clusters=5, prior=False, parallel=False,
+                      burnin_tol=0.001, burnin_method='multi-sum', outlayer_percentile=0.0005, clusters=5, prior=False, parallel=False, threads=1,
                       plot=False, file=None, load=True):
         ndim = len(self.active.sampling_dims)
         if chains is None:
@@ -673,7 +673,7 @@ class StochasticProcess(PlotModel):#TheanoBlackBox
         def parallel_mcmc(nchains):
             return mcmc_ensemble(ndim, samples=samples, chains=nchains, ntemps=ntemps, start=start,
                                            logp=logp, loglike=loglike, logprior=logprior,
-                                           noise_mult=noise_mult, noise_sum=noise_sum)
+                                           noise_mult=noise_mult, noise_sum=noise_sum, threads=threads)
 
         if parallel in [None, 0, 1]:
             lnprob, echain = parallel_mcmc(nchains=chains)

@@ -15,22 +15,22 @@ from tqdm import tqdm
 
 # SAMPLING
 
-@jit
+#@jit
 def mcmc_ensemble(ndim, samples=1000, chains=None, ntemps=None, start=None, logp=None, loglike=None, logprior=None,
-                  noise_mult=0.1, noise_sum=0.01, live_dangerously=False):
+                  args=[], kwargs={}, noise_mult=0.1, noise_sum=0.01, live_dangerously=False, threads=1):
 
     if chains is None:
         chains = 2 * ndim
 
     if ntemps is None:
-        sampler = emcee.EnsembleSampler(chains, ndim, logp, live_dangerously=live_dangerously)
+        sampler = emcee.EnsembleSampler(chains, ndim, logp, args=args, kwargs=kwargs, live_dangerously=live_dangerously, threads=threads)
         if start.shape == (chains, ndim):
             p0 = start
         else:
             noise = np.random.normal(loc=1, scale=noise_mult, size=(chains, ndim))
             p0 = noise * np.ones((chains, 1)) * start
     else:
-        sampler = emcee.PTSampler(ntemps, chains, ndim, loglike, logprior)
+        sampler = emcee.PTSampler(ntemps, chains, ndim, loglike, logprior, threads=threads)
         if start.shape == (ntemps, chains, ndim):
             p0 = start
         elif start.shape == (chains, ndim):
