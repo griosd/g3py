@@ -11,6 +11,7 @@ from sklearn import mixture, neighbors
 from matplotlib import cm
 from numba import jit
 from tqdm import tqdm
+import multiprocessing as mp
 
 
 # SAMPLING
@@ -21,6 +22,8 @@ def mcmc_ensemble(ndim, samples=1000, chains=None, ntemps=None, start=None, logp
 
     if chains is None:
         chains = 2 * ndim
+    if threads is 'auto':
+        threads = mp.cpu_count() // 2
 
     if ntemps is None:
         sampler = emcee.EnsembleSampler(chains, ndim, logp, args=args, kwargs=kwargs, live_dangerously=live_dangerously, threads=threads)
