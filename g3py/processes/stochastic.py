@@ -180,6 +180,18 @@ class StochasticProcess(PlotModel):#TheanoBlackBox
             self.index = np.arange(len(self.inputs))
 
     def observed(self, inputs=None, outputs=None, order=None, index=None, hidden=None):
+        """
+        This function asign the atribute space to the gp.
+        Args:
+            inputs (numpy.ndarray): the inputs of the process
+            outputs (numpy.ndarray): the outputs (observations) of the process
+            order:
+            index:
+            hidden:
+
+        Returns:
+
+        """
         self.set_space(inputs=inputs, outputs=outputs, order=order, index=index, hidden=hidden)
         if inputs is None and outputs is None:
             self.is_observed = False
@@ -428,6 +440,32 @@ class StochasticProcess(PlotModel):#TheanoBlackBox
     def predict(self, params=None, space=None, inputs=None, outputs=None, mean=True, std=True, var=False, cov=False,
                 median=False, quantiles=False, quantiles_noise=False, samples=0, distribution=False,
                 prior=False, noise=False, simulations=None):
+        """
+        Predict a stochastic process with each feature of the process.
+        Args:
+            params (dict): Contains the hyperparameters of the stochastic process
+            space (numpy.ndarray): the domain space of the process
+            inputs (numpy.ndarray): the inputs of the process
+            outputs (numpy.ndarray): the outputs (observations) of the process
+            mean (bool): Determines whether the mean is displayed
+            std (bool): Determines whether the standard deviation is displayed
+            var (bool): Determines whether the variance is displayed
+            cov (bool): Determines whether the covariance is displayed
+            median (bool): Determines whether the median is displayed
+            quantiles (bool): Determines whether the quantiles (95% of confidence) are displayed
+            quantiles_noise (bool): Determines whether the noise is considered for calculating (the
+                quantile and it is displayed
+            samples (int): the number of samples of the stochastic process that are generated
+            distribution (bool): whether it returns the log predictive function
+            prior (bool): whether the prediction considers the prior
+            noise (bool): wheter the prediction considers noise
+            simulations (int): the number of simulation for the aproximation of the value of the
+            stadistics
+
+        Returns:
+            Returns a dictionary which contains the information of the mean, std, var, cov, median,
+            quantiles, quantiles_noise and distribution whether they are required.
+        """
         if params is None:
             params = self.params
         if not self.is_observed:
