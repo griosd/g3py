@@ -181,16 +181,14 @@ class StochasticProcess(PlotModel):#TheanoBlackBox
 
     def observed(self, inputs=None, outputs=None, order=None, index=None, hidden=None):
         """
-        This function asign the atribute space to the gp.
+        This function asign the observations to the gp and calculates the default parameters
         Args:
             inputs (numpy.ndarray): the inputs of the process
             outputs (numpy.ndarray): the outputs (observations) of the process
-            order:
-            index:
-            hidden:
-
-        Returns:
-
+            order (numpy.ndarray): For multidimensional process, the order indicates the order in
+                which the domain (space) is plotted.:
+            index (numpy.ndarray): It is the index of the observations
+            hidden (numpy.ndarray): The set of values from where the observations are taken
         """
         self.set_space(inputs=inputs, outputs=outputs, order=order, index=index, hidden=hidden)
         if inputs is None and outputs is None:
@@ -561,7 +559,24 @@ class StochasticProcess(PlotModel):#TheanoBlackBox
 
     def find_MAP(self, start=None, points=1, return_points=False, plot=False, display=True,
                  powell=True, bfgs=True, init='bfgs', max_time=None):
+        """
+        This function calculates the Maximun A Posteriori using the powell algorithm by default
+        Args:
+            start (g3py.libs.DictObj): The initial parameters to start the optimization.
+                The default value correspond to the default parameters of the gp.
+            points (int): the number of iterations of the optimization problem
+            return_points (bool): Determines whether the parameters points of the optimization
+                are displayed.
+            plot (bool): Determines whether the result it is plotted.
+            display (bool):
+            powell:
+            bfgs:
+            init:
+            max_time:
 
+        Returns:
+
+        """
         points_list = list()
         if start is None:
             start = self.params

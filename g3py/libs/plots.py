@@ -61,6 +61,9 @@ def style_big():
 
 
 def style_big_seaborn():
+    """
+    It defines the features for the figure for plotting, using the seaborn style.
+    """
     style_seaborn()
     plt.rcParams['xtick.labelsize'] = 36  # x-numbers size
     plt.rcParams['ytick.labelsize'] = 36  # x-numbers size

@@ -462,6 +462,13 @@ class PlotModel:
         return {k: params[k] for k in self.model.test_point}
 
     def eval_params(self, params=None):
+        """
+        This function evaluates the params to obtain the l1 and l2 error, and the loglikelihood as well.
+        Args:
+            params (g3py.libs.DictObj):  The hyperparams came in the dictionary of the params
+        Returns:
+            It returns the evaluation over the error l1, l2 and the loglikelihood
+        """
         r = params.copy()
         r['_ll'] = self.logp(self.filter_params(params))
         r.update(self.scores(params))
@@ -581,7 +588,7 @@ class PlotModel:
             inputs (numpy.ndarray): the inputs of the process
             outputs (numpy.ndarray): the outputs (observations) of the process
             hidden (bool): Determines whether the hidden process is plotted
-            order (numoy.ndarray): For multidimensional process, the order indicates the order in
+            order (numpy.ndarray): For multidimensional process, the order indicates the order in
                 which the domain (space) is plotted.
             mean (bool): Determines whether the mean is displayed
             std (bool): Determines whether the standard deviation is displayed
@@ -706,6 +713,15 @@ class PlotModel:
                 break
 
     def widget(self, params=None, model=False, auto=False, *args, **kwargs):
+        """
+        Let set the params in a widget and the posterior visualization
+        Args:
+            params (dict): The hyperparams of the gp
+            model (pymc3 model): The model to display
+            auto (bool): If the display its automatic of it is not.
+            *args: Variable length argument list, used in the plot function.
+            **kwargs: Arbitrary keyword arguments, used in the plot function.
+        """
         if params is None:
             params = self.params_widget
         intervals = dict()
