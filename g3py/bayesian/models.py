@@ -182,6 +182,17 @@ class GraphicalModel:
         return default
 
     def params_random(self, mean=None, sigma=0.1, prop=True):
+        """
+        Calculates a set of random parameters for the process around of the mean. In case that the mean it is
+        not given, it uses the default.
+        Args:
+            mean (g3py.libs.DictObj): A dictionary with the parameters of the process.
+            sigma (float): the size of the perturbation (the variance)
+            prop (bool): whether the perturbation around the mean is aditive (False) or multiplicative (True)
+
+        Returns:
+            Returns a random mean obtained around the given mean (if no mean is given, it uses the default)
+        """
         if mean is None:
             mean = self.params_default
         for k, v in mean.items():

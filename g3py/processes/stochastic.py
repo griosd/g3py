@@ -121,6 +121,9 @@ class StochasticProcess(PlotModel):#TheanoBlackBox
         return self.active.set_params(*args, **kwargs)
 
     def params_random(self, *args, **kwargs):
+        """
+        Alias for the method .active.params_random()
+        """
         return self.active.params_random(*args, **kwargs)
 
     def params_datatrace(self, *args, **kwargs):
@@ -441,7 +444,7 @@ class StochasticProcess(PlotModel):#TheanoBlackBox
         """
         Predict a stochastic process with each feature of the process.
         Args:
-            params (dict): Contains the hyperparameters of the stochastic process
+            params (g3py.libs.DictObj): Contains the hyperparameters of the stochastic process
             space (numpy.ndarray): the domain space of the process
             inputs (numpy.ndarray): the inputs of the process
             outputs (numpy.ndarray): the outputs (observations) of the process
@@ -560,22 +563,24 @@ class StochasticProcess(PlotModel):#TheanoBlackBox
     def find_MAP(self, start=None, points=1, return_points=False, plot=False, display=True,
                  powell=True, bfgs=True, init='bfgs', max_time=None):
         """
-        This function calculates the Maximun A Posteriori using the powell algorithm by default
+        This function calculates the Maximun A Posteriori alternating the bfgs and powell algorithms,
+
         Args:
             start (g3py.libs.DictObj): The initial parameters to start the optimization.
-                The default value correspond to the default parameters of the gp.
-            points (int): the number of iterations of the optimization problem
+                The default value correspond to the default parameters of the gp. This could be a list
+                of initial points.
+            points (int): the number of (meta) iterations of the optimization problem
             return_points (bool): Determines whether the parameters points of the optimization
                 are displayed.
             plot (bool): Determines whether the result it is plotted.
-            display (bool):
-            powell:
-            bfgs:
-            init:
-            max_time:
+            display (bool): Determines whether the information of the optimization is displayed.
+            powell (bool): Whether the powell algotithm it is used
+            bfgs (bool): Whether the bfgs algotithm it is used
+            init (str): The algorith with which it starts in the first iteration.
+            max_time (int): the maximum number of seconds for every step in the optimization
 
         Returns:
-
+            This function returns the optimal parameters of the loglikelihood function.
         """
         points_list = list()
         if start is None:
@@ -668,6 +673,34 @@ class StochasticProcess(PlotModel):#TheanoBlackBox
     def sample_hypers(self, start=None, samples=1000, chains=None, ntemps=None, raw=False, noise_mult=0.1, noise_sum=0.01,
                       burnin_tol=0.001, burnin_method='multi-sum', outlayer_percentile=0.0005, clusters=5, prior=False, parallel=False, threads=1,
                       plot=False, file=None, load=True):
+        """
+        This function find the optimal hyperparameters of the logpredictive function using the
+        'Ensemble MCMC' algorithm.
+        Args:
+            start (g3py.libs.DictObj): The initial parameters for the optimization. If start is None,
+                it starts with the parameters obtained using find_MAP algorithm.
+            samples (int): the number of iterations performed by the algorithm
+            chains (int): the number of markov chains used in the sampling. The number of chains needs
+                to be an even number and more than twice the dimension of the parameter space.
+            ntemps (int): the number of temperatures used.
+            raw (bool): this argument determines whether the result returned is raw or is pre-processed
+            noise_mult (float): the variance of the multiplicative noise
+            noise_sum (float): the variance of the aditive noise
+            burnin_tol (float): It is the tolerance for the burnin.
+            burnin_method (str): This set the algorith used to calculates the burnin
+            outlayer_percentile (float): this takes a value between 0 and 1, and represent the value
+                of the percentile to let out as outlayers.
+            clusters (int): the number of clusters in which the sample is divided
+            prior (bool): Whether the prior its considered
+            parallel (bool): Whether the algorithm works in paralell or not.
+            threads:
+            plot:
+            file:
+            load:
+
+        Returns:
+
+        """
         ndim = len(self.active.sampling_dims)
         if chains is None:
             chains = 2*ndim
