@@ -693,13 +693,19 @@ class StochasticProcess(PlotModel):#TheanoBlackBox
             clusters (int): the number of clusters in which the sample is divided
             prior (bool): Whether the prior its considered
             parallel (bool): Whether the algorithm works in paralell or not.
-            threads:
-            plot:
-            file:
-            load:
+            threads (int): the number of process to paralelize the algorithm
+            plot (bool): whether the information of the datatrace are plotted or not.
+            file (str): a path for save the datatrace
+            load (bool): if load is True, a datatrace will be searched in the path given by file
 
         Returns:
-
+            This function returns the information given by the Ensemble Markov Chain Monte Carlo Algorithm
+            The information could be given tranformed or raw, depending of the boolean 'raw'.
+            In the raw case, the information given contains evolution of each chain (which contains
+             the parameters) across the iterations and the value of the loglikelihood in each iteration.
+            Otherwhise, the function returns a datatrace, whose columns contains the values of
+            every parameter, it transformation (logaritm transformation), the chain number to which it
+            belong, the iteration number, and the 'burnin' and the 'outlayer' booleans.
         """
         ndim = len(self.active.sampling_dims)
         if chains is None:
