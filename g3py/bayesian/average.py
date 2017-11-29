@@ -157,6 +157,26 @@ def kde_to_datatrace(process, kde, nsamples=1000, prior=False):
 
 
 def cluster_datatrace(process, dt, n_components=5, bayesian=True, burnin=True, outlayer=True, n_init=1, max_iter=5000):
+    """
+    This function takes a datatrace and clusters it and set the cluster atribute to the stochastic process.
+    Args:
+        process (g3py.processes.gaussian.GaussianProcess): The process from where the datatrace was obtained.
+        dt (pandas.core.frame.DataFrame): result of MCMC run on DataFrame format. This contains the whole
+            information of the evolution of the MCMC.
+        n_components (int): The desired number of clusters.
+        bayesian (bool): If True, it uses BayesianGaussianMixture algorithm. If False, uses GaussianMixture algorithm.
+        burnin (bool): If it is True, only the chains that have the atribute '_burnin' as True will be plotted
+        outlayer (bool): If it is True, only the chains that have the atribute '_outlayer' as True will be plotted
+        n_init (int): The number of initializations to perform. The result with the highest lower bound value on the
+            likelihood is kept.
+        max_iter (int): The number of EM iterations to perform.
+
+    Returns:
+        Returns a function (a method of the process) named '_cluster', which takes a datatrace and
+        classify the parameters into clusters.
+        Also, takes a datatrace for training the clusters, and set a columns named '_cluster' which
+        contains the information of which cluster belong each set of parameters.
+    """
     #excludes = '^((?!_nchain|_niter|_burnin|_outlayer|_cluster|_log_|_logodds_|_interval_|_lowerbound_|_upperbound_|_sumto1_|_stickbreaking_|_circular_).)*$'
     #dt.filter(regex=excludes)
     datatrace_filter = dt
@@ -246,6 +266,32 @@ def conditional(dt, lambda_df):
 
 
 def find_candidates(dt, ll=1, l1=0, l2=0, nlpd=0, mse=0, mean=False, median=False, by_cluster=True, rand=0):
+    """
+    Find the best set of parameters (candidates) from the datatrace, depending on some criteria
+    (min ll, min l1 or l2 error). For finding a candidate, the criteria (ll, l1 or l2) needs to be
+    a column in the datatrace, otherwise the candidates will be an empty pandas.
+    Args:
+        dt (pandas.core.frame.DataFrame): result of MCMC run on DataFrame format. This contains the whole
+            information of the evolution of the MCMC.
+        ll (int): The amount of candidates desired using the ll value for sorting. Empty list in case
+            that ll column does not exist.
+        l1 (int): The amount of candidates desired using the l1 value for sorting. Empty list in case
+            that ll column does not exist.
+        l2 (int): The amount of candidates desired using the l2 value for sorting. Empty list in case
+            that ll column does not exist.
+        nlpd (int): The amount of candidates desired using the nlpd value for sorting. Empty list in case
+            that ll column does not exist.
+        mse (int): The amount of candidates desired using the mse value for sorting. Empty list in case
+            that ll column does not exist.
+        mean (bool):
+        median (bool):
+        by_cluster (bool): If it is True, this function will find candidates from each cluster. If False
+            the candidates won't consider which cluster they belong.
+        rand:
+
+    Returns:
+
+    """
     # modes
     dt_full = dt.drop_duplicates(subset=[k for k in dt.columns if not k.startswith('_')])
     candidates = list()
@@ -296,53 +342,37 @@ def plot_datatrace(datatrace, burnin = False, outlayer = False, varnames=None, t
                   lines=None, combined=False, plot_transformed=True, grid=True,
                   alpha=0.35, priors=None, prior_alpha=1, prior_style='--',
                   ax=None):
-    """Plot samples histograms and values
+    """
+    Plot the kde of the histograms and values of the parameters contained in the chains.
+    Args:
+        datatrace (pandas.core.frame.DataFrame): result of MCMC run on DataFrame format. This contains the whole
+            information of the evolution of the MCMC.
+        burnin (bool): If it is True, only the chains that have the atribute '_burnin' as True will be plotted
+        outlayer (bool): If it is True, only the chains that have the atribute '_outlayer' as True will be plotted
+        varnames (list, str): list of variable names
+        transform (function): Function to transform data (defaults to identity)
+        figsize (figure size tuple):  If None, size is (12, num of variables * 2) inch
+        lines (dict): Dictionary of variable name / value  to be overplotted as vertical
+            lines to the posteriors and horizontal lines on sample values
+            e.g. mean of posteriors, true values of a simulation
+        combined (bool): Flag for combining multiple chains into a single chain. If False (default),
+            chains will be plotted separately.
+        plot_transformed (bool): Flag for plotting automatically transformed variables in addition to original
+            variables (defaults to False).
+        grid (bool): Flag for adding gridlines to histogram. Defaults to True.
+        alpha (float): Alpha value for plot line. Defaults to 0.35. Determines the transparency.
+        priors (iterable of PyMC distributions): PyMC prior distribution(s) to be plotted alongside poterior. Defaults
+            to None (no prior plots).
+        prior_alpha (float):  Alpha value for prior plot. Defaults to 1.
+        prior_style (str): Line style for prior plot. Defaults to '--' (dashed line).
+        ax (axes):  Matplotlib axes. Accepts an array of axes, e.g.:
 
-    Parameters
-    ----------
-
-    datatrace : result of MCMC run on DataFrame format
-    varnames : list of variable names
-        Variables to be plotted, if None all variable are plotted
-    transform : callable
-        Function to transform data (defaults to identity)
-    figsize : figure size tuple
-        If None, size is (12, num of variables * 2) inch
-    lines : dict
-        Dictionary of variable name / value  to be overplotted as vertical
-        lines to the posteriors and horizontal lines on sample values
-        e.g. mean of posteriors, true values of a simulation
-    combined : bool
-        Flag for combining multiple chains into a single chain. If False
-        (default), chains will be plotted separately.
-    plot_transformed : bool
-        Flag for plotting automatically transformed variables in addition to
-        original variables (defaults to False).
-    grid : bool
-        Flag for adding gridlines to histogram. Defaults to True.
-    alpha : float
-        Alpha value for plot line. Defaults to 0.35.
-    priors : iterable of PyMC distributions
-        PyMC prior distribution(s) to be plotted alongside poterior. Defaults
-        to None (no prior plots).
-    prior_alpha : float
-        Alpha value for prior plot. Defaults to 1.
-    prior_style : str
-        Line style for prior plot. Defaults to '--' (dashed line).
-    ax : axes
-        Matplotlib axes. Accepts an array of axes, e.g.:
-
-        >>> fig, axs = plt.subplots(3, 2) # 3 RVs
-        >>> pymc3.traceplot(trace, ax=axs)
+             >>> fig, axs = plt.subplots(3, 2) # 3 RVs
+             >>> pymc3.traceplot(trace, ax=axs)
 
         Creates own axes by default.
-
-    Returns
-    -------
-
-    ax : matplotlib axes
-
     """
+
     nburnin = datatrace.loc[(~datatrace._burnin).idxmin()]._niter
     if burnin and hasattr(datatrace, '_burnin'):
         datatrace = datatrace[datatrace._burnin]
@@ -447,6 +477,28 @@ def kde_datatrace(dt, items=None, size=6, n_levels=20, cmap="Blues_d"):
 
 def hist_datatrace(dt, items=None, like=None, reference=None, drop=[], drop_default=['_burnin', '_outlayer', '_nchain', '_niter'],
                    regex=None, samples=None, bins=200, layout=(5, 5), figsize=(20, 20), size_reference=10, width_reference=3, burnin=True, outlayer=True):
+    """
+    Plot the histograms of the values of the parameters contained in a datatrace
+    Args:
+        dt (pandas.core.frame.DataFrame): result of MCMC run on DataFrame format. This contains the whole
+            information of the evolution of the MCMC.
+        items (list): Contain the label of the parameters desired to be plotted. Defaults None plot every parameter.
+        like (str): All the parameters that contains this string will be plotted.
+        reference (g3py.libs.DictObj): A dictionary that contains reference values that are plotted as a dash line.
+        drop (list): A list that contains the labels of the columns that will be dropped from the datatrace
+            before plotting.
+        drop_default (list): The default labels for drop from the datatrace before plotting
+        regex (str): A regular expression that indicates which variables will be ploted.
+        samples (int): The number of samples taken from the datatrace to plot. Default takes the whole
+            datatrace
+        bins (int): The numbers of bins for the histograms.
+        layout (tuple): The layout for the subplots.
+        figsize (tuple): The figure size.
+        size_reference (int): The size of the text embedded in the histograms.
+        width_reference (int): The width of the dash line reference
+        burnin (bool): If it is True, only the chains that have the atribute '_burnin' as True will be plotted
+        outlayer (bool): If it is True, only the chains that have the atribute '_outlayer' as True will be plotted
+    """
     if burnin and hasattr(dt, '_burnin'):
         dt = dt[dt._burnin]
     if outlayer and hasattr(dt, '_outlayer'):
@@ -455,7 +507,7 @@ def hist_datatrace(dt, items=None, like=None, reference=None, drop=[], drop_defa
     if drop is not None:
         dt = dt.drop(drop, axis=1)
     marginal = marginal_datatrace(dt, items=items, like=like, regex=regex, samples=samples)
-    marginal.columns = [c[c.find('_') + 1:] for c in marginal.columns]
+    #marginal.columns = [c[c.find('_') + 1:] for c in marginal.columns]
     marginal.hist(bins=bins, layout=layout, figsize=figsize)
     columns = sorted(marginal.columns)
     if reference is not None:
@@ -484,6 +536,30 @@ def hist_datatrace(dt, items=None, like=None, reference=None, drop=[], drop_defa
 def scatter_datatrace(dt, items=None, like=None, drop=[], drop_default=['_burnin', '_outlayer', '_nchain', '_niter'],
                       regex=None, samples=100000, burnin=True, outlayer=True, cluster=None, x_vars=None, y_vars=None,
                       size=2.5, aspect=1.0, x_rotation=45):
+    """
+    Plots a scatter plot of the kde of the histograms of the parameters, printing in different color
+    the clusters.
+    Args:
+        dt (pandas.core.frame.DataFrame): result of MCMC run on DataFrame format. This contains the whole
+            information of the evolution of the MCMC.
+        items (list): Contain the label of the parameters desired to be plotted. Defaults None plot every
+        like (str): All the parameters that contains this string will be plotted.
+        drop (list): A list that contains the labels of the columns that will be dropped from the datatrace
+            before plotting.
+        drop_default (list): The default labels for drop from the datatrace before plotting.
+        regex (str): A regular expression that indicates which variables will be ploted.
+        samples (int): The number of samples taken from the datatrace to plot. Default takes the whole
+            datatrace.
+        burnin (bool): If it is True, only the chains that have the atribute '_burnin' as True will be plotted
+        outlayer (bool): If it is True, only the chains that have the atribute '_outlayer' as True will be
+        cluster (int): For plotting a specific cluster.
+        {x, y}_vars : lists of variable names, optional
+        Variables within ``data`` to use separately for the rows and
+        columns of the figure; i.e. to make a non-square plot.
+        size (float): scalar, optional.   Height (in inches) of each facet.
+        aspect (float): scalar, optional. Aspect * size gives the width (in inches) of each facet.
+        x_rotation (float): correspond to the angle of the label of x_axis.
+    """
     if burnin and hasattr(dt, '_burnin'):
         dt = dt[dt._burnin]
     if outlayer and hasattr(dt, '_outlayer'):

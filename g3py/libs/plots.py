@@ -29,6 +29,9 @@ def show(*args, **kwargs):
 
 
 def style_seaborn():
+    """
+    This function set some features of the figures.
+    """
     plt.style.use('classic')
     sb.set(style='darkgrid', color_codes=False)
     plt.style.use('seaborn-darkgrid')
