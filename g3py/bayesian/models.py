@@ -146,7 +146,7 @@ class GraphicalModel:
 
     @property
     def ndim(self):
-        return self.model.bijection.ordering.dimensions
+        return self.model.bijection.ordering.size
 
     def array_to_dict(self, params):
         return self.bijection.rmap(params)
@@ -577,6 +577,16 @@ class PlotModel:
                 order = space[:, 0]
             else:
                 order = np.arange(len(space))
+        if samples > 0 and palette is None:
+            if 'samples' not in labels:
+                labels['samples'] = None
+            plot(order, values['samples'][:, 0], alpha=0.4, label=labels['samples'])
+            plot(order, values['samples'], alpha=0.4)
+        elif samples > 0 and palette is not None:
+            if 'samples' not in labels:
+                labels['samples'] = None
+            plot(order, values['samples'][:, 0], color=cmap(0.9), alpha=0.15, linewidth='1.0', label=labels['samples'])
+            plot(order, values['samples'], color=cmap(0.9), alpha=0.15, linewidth='1.0')
         if mean:
             if 'mean' not in labels:
                 labels['mean'] = 'Mean'
@@ -607,16 +617,7 @@ class PlotModel:
             plot(order, values['mean'] - 2.0 * values['std'], '--k', alpha=0.2)
         if cov:
             pass
-        if samples > 0 and palette is None:
-            if 'samples' not in labels:
-                labels['samples'] = None
-            plot(order, values['samples'][:, 0], alpha=0.4, label=labels['samples'])
-            plot(order, values['samples'], alpha=0.4)
-        if samples > 0 and palette is not None:
-            if 'samples' not in labels:
-                labels['samples'] = None
-            plot(order, values['samples'][:, 0], color=cmap(0.9), alpha=0.15, linewidth='1.0', label=labels['samples'])
-            plot(order, values['samples'], color=cmap(0.9), alpha=0.15, linewidth='1.0')
+
         if data and hidden is not False:
             self.plot_hidden(big=big)
         if data and self.is_observed:
