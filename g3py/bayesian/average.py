@@ -101,14 +101,19 @@ def chains_to_datatrace(process, chains, ll=None, transforms=True, burnin_tol=0.
         ncolumn = n_vars
         varnames = process.params.keys()
         for v in datatrace.columns:
-            if '___' in v:
+            prefix = '_'
+            if '____' in v:
+                name = v[:v.find('____')+2]
+                prefix = '__'
+            elif '___' in v:
                 name = v[:v.find('___')+1]
             else:
                 name = v
             if name not in varnames:
                 continue
             if name in process.transformations:
-                datatrace.insert(ncolumn, v.replace('_' + process.model[name].distribution.transform_used.name + '_', ''), process.transformations[name](datatrace[v]))
+                datatrace.insert(ncolumn, v.replace('_' + process.model[name].distribution.transform_used.name + prefix, ''),
+                                 process.transformations[name](datatrace[v]))
                 ncolumn += 1
     if clusters is not None:
         if clusters > 0:
@@ -455,7 +460,7 @@ def hist_datatrace(dt, items=None, like=None, reference=None, drop=[], drop_defa
     if drop is not None:
         dt = dt.drop(drop, axis=1)
     marginal = marginal_datatrace(dt, items=items, like=like, regex=regex, samples=samples)
-    marginal.columns = [c[c.find('_') + 1:] for c in marginal.columns]
+    #marginal.columns = [c[c.find('_') + 1:] for c in marginal.columns]
     marginal.hist(bins=bins, layout=layout, figsize=figsize)
     columns = sorted(marginal.columns)
     if reference is not None:
