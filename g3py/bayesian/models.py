@@ -487,6 +487,21 @@ class PlotModel:
         return r
 
     def average(self, datatrace, scores=True, *args, **kwargs):
+        """
+        For each set of parameters (rows) of the datatrace, the prediction is calculated and then
+        calculates the average of the curves.
+        Args:
+            datatrace (pandas.core.frame.DataFrame): result of MCMC run on DataFrame format. This contains the whole
+            information of the evolution of the MCMC.
+            scores (bool): If True, error l1 and l2 are calculated and returned.
+            *args: List arguments inherited from '.predict' and '.scores' methods.
+            **kwargs: Dictionary of arguments inherited from '.predict' and '.scores' methods.
+
+        Returns:
+            Returns a dictionary that contains the average prediction, and the scores (if scores True).
+            Depending on the *args and **kwargs, the average of the others curves generated from the
+            '.predict' method are returned.
+        """
         average = None
         for k, v in datatrace.iterrows():
             params = self.active.model.bijection.rmap(v)
@@ -504,6 +519,17 @@ class PlotModel:
         return average
 
     def particles(self, datatrace, nsamples = None, *args, **kwargs):
+        """
+        Calculates a sample of a gaussian process using the parameters contained in a datatrace.
+        Args:
+            datatrace (pandas.core.frame.DataFrame): result of MCMC run on DataFrame format. This contains the whole
+            information of the evolution of the MCMC.
+            nsamples (int): the number of desired samples
+            *args: list of arguments that is inherited from the method '.sample'
+            **kwargs: dictionary of arguments that is inherithed from the method '.sample'.
+        Returns:
+            It returns a numpy.ndarray that contains the values of the particles.
+        """
         particles = []
         if nsamples is None:
             nsamples = len(datatrace)
@@ -707,6 +733,20 @@ class PlotModel:
             plot_text('Space X', 'Index', 'Value', legend=False)
 
     def plot_datatrace(self, datatrace, overlap=False, limit=10, scores=True, *args, **kwargs):
+        """
+        This method takes the hyperparameters of the gp from a datatrace, and plot the prediction
+        of each candidate included in the datatrace.
+        Args:
+            datatrace (pandas.core.frame.DataFrame): result of MCMC run on DataFrame format. This contains the whole
+            information of the evolution of the MCMC.
+            overlap (bool): If True, the plots are overlaped. If False, are plotted separately.
+            limit (int): The maximum number of process plotted.
+            scores (bool): If True, the scores l1 and l2 errors are calculated and plotted in the
+                title of the figures. If False, the tittle only contains the name of the candidated
+                obtained from the datatrace.
+            *args: list arguments inherited from the methods '.plot' and '.scores').
+            **kwargs: dictionary arguments inherited from the methods '.plot' and '.scores').
+        """
         for k, v in datatrace.iterrows():
             self.plot(self.active.model.bijection.rmap(v), *args, **kwargs)
             if not overlap:

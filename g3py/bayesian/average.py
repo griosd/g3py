@@ -268,8 +268,8 @@ def conditional(dt, lambda_df):
 def find_candidates(dt, ll=1, l1=0, l2=0, nlpd=0, mse=0, mean=False, median=False, by_cluster=True, rand=0):
     """
     Find the best set of parameters (candidates) from the datatrace, depending on some criteria
-    (min ll, min l1 or l2 error). For finding a candidate, the criteria (ll, l1 or l2) needs to be
-    a column in the datatrace, otherwise the candidates will be an empty pandas.
+    (min ll, min l1 or l2 error, etc). For finding a candidate, the criteria (ll, l1 or l2, etc) needs
+    to be a  existing column in the datatrace, otherwise the candidates will be an empty pandas.
     Args:
         dt (pandas.core.frame.DataFrame): result of MCMC run on DataFrame format. This contains the whole
             information of the evolution of the MCMC.
@@ -283,14 +283,13 @@ def find_candidates(dt, ll=1, l1=0, l2=0, nlpd=0, mse=0, mean=False, median=Fals
             that ll column does not exist.
         mse (int): The amount of candidates desired using the mse value for sorting. Empty list in case
             that ll column does not exist.
-        mean (bool):
-        median (bool):
+        mean (bool): If True, the mean of the datatrace will be displayed.
+        median (bool): If True, the median of the datatrace will be displayed.
         by_cluster (bool): If it is True, this function will find candidates from each cluster. If False
             the candidates won't consider which cluster they belong.
-        rand:
-
+        rand (int): Determines the number of random candidates obtained from the datatrace
     Returns:
-
+        This returns a datatrace that contains the best candidates for certain criteria.
     """
     # modes
     dt_full = dt.drop_duplicates(subset=[k for k in dt.columns if not k.startswith('_')])
