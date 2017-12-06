@@ -129,6 +129,20 @@ def datatrace_to_chains(process, dt, flat=False, burnin=False):
 
 
 def datatrace_to_kde(process, dt, kernel='tophat', bandwidth=0.02, min_ll=-1e6):
+    """
+    Takes a datatrace and calculates the kernel density estimation of it.
+    Args:
+        process (g3py.processes.gaussian.GaussianProcess): The process from where the datatrace was
+            obtained.
+        dt (pandas.core.frame.DataFrame): result of MCMC run on DataFrame format. This contains the whole
+            information of the evolution of the MCMC.
+        kernel (str): The kernel to use. Valid kernels are [‘gaussian’|’tophat’|’epanechnikov’|
+            ’exponential’|’linear’|’cosine’]
+        bandwidth (float): The bandwidth of the kernel
+        min_ll (float): The minimun value of the ll that is considered for the kde.
+    Returns:
+        Returns an instance of the class sklearn.neighbors.KernelDensity
+    """
     # con outlayers pero sin burn-in
     if hasattr(dt, '_ll'):
         dt = dt[np.isfinite(dt['_ll'])]
@@ -139,6 +153,19 @@ def datatrace_to_kde(process, dt, kernel='tophat', bandwidth=0.02, min_ll=-1e6):
 
 
 def kde_to_datatrace(process, kde, nsamples=1000, prior=False):
+    """
+    Convert an kde to a datatrace.
+    Args:
+        process (g3py.processes.gaussian.GaussianProcess): A gaussian process from where the datatrace was
+            obtained.
+        kde (sklearn.neighbors.kde.KernelDensity): An instance from the class sklearn.neighbors.KernelDensity
+        nsamples (int): the number of samples taken from the model.
+        prior (bool): Determines whether the ll value consider the prior.
+
+    Returns:
+        Sample from the kde into a datatrace that contains the same information that the MCMC algorithm
+        returns.
+    """
     samples = kde.sample(n_samples=1)
     ll = process.logp_chain(samples, prior=prior)
     samples, ll = samples[ll > kde.min_ll], ll[ll > kde.min_ll]
@@ -239,6 +266,23 @@ def errors_datatrace(process, dt, inputs=None, outputs=None, space=None, hidden=
 
 # SELECTION
 def marginal_datatrace(dt, items=None, like=None, regex=None, drop=None, samples=None):
+    """
+    Given a datatrace, this function generates a subsample of it.
+    Args:
+        dt (pandas.core.frame.DataFrame): result of MCMC run on DataFrame format. This contains the whole
+            information of the evolution of the MCMC.
+        items (list): Contain the label of the parameters desired to be plotted. Defaults None plots
+            every parameter.
+        like (str): All the parameters that contains this string will be plotted.
+        regex (str): A regular expression that indicates which variables will be ploted.
+        drop (list): A list that contains the labels of the columns that will be dropped from the datatrace
+        before plotting.
+        samples (int): The number of samples taken from the datatrace to plot. Default takes the whole
+        datatrace
+
+    Returns:
+        Returns a filtered datatrace.
+    """
     if drop is not None:
         dt = dt.drop(drop, axis=1)
     if items is None and like is None and regex is None:
@@ -252,6 +296,17 @@ def marginal_datatrace(dt, items=None, like=None, regex=None, drop=None, samples
 
 
 def conditional_datatrace(dt, lambda_df):
+    """
+    Given a datatrace and a condition over it (as a lambda function), the section of the datatrace that
+    satisfies that condition is calculated and returned.
+    Args:
+        dt (pandas.core.frame.DataFrame): result of MCMC run on DataFrame format. This contains the whole
+            information of the evolution of the MCMC.
+        lambda_df (function): a lambda function that represents a condition over the datatrace
+    Returns:
+        This returns a datatrace, subset of the given datatrace, that holds the condition given by
+        the lambda function over the datatrace, and it relative size.
+    """
     conditional_traces = dt.loc[lambda_df, :]
     print('#' + str(len(conditional_traces)) + " (" + str(100 * len(conditional_traces) / len(dt)) + " %)")
     return conditional_traces
