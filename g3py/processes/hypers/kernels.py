@@ -6,8 +6,10 @@ from .metrics import Delta, Minimum, Difference, One, ARD_Dot, ARD_DotBias, ARD_
 from ...libs.tensors import debug
 
 
-pi = np.pi
-pi2 = np.pi**2
+pi = np.float32(np.pi)
+pi2 = np.float32(np.pi**2)
+zero = np.float32(0.0)
+two = np.float32(2.0)
 
 
 class Kernel(Hypers):
@@ -472,8 +474,18 @@ class SIN(KernelPeriodic):
         return tt.exp(2 * tt.dot(tt.sin(pi * d * self.freq) ** 2, self.rate))
 
 
+class SINC(KernelPeriodic):
+    def __init__(self, x=None, name=None, metric=Difference, var=None, freq=None):
+        super().__init__(x, name, metric, var, freq, rate=1.0)
+
+    def k(self, d):
+        sinc = tt.sin(d * self.freq)/(self.freq * d)
+        r = tt.switch(tt.neq(d, zero), sinc, np.float32(1))
+        return tt.prod(r, axis=2, dtype=th.config.floatX)
+
+
 class SM(KernelPeriodic):
     def k(self, d):
-        return tt.exp(-2*pi2*tt.dot(d ** 2, self.rate ** 2)) * tt.prod(tt.cos(2 * pi * d * self.freq), axis=2, dtype=th.config.floatX)
+        return tt.exp(-two*pi2*tt.dot(d ** 2, self.rate ** 2)) * tt.prod(tt.cos( two*pi * d * self.freq), axis=2, dtype=th.config.floatX)
 
 

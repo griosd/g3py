@@ -12,7 +12,7 @@ from .hypers.means import Mean
 from .hypers.mappings import Mapping, Identity
 from .stochastic import zero32, StochasticProcess
 from ..libs.tensors import tt_to_cov, cholesky_robust, tt_to_bounded, tt_to_num
-from ..libs.plots import plot_text, show, grid2d, plot_2d
+from ..libs.plots import plot_text, show, grid2d, plot_2d, plot_matrix
 
 
 class EllipticalProcess(StochasticProcess):
@@ -234,16 +234,10 @@ class EllipticalProcess(StochasticProcess):
         if space is None:
             space = self.space
         concentration_matrix = self.kernel(params=params, space=space, prior=prior, noise=noise)
-        if color:
-            if figsize is not None:
-                plt.figure(None, figsize)
-            v = np.max(np.abs(concentration_matrix))
-            plt.imshow(concentration_matrix, cmap=cmap, vmax=v, vmin=-v)
-        else:
-            plt.matshow(concentration_matrix)
+        plot_matrix(concentration_matrix, color=color, cmap=cmap, figsize=figsize)
         plot_text(title, 'Space x', 'Space x', legend=False)
 
-    def plot_mapping(self, params=None, domain=None, inputs=None, outputs=None, neval=100, title=None, label='mapping'):
+    def plot_mapping(self, params=None, domain=None, inputs=None, outputs=None, neval=100, title=None, label='mapping', **kwargs):
         if params is None:
             params = self.params
         if domain is None:
@@ -254,7 +248,7 @@ class EllipticalProcess(StochasticProcess):
             domain = np.linspace(mean - 2 * std, mean + 2 * std, neval)
             domain = np.linspace(outputs.min(), outputs.max(), neval)
         #plt.plot(self.mapping(params=params, outputs=domain, inputs=inputs), domain, label=label)
-        plt.plot(domain, self.mapping_inv(params=params, outputs=domain, inputs=inputs), label=label)
+        plt.plot(domain, self.mapping_inv(params=params, outputs=domain, inputs=inputs), label=label, **kwargs)
 
         if title is None:
             title = 'Mapping'

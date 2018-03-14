@@ -311,6 +311,35 @@ class StochasticProcess(PlotModel):#TheanoBlackBox
     def th_error_mse(self, prior=False, noise=False):
         return tt.mean(tt.abs_(self.th_vector - self.th_outputs))**2 + tt.var(tt.abs_(self.th_vector - self.th_outputs))
 
+    def _compile_methods_logp(self):
+        reset_space = self.space
+        reset_hidden = self.hidden
+        reset_order = self.order
+        reset_inputs = self.inputs
+        reset_outputs = self.outputs
+        reset_index = self.index
+        reset_observed = self.is_observed
+
+        self.set_space(space=self.th_space_.tag.test_value, hidden=self.th_vector.tag.test_value,
+                       inputs=self.th_inputs_.tag.test_value, outputs=self.th_outputs_.tag.test_value)
+        self.compiles = DictObj()
+
+        self.logp = types.MethodType(self._method_name('th_logp'), self)
+        self.dlogp = types.MethodType(self._method_name('th_dlogp'), self)
+        self.loglike = types.MethodType(self._method_name('th_loglike'), self)
+
+        self.is_observed = True
+        _ = self.logp(array=True)
+        _ = self.logp(array=True, prior=True)
+        _ = self.loglike(array=True)
+        try:
+            _ = self.dlogp(array=True)
+        except Exception as m:
+            print('Compiling dlogp error:', m)
+        self.is_observed = reset_observed
+        self.set_space(space=reset_space, hidden=reset_hidden, order=reset_order,
+                       inputs=reset_inputs, outputs=reset_outputs, index=reset_index)
+
     def _compile_methods(self):
         reset_space = self.space
         reset_hidden = self.hidden

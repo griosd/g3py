@@ -106,6 +106,16 @@ def plot_img(name='example', path='plots/', extension='png'):
     display.display(display.HTML('<img src=\'{}?{}\'>'.format(file, np.random.rand())))
 
 
+def plot_matrix(matrix, color=True, cmap=cm.seismic, figsize=(6, 6)):
+    if color:
+        if figsize is not None:
+            plt.figure(None, figsize)
+        v = np.max(np.abs(matrix))
+        plt.imshow(matrix, cmap=cmap, vmax=v, vmin=-v)
+    else:
+        plt.matshow(matrix)
+
+
 def grid2d(x, y):
     xy = np.zeros((len(x) * len(y), 2))
     for i in range(len(x)):
