@@ -322,7 +322,8 @@ class StochasticProcess(PlotModel):#TheanoBlackBox
 
         self.set_space(space=self.th_space_.tag.test_value, hidden=self.th_vector.tag.test_value,
                        inputs=self.th_inputs_.tag.test_value, outputs=self.th_outputs_.tag.test_value)
-        self.compiles = DictObj()
+        if self.compiles is None:
+            self.compiles = DictObj()
         if self.th_mean() is not None:
             self.mean = types.MethodType(self._method_name('th_mean'), self)
         if self.th_median() is not None:
