@@ -614,7 +614,7 @@ class StochasticProcess(PlotModel):#TheanoBlackBox
             return params, points_list
 
     def sample_hypers(self, start=None, samples=1000, chains=None, ntemps=None, raw=False, noise_mult=0.1, noise_sum=0.01,
-                      burnin_tol=0.001, burnin_method='multi-sum', outlayer_percentile=0.0005, clusters=5, prior=False, parallel=False, threads=1,
+                      burnin_tol=0.001, burnin_method='multi-sum', outlayer_percentile=0.0005, clusters=None, prior=False, parallel=False, threads=1,
                       plot=False, file=None, load=True):
         ndim = len(self.active.sampling_dims)
         if chains is None:
