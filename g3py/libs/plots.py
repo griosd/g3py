@@ -82,7 +82,7 @@ def style_widget():
             </style>'''))
 
 
-def plot_text(title="title", x="xlabel", y="ylabel", ncol=3, loc='best', axis=None, legend=True):
+def plot_text(title="", x="", y="", ncol=3, loc='best', axis=None, legend=True):
     plt.axis('tight')
     plt.title(title)
     plt.xlabel(x)
