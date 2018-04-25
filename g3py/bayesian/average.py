@@ -387,12 +387,12 @@ def plot_datatrace(datatrace, burnin = False, outlayer = False, varnames=None, t
             dk = datatrace.loc[key]
             dk = dk[np.isfinite(dk[v])]
             d = np.squeeze(transform(dk[v]))
-            d = pm.plots.make_2d(d)
+            d = pm.utils.make_2d(d)
             try:
                 if d.dtype.kind == 'i':
-                    pm.plots.histplot_op(ax[i, 0], d, alpha=alpha)
+                    pm.artists.histplot_op(ax[i, 0], d, alpha=alpha)
                 else:
-                    pm.plots.kdeplot_op(ax[i, 0], d, prior, prior_alpha, prior_style)
+                    pm.artists.kdeplot_op(ax[i, 0], d, prior, prior_alpha, prior_style)
             except:
                 pass
             ax[i, 1].plot(dk._niter, d, alpha=alpha)
