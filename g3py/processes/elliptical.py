@@ -17,7 +17,7 @@ from ..libs.plots import plot_text, show, grid2d, plot_2d, plot_matrix
 
 class EllipticalProcess(StochasticProcess):
     def __init__(self, space=None, location: Mean=None, kernel: Kernel=None, mapping: Mapping=Identity(), degree: Freedom=None,
-                 noisy=True, *args, **kwargs):
+                 noisy=True, var_noise=None, *args, **kwargs):
         #print('EllipticalProcess__init__')
 
         self.f_location = location
@@ -25,7 +25,7 @@ class EllipticalProcess(StochasticProcess):
         self.f_mapping = mapping
         if noisy:
             self.f_kernel = kernel
-            self.f_kernel_noise = KernelSum(self.f_kernel, KernelNoise(name='Noise')) #self.th_space,
+            self.f_kernel_noise = KernelSum(self.f_kernel, KernelNoise(name='Noise', var=var_noise)) #self.th_space,
         else:
             self.f_kernel = kernel
             self.f_kernel_noise = self.f_kernel
