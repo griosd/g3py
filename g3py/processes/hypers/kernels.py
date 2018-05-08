@@ -11,7 +11,6 @@ pi2 = np.float32(np.pi**2)
 zero = np.float32(0.0)
 two = np.float32(2.0)
 
-
 class Kernel(Hypers):
     def __init__(self, x=None, name=None, metric=Delta, var=None):
         if type(metric) is type:
@@ -489,3 +488,6 @@ class SM(KernelPeriodic):
         return tt.exp(-two*pi2*tt.dot(d ** 2, self.rate ** 2)) * tt.prod(tt.cos( two*pi * d * self.freq), axis=2, dtype=th.config.floatX)
 
 
+class SM2(KernelPeriodic):
+    def k(self, d):
+        return np.float32(2.0*np.sqrt(2.0))*self.rate*tt.exp(-2*pi2*tt.dot(d ** 2, self.rate ** 2)) * tt.prod(tt.cos(d * self.freq), axis=2, dtype=th.config.floatX)
