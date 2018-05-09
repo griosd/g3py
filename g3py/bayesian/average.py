@@ -108,7 +108,7 @@ def chains_to_datatrace(process, chains, ll=None, transforms=True, burnin_tol=0.
             elif '___' in v:
                 name = v[:v.find('___')+1]
             else:
-                name = v
+                name = v[:v.find('__')]
             if name not in varnames:
                 continue
             if name in process.transformations:

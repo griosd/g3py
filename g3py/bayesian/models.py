@@ -146,7 +146,7 @@ class GraphicalModel:
 
     @property
     def ndim(self):
-        return self.model.bijection.ordering.size
+        return self.model.ndim
 
     def array_to_dict(self, params):
         return self.bijection.rmap(params)
