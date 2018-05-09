@@ -13,11 +13,11 @@ def figure(*args, **kwargs):
 
 
 def plot(*args, **kwargs):
-    plt.plot(*args, **kwargs)
+    return plt.plot(*args, **kwargs)
 
 
 def subplot(*args, **kwargs):
-    plt.subplot(*args, **kwargs)
+    return plt.subplot(*args, **kwargs)
 
 
 def tight_layout(*args, **kwargs):
