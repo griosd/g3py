@@ -82,6 +82,6 @@ def load_datatrace(path='datatrace.h5'):
     return pd.read_hdf(path)
 
 
-def print(*args):
-    for a in args:
-        pprint(a)
+#def print(*args):
+#    for a in args:
+#        pprint(a)

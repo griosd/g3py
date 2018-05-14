@@ -101,18 +101,20 @@ def chains_to_datatrace(process, chains, ll=None, transforms=True, burnin_tol=0.
         ncolumn = n_vars
         varnames = process.params.keys()
         for v in datatrace.columns:
-            prefix = '_'
             if '____' in v:
                 name = v[:v.find('____')+2]
                 prefix = '__'
             elif '___' in v:
                 name = v[:v.find('___')+1]
+                prefix = '_'
             else:
                 name = v[:v.find('__')]
+                prefix = ''
             if name not in varnames:
                 continue
             if name in process.transformations:
-                datatrace.insert(ncolumn, v.replace('_' + process.model[name].distribution.transform_used.name + prefix, ''),
+                datatrace.insert(ncolumn,
+                                 v.replace('_' + process.model[name].distribution.transform_used.name + prefix, ''),
                                  process.transformations[name](datatrace[v]))
                 ncolumn += 1
     if clusters is not None:

@@ -9,7 +9,7 @@ import theano.tensor as tt
 from ..bayesian.average import mcmc_ensemble, chains_to_datatrace, plot_datatrace
 from ..bayesian.models import GraphicalModel, PlotModel
 from ..bayesian.selection import optimize
-from ..libs import DictObj, print, save_pkl, load_pkl, load_datatrace, save_datatrace
+from ..libs import DictObj, save_pkl, load_pkl, load_datatrace, save_datatrace
 from ..libs.tensors import tt_to_num, makefn, gradient
 
 # from ..bayesian.models import TheanoBlackBox
