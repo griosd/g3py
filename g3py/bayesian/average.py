@@ -12,7 +12,7 @@ from matplotlib import cm
 from numba import jit
 from tqdm import tqdm
 import multiprocessing as mp
-
+from pymc3.plots import utils, artists
 
 # SAMPLING
 
@@ -389,13 +389,14 @@ def plot_datatrace(datatrace, burnin = False, outlayer = False, varnames=None, t
             dk = datatrace.loc[key]
             dk = dk[np.isfinite(dk[v])]
             d = np.squeeze(transform(dk[v]))
-            d = pm.utils.make_2d(d)
+            d = utils.make_2d(d)
             try:
                 if d.dtype.kind == 'i':
-                    pm.artists.histplot_op(ax[i, 0], d, alpha=alpha)
+                    artists.histplot_op(ax[i, 0], d, alpha=alpha)
                 else:
-                    pm.artists.kdeplot_op(ax[i, 0], d, prior, prior_alpha, prior_style)
-            except:
+                    artists.kdeplot_op(ax[i, 0], d, 4.5, prior, prior_alpha, prior_style)
+            except Exception as e:
+                print(e)
                 pass
             ax[i, 1].plot(dk._niter, d, alpha=alpha)
 
@@ -463,6 +464,7 @@ def hist_datatrace(dt, items=None, like=None, reference=None, drop=[], drop_defa
         dt = dt.drop(drop, axis=1)
     marginal = marginal_datatrace(dt, items=items, like=like, regex=regex, samples=samples)
     #marginal.columns = [c[c.find('_') + 1:] for c in marginal.columns]
+    #fig, ax = plt.subplots(figsize=figsize)
     marginal.hist(bins=bins, layout=layout, figsize=figsize)
     columns = sorted(marginal.columns)
     if reference is not None:
@@ -485,6 +487,7 @@ def hist_datatrace(dt, items=None, like=None, reference=None, drop=[], drop_defa
                         except Exception as e:
                             pass
                     i += 1
+    #ax.xaxis.set_major_locator(plt.MaxNLocator(2))
     #return marginal
 
 
