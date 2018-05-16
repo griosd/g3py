@@ -79,7 +79,11 @@ def save_datatrace(dt, path='datatrace.h5', key='datatrace', mode='w'):
 
 
 def load_datatrace(path='datatrace.h5'):
-    return pd.read_hdf(path)
+    try:
+        return pd.read_hdf(path)
+    except Exception as e:
+        print(e)
+        return None
 
 
 #def print(*args):
