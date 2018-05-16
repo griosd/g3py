@@ -561,24 +561,16 @@ class PlotModel:
         if title is not None:
             self.description['text'] = text
 
-    def plot_space(self, order=None, space=None, index=None, inputs=None, independent=False, observed=False):
-        if order is None:
-            order = self.order
-        if space is None:
-            space = self.space
-        if index is None:
-            index = self.index
-        if inputs is None:
-            inputs = self.inputs
+    def plot_space(self, independent=False, observed=False):
         if independent:
-            for i in range(space.shape[1]):
+            for i in range(self.space.shape[1]):
                 figure(i)
-                plot(order, space[:, i])
+                plot(self.order, self.space[:, i])
         else:
-            plot(order, space)
+            plot(self.order, self.space)
         if self.index is not None and observed:
             if independent:
-                for i in range(space.shape[1]):
+                for i in range(self.space.shape[1]):
                     figure(i)
                     plot(self.index, self.inputs[:, i], '.k')
             else:
@@ -730,7 +722,7 @@ class PlotModel:
             plot_text(title, self.description['x'], self.description['y'], loc=loc, ncol=ncol)
         if plot_space:
             show()
-            self.plot_space(order, space)
+            plot(order, space)
             plot_text('Space X', 'Index', 'Value', legend=False)
 
     def plot_datatrace(self, datatrace, overlap=False, limit=10, scores=True, *args, **kwargs):

@@ -125,13 +125,6 @@ def plot_matrix(matrix, color=True, cmap=cm.seismic, figsize=(6, 6)):
         plt.matshow(matrix)
 
 
-def plot_img(name='example', path='plots/', extension='png'):
-    file = path + name+'.'+extension
-    plt.savefig(file, bbox_inches='tight')
-    display.HTML('<img src=\'{}\'>'.format(file+'#'+str(np.random.rand())))
-    show()
-
-
 def grid2d(x, y):
     xy = np.zeros((len(x) * len(y), 2))
     for i in range(len(x)):

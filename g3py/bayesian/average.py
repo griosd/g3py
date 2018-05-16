@@ -135,7 +135,7 @@ def datatrace_to_chains(process, dt, flat=False, burnin=False):
         return chain.ix[:, :process.ndim].values.reshape(levshape[0], levshape[1], process.ndim)
 
 
-def datatrace_to_kde(process, dt, kernel='tophat', bandwidth=0.02, min_ll=-1e10):
+def datatrace_to_kde(process, dt, kernel='tophat', bandwidth=0.02, min_ll=-1e6):
     """
     Takes a datatrace and calculates the kernel density estimation of it.
     Args:
@@ -151,12 +151,11 @@ def datatrace_to_kde(process, dt, kernel='tophat', bandwidth=0.02, min_ll=-1e10)
         Returns an instance of the class sklearn.neighbors.KernelDensity
     """
     # con outlayers pero sin burn-in
-    dt = dt[dt._burnin]
     if hasattr(dt, '_ll'):
         dt = dt[np.isfinite(dt['_ll'])]
         dt = dt[dt._ll > min_ll]
-    kde = neighbors.kde.KernelDensity(kernel=kernel, bandwidth=bandwidth).fit(dt.iloc[:, :process.ndim])
-    kde.min_ll = min_ll
+    kde = neighbors.kde.KernelDensity(kernel=kernel, bandwidth=bandwidth).fit(dt[dt._burnin].iloc[:, :process.ndim])
+    kde.min_ll = dt[dt._burnin]._ll.min()
     return kde
 
 
@@ -570,7 +569,8 @@ def hist_datatrace(dt, items=None, like=None, reference=None, drop=[], drop_defa
     if drop is not None:
         dt = dt.drop(drop, axis=1)
     marginal = marginal_datatrace(dt, items=items, like=like, regex=regex, samples=samples)
-    marginal.columns = [c[c.find('_') + 1:] for c in marginal.columns]
+    #marginal.columns = [c[c.find('_') + 1:] for c in marginal.columns]
+    #fig, ax = plt.subplots(figsize=figsize)
     marginal.hist(bins=bins, layout=layout, figsize=figsize)
     columns = sorted(marginal.columns)
     if reference is not None:
@@ -593,6 +593,7 @@ def hist_datatrace(dt, items=None, like=None, reference=None, drop=[], drop_defa
                         except Exception as e:
                             pass
                     i += 1
+    #ax.xaxis.set_major_locator(plt.MaxNLocator(2))
     #return marginal
 
 
