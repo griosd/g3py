@@ -13,7 +13,7 @@ from .. import config
 from ipywidgets import interact, interact_manual, FloatSlider
 # from numba import jit
 
-
+# Build the model from pymc3, which it a container for the model.
 Model = pm.Model
 
 
@@ -182,6 +182,17 @@ class GraphicalModel:
         return default
 
     def params_random(self, mean=None, sigma=0.1, prop=True):
+        """
+        Calculates a set of random parameters for the process around of the mean. In case that the mean it is
+        not given, it uses the default.
+        Args:
+            mean (g3py.libs.DictObj): A dictionary with the parameters of the process.
+            sigma (float): the size of the perturbation (the variance)
+            prop (bool): whether the perturbation around the mean is aditive (False) or multiplicative (True)
+
+        Returns:
+            Returns a random mean obtained around the given mean (if no mean is given, it uses the default)
+        """
         if mean is None:
             mean = self.params_default
         for k, v in mean.items():
@@ -462,6 +473,13 @@ class PlotModel:
         return {k: params[k] for k in self.model.test_point}
 
     def eval_params(self, params=None):
+        """
+        This function evaluates the params to obtain the l1 and l2 error, and the loglikelihood as well.
+        Args:
+            params (g3py.libs.DictObj):  The hyperparams came in the dictionary of the params
+        Returns:
+            It returns the evaluation over the error l1, l2 and the loglikelihood
+        """
         r = params.copy()
         r['_ll'] = self.logp(self.filter_params(params))
         r.update(self.scores(params))
@@ -469,6 +487,21 @@ class PlotModel:
         return r
 
     def average(self, datatrace, scores=True, *args, **kwargs):
+        """
+        For each set of parameters (rows) of the datatrace, the prediction is calculated and then
+        calculates the average of the curves.
+        Args:
+            datatrace (pandas.core.frame.DataFrame): result of MCMC run on DataFrame format. This contains the whole
+            information of the evolution of the MCMC.
+            scores (bool): If True, error l1 and l2 are calculated and returned.
+            *args: List arguments inherited from '.predict' and '.scores' methods.
+            **kwargs: Dictionary of arguments inherited from '.predict' and '.scores' methods.
+
+        Returns:
+            Returns a dictionary that contains the average prediction, and the scores (if scores True).
+            Depending on the *args and **kwargs, the average of the others curves generated from the
+            '.predict' method are returned.
+        """
         average = None
         for k, v in datatrace.iterrows():
             params = self.active.model.bijection.rmap(v)
@@ -486,6 +519,17 @@ class PlotModel:
         return average
 
     def particles(self, datatrace, nsamples = None, *args, **kwargs):
+        """
+        Calculates a sample of a gaussian process using the parameters contained in a datatrace.
+        Args:
+            datatrace (pandas.core.frame.DataFrame): result of MCMC run on DataFrame format. This contains the whole
+            information of the evolution of the MCMC.
+            nsamples (int): the number of desired samples
+            *args: list of arguments that is inherited from the method '.sample'
+            **kwargs: dictionary of arguments that is inherithed from the method '.sample'.
+        Returns:
+            It returns a numpy.ndarray that contains the values of the particles.
+        """
         particles = []
         if nsamples is None:
             nsamples = len(datatrace)
@@ -499,6 +543,15 @@ class PlotModel:
         return particles
 
     def describe(self, title=None, x=None, y=None, text=None):
+        """
+        Set descriptions to the model
+        Args:
+            title (str): The title of the process
+            x (str):the label for the dependient variable
+            y (str):the label for the independient variable
+            text (str): aditional text if necessary.
+        """
+
         if title is not None:
             self.description['title'] = title
         if title is not None:
@@ -508,16 +561,24 @@ class PlotModel:
         if title is not None:
             self.description['text'] = text
 
-    def plot_space(self, independent=False, observed=False):
+    def plot_space(self, order=None, space=None, index=None, inputs=None, independent=False, observed=False):
+        if order is None:
+            order = self.order
+        if space is None:
+            space = self.space
+        if index is None:
+            index = self.index
+        if inputs is None:
+            inputs = self.inputs
         if independent:
-            for i in range(self.space.shape[1]):
+            for i in range(space.shape[1]):
                 figure(i)
-                plot(self.order, self.space[:, i])
+                plot(order, space[:, i])
         else:
-            plot(self.order, self.space)
+            plot(order, space)
         if self.index is not None and observed:
             if independent:
-                for i in range(self.space.shape[1]):
+                for i in range(space.shape[1]):
                     figure(i)
                     plot(self.index, self.inputs[:, i], '.k')
             else:
@@ -556,6 +617,43 @@ class PlotModel:
     def plot(self, params=None, space=None, inputs=None, outputs=None, hidden=True, order=None, mean=True, std=False, cov=False,
              median=False, quantiles=True, quantiles_noise=True, samples=0, palette="Reds", prior=False, noise=False, simulations=100,
              values=None, data=True, logp=True, big=None, plot_space=False, title=None, labels={}, loc='best', ncol=3):
+        """
+        Creates the prediction of a gp and plot it
+        Args:
+            params (dict): Contains the hyperparameters of the stochastic process
+            space (numpy.ndarray): the domain space of the process
+            inputs (numpy.ndarray): the inputs of the process
+            outputs (numpy.ndarray): the outputs (observations) of the process
+            hidden (bool): Determines whether the hidden process is plotted
+            order (numpy.ndarray): For multidimensional process, the order indicates the order in
+                which the domain (space) is plotted.
+            mean (bool): Determines whether the mean is displayed
+            std (bool): Determines whether the standard deviation is displayed
+            var (bool): Determines whether the variance is displayed
+            cov (bool): Determines whether the covariance is displayed
+            median (bool): Determines whether the median is displayed
+            quantiles (bool): Determines whether the quantiles (95% of confidence) are displayed
+            quantiles_noise (bool): Determines whether the noise is considered for calculating (the
+                quantile and it is displayed
+            samples (int): the number of samples of the stochastic process that are generated
+            palette (str): the name of the color palette
+            prior (bool): whether the prediction considers the prior
+            noise (bool): wheter the prediction considers noise
+            simulations (int): the number of simulation for the aproximation of the value of the
+            values (dict): a dictionary that contains the numpy.ndarrays for plotting
+            data (bool): If it is True, it will show the values
+            logp (bool): If it is True, the tittle shows the value of the log p given the parameters
+            big (bool): The default is None. Its value determines the style of the plot. When it is True
+                (or none) shows the big style
+            plot_space (bool): Whether the space its plotted.
+            title (str): The tittle for the figure
+            labels (dict): a dictionary that contains the labels of the plotted curves
+            loc (str): The location for the legend
+            ncol (int): The number of columns of the legend
+
+        Returns:
+            It returns a figure that contains the information required in the arguments.
+        """
         if values is None:
             values = self.predict(params=params, space=space, inputs=inputs, outputs=outputs, mean=mean, std=std,
                                   cov=cov, median=median, quantiles=quantiles, quantiles_noise=quantiles_noise,
@@ -632,10 +730,24 @@ class PlotModel:
             plot_text(title, self.description['x'], self.description['y'], loc=loc, ncol=ncol)
         if plot_space:
             show()
-            self.plot_space(space)
+            self.plot_space(order, space)
             plot_text('Space X', 'Index', 'Value', legend=False)
 
     def plot_datatrace(self, datatrace, overlap=False, limit=10, scores=True, *args, **kwargs):
+        """
+        This method takes the hyperparameters of the gp from a datatrace, and plot the prediction
+        of each candidate included in the datatrace.
+        Args:
+            datatrace (pandas.core.frame.DataFrame): result of MCMC run on DataFrame format. This contains the whole
+            information of the evolution of the MCMC.
+            overlap (bool): If True, the plots are overlaped. If False, are plotted separately.
+            limit (int): The maximum number of process plotted.
+            scores (bool): If True, the scores l1 and l2 errors are calculated and plotted in the
+                title of the figures. If False, the tittle only contains the name of the candidated
+                obtained from the datatrace.
+            *args: list arguments inherited from the methods '.plot' and '.scores').
+            **kwargs: dictionary arguments inherited from the methods '.plot' and '.scores').
+        """
         for k, v in datatrace.iterrows():
             self.plot(self.active.model.bijection.rmap(v), *args, **kwargs)
             if not overlap:
@@ -653,6 +765,15 @@ class PlotModel:
                 break
 
     def widget(self, params=None, model=False, auto=False, *args, **kwargs):
+        """
+        Let set the params in a widget and the posterior visualization
+        Args:
+            params (dict): The hyperparams of the gp
+            model (pymc3 model): The model to display
+            auto (bool): If the display its automatic of it is not.
+            *args: Variable length argument list, used in the plot function.
+            **kwargs: Arbitrary keyword arguments, used in the plot function.
+        """
         if params is None:
             params = self.params_widget
         intervals = dict()

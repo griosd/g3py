@@ -1,3 +1,7 @@
+""" This module contains different data generators.
+
+"""
+
 import g3py as g3
 import numpy as np
 import pandas as pd
@@ -123,6 +127,25 @@ def load_csv(file, index_col=0):
 
 
 def random_obs(x, y, p=0.2, s=1.0, include_min=False, plot=True, plot_independent=False):
+    """Generates a random subsample of size len(x)*s*p from the arrays x and y.
+    Args:
+        x (array): independent variable
+        y (array): dependent data
+        p (float): porcentual size of the subsample
+        s (float): porcentual size from x to subsample
+        include_min (bool): whether include or not the minimun of x.
+        plot (bool): to plot the data
+        plot_independet (bool): to plot into different figures
+    Returns:
+        obs_j /array): index of the elements that were subsampled
+        x_obs (array): set of elements of x that were subsampled.
+        y_obs (array): set of elements of y that were subsampled.
+        test_j (array): index of the elements that weren't subsampled.
+        x_test (array): set of elements of x that weren't subsampled.
+        x_test (array): set of elements of y that weren't subsampled.
+        """
+
+
     n = int(len(x)*s)
     obs_j = np.unique(np.sort(np.random.choice(range(n), int(n*p), replace=False)))
     if include_min:

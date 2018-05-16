@@ -121,6 +121,9 @@ class StochasticProcess(PlotModel):#TheanoBlackBox
         return self.active.set_params(*args, **kwargs)
 
     def params_random(self, *args, **kwargs):
+        """
+        Alias for the method .active.params_random()
+        """
         return self.active.params_random(*args, **kwargs)
 
     def params_datatrace(self, *args, **kwargs):
@@ -180,6 +183,16 @@ class StochasticProcess(PlotModel):#TheanoBlackBox
             self.index = np.arange(len(self.inputs))
 
     def observed(self, inputs=None, outputs=None, order=None, index=None, hidden=None):
+        """
+        This function asign the observations to the gp and calculates the default parameters
+        Args:
+            inputs (numpy.ndarray): the inputs of the process
+            outputs (numpy.ndarray): the outputs (observations) of the process
+            order (numpy.ndarray): For multidimensional process, the order indicates the order in
+                which the domain (space) is plotted.:
+            index (numpy.ndarray): It is the index of the observations
+            hidden (numpy.ndarray): The set of values from where the observations are taken
+        """
         self.set_space(inputs=inputs, outputs=outputs, order=order, index=index, hidden=hidden)
         if inputs is None and outputs is None:
             self.is_observed = False
@@ -429,6 +442,32 @@ class StochasticProcess(PlotModel):#TheanoBlackBox
     def predict(self, params=None, space=None, inputs=None, outputs=None, mean=True, std=True, var=False, cov=False,
                 median=False, quantiles=False, quantiles_noise=False, samples=0, distribution=False,
                 prior=False, noise=False, simulations=None):
+        """
+        Predict a stochastic process with each feature of the process.
+        Args:
+            params (g3py.libs.DictObj): Contains the hyperparameters of the stochastic process
+            space (numpy.ndarray): the domain space of the process
+            inputs (numpy.ndarray): the inputs of the process
+            outputs (numpy.ndarray): the outputs (observations) of the process
+            mean (bool): Determines whether the mean is displayed
+            std (bool): Determines whether the standard deviation is displayed
+            var (bool): Determines whether the variance is displayed
+            cov (bool): Determines whether the covariance is displayed
+            median (bool): Determines whether the median is displayed
+            quantiles (bool): Determines whether the quantiles (95% of confidence) are displayed
+            quantiles_noise (bool): Determines whether the noise is considered for calculating (the
+                quantile and it is displayed
+            samples (int): the number of samples of the stochastic process that are generated
+            distribution (bool): whether it returns the log predictive function
+            prior (bool): whether the prediction considers the prior
+            noise (bool): wheter the prediction considers noise
+            simulations (int): the number of simulation for the aproximation of the value of the
+            stadistics
+
+        Returns:
+            Returns a dictionary which contains the information of the mean, std, var, cov, median,
+            quantiles, quantiles_noise and distribution whether they are required.
+        """
         if params is None:
             params = self.params
         if not self.is_observed:
@@ -524,7 +563,26 @@ class StochasticProcess(PlotModel):#TheanoBlackBox
 
     def find_MAP(self, start=None, points=1, return_points=False, plot=False, display=True,
                  powell=True, bfgs=True, init='bfgs', max_time=None):
+        """
+        This function calculates the Maximun A Posteriori alternating the bfgs and powell algorithms,
 
+        Args:
+            start (g3py.libs.DictObj): The initial parameters to start the optimization.
+                The default value correspond to the default parameters of the gp. This could be a list
+                of initial points.
+            points (int): the number of (meta) iterations of the optimization problem
+            return_points (bool): Determines whether the parameters points of the optimization
+                are displayed.
+            plot (bool): Determines whether the result it is plotted.
+            display (bool): Determines whether the information of the optimization is displayed.
+            powell (bool): Whether the powell algotithm it is used
+            bfgs (bool): Whether the bfgs algotithm it is used
+            init (str): The algorith with which it starts in the first iteration.
+            max_time (int): the maximum number of seconds for every step in the optimization
+
+        Returns:
+            This function returns the optimal parameters of the loglikelihood function.
+        """
         points_list = list()
         if start is None:
             start = self.params
@@ -616,6 +674,40 @@ class StochasticProcess(PlotModel):#TheanoBlackBox
     def sample_hypers(self, start=None, samples=1000, chains=None, ntemps=None, raw=False, noise_mult=0.1, noise_sum=0.01,
                       burnin_tol=0.001, burnin_method='multi-sum', outlayer_percentile=0.0005, clusters=None, prior=False, parallel=False, threads=1,
                       plot=False, file=None, load=True):
+        """
+        This function find the optimal hyperparameters of the logpredictive function using the
+        'Ensemble MCMC' algorithm.
+        Args:
+            start (g3py.libs.DictObj): The initial parameters for the optimization. If start is None,
+                it starts with the parameters obtained using find_MAP algorithm.
+            samples (int): the number of iterations performed by the algorithm
+            chains (int): the number of markov chains used in the sampling. The number of chains needs
+                to be an even number and more than twice the dimension of the parameter space.
+            ntemps (int): the number of temperatures used.
+            raw (bool): this argument determines whether the result returned is raw or is pre-processed
+            noise_mult (float): the variance of the multiplicative noise
+            noise_sum (float): the variance of the aditive noise
+            burnin_tol (float): It is the tolerance for the burnin.
+            burnin_method (str): This set the algorith used to calculates the burnin
+            outlayer_percentile (float): this takes a value between 0 and 1, and represent the value
+                of the percentile to let out as outlayers.
+            clusters (int): the number of clusters in which the sample is divided
+            prior (bool): Whether the prior its considered
+            parallel (bool): Whether the algorithm works in paralell or not.
+            threads (int): the number of process to paralelize the algorithm
+            plot (bool): whether the information of the datatrace are plotted or not.
+            file (str): a path for save the datatrace
+            load (bool): if load is True, a datatrace will be searched in the path given by file
+
+        Returns:
+            This function returns the information given by the Ensemble Markov Chain Monte Carlo Algorithm
+            The information could be given tranformed or raw, depending of the boolean 'raw'.
+            In the raw case, the information given contains evolution of each chain (which contains
+             the parameters) across the iterations and the value of the loglikelihood in each iteration.
+            Otherwhise, the function returns a datatrace, whose columns contains the values of
+            every parameter, it transformation (logaritm transformation), the chain number to which it
+            belong, the iteration number, and the 'burnin' and the 'outlayer' booleans.
+        """
         ndim = len(self.active.sampling_dims)
         if chains is None:
             chains = 2*ndim
