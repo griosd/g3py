@@ -1,7 +1,16 @@
-from .stochastic import *
-from .gaussian import *
-from .studentT import *
+from .stochastic import StochasticProcess
+from .gaussian import GaussianProcess, WarpedGaussianProcess
+from .studentT import StudentTProcess, WarpedStudentTProcess
+from .marginal import *
+from .transport import TransportGaussianProcess
+from .copula import CopulaGaussianProcess, CopulaStudentTProcess
+
 
 GP = GaussianProcess
-TGP = TransformedGaussianProcess
+WGP = WarpedGaussianProcess
+
 TP = StudentTProcess
+WTP = WarpedStudentTProcess
+
+CGP = CopulaGaussianProcess
+CSTP = CopulaStudentTProcess

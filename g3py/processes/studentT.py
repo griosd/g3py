@@ -1,114 +1,153 @@
-from .stochastic import *
-from ..functions import Freedom, Kernel, Mean, Mapping, Identity
-from ..libs import cholesky_robust, debug, ifelse
-from pymc3.distributions.distribution import generate_samples
-from scipy.stats._multivariate import multivariate_normal
-from scipy.stats import t
-from pymc3.distributions.special import gammaln
+import numpy as np
+import scipy as sp
+import pymc3 as pm
+import theano as th
+import theano.tensor as tt
+import theano.tensor.slinalg as tsl
+import theano.tensor.nlinalg as tnl
+from theano.ifelse import ifelse
+from .elliptical import EllipticalProcess, debug_p
+from ..libs.tensors import tt_eval, cholesky_robust, debug
+from .hypers.mappings import Identity
+from .hypers import Freedom
+from scipy import stats
 
 
-class StudentTProcess(StochasticProcess):
-    def __init__(self, space=1, location: Mean=None, kernel: Kernel=None, noise=True,
-                 name='TP', inputs=None, outputs=None, hidden=None, file=None, precompile=False, *args, **kwargs):
-        super().__init__(space=space, location=location, kernel=kernel, mapping=Identity(), noise=noise,
-                         freedom=Freedom(bound=2), name=name, inputs=inputs, outputs=outputs, hidden=hidden, file=file, precompile=precompile, *args, **kwargs)
+class StudentTProcess(EllipticalProcess):
 
-        self.prior_freedom = None
-        self.posterior_freedom = None
+    def __init__(self, *args, **kwargs):
+        if 'name' not in kwargs:
+            kwargs['name'] = 'TP'
+        if 'degree' not in kwargs:
+            kwargs['degree'] = Freedom()
+        super().__init__(*args, **kwargs)
 
-    def _define_distribution(self):
-        self.distribution = TTPDist(self.name, mu=self.location(self.inputs), cov=tt_to_cov(self.kernel.cov(self.inputs)),
-                                    mapping=Identity(), freedom=self.freedom(), ttp=self, observed=self.outputs,
-                                    testval=self.outputs, dtype=th.config.floatX)
+    def th_define_process(self):
+        super().th_define_process()
+        self.distribution = WarpedStudentTDistribution(self.name,
+                                                       mu=self.prior_location_inputs,
+                                                       cov=self.prior_kernel_inputs,
+                                                       freedom=self.th_freedom(prior=True),
+                                                       mapping=self.f_mapping,
+                                                       observed=self.th_outputs,
+                                                       testval=self.th_outputs,
+                                                       dtype=th.config.floatX)
 
-    def _define_process(self):
-        # Prior
-        self.prior_freedom = self.freedom()
-        self.prior_mean = self.location_space
-        self.prior_covariance = self.kernel_f_space
-        self.prior_cholesky = cholesky_robust(self.prior_covariance)
-        self.prior_logp = TTPDist.logp_cho(self.random_th, self.prior_mean, self.prior_cholesky, self.mapping, self.prior_freedom)
-        self.prior_distribution = tt.exp(self.prior_logp.sum())
-        self.prior_variance = tnl.extract_diag(self.prior_covariance)
-        self.prior_std = tt.sqrt(self.prior_variance)
-        self.prior_noise = tt.sqrt(tnl.extract_diag(self.kernel_space))
-        self.prior_logpred = TTPDist.logp_cho(self.random_th, self.prior_mean, nL.alloc_diag(self.prior_noise),
-                                              self.mapping, self.prior_freedom)
-        #Revisar
-        sigma = self.random_scalar#np.float32(t.interval(0.95, 3.0)[1])
-        self.prior_median = self.prior_mean
-        self.prior_quantile_up = self.prior_mean + sigma * self.prior_std
-        self.prior_quantile_down = self.prior_mean - sigma * self.prior_std
-        self.prior_noise_up = self.prior_mean + sigma * self.prior_noise
-        self.prior_noise_down = self.prior_mean - sigma * self.prior_noise
-        self.prior_sampler = self.prior_mean + tt.sqrt(self.random_scalar) * self.prior_cholesky.dot(self.random_th)
+    def th_scaling(self, prior=False, noise=False):
+        if prior:
+            return np.float32(1.0)
+        np2 = np.float32(2.0)
+        alpha = tsl.solve_lower_triangular(cholesky_robust(self.prior_kernel_inputs), self.mapping_outputs - self.prior_location_inputs)
+        beta = alpha.T.dot(alpha)
+        coeff = (self.th_freedom(prior=True) + beta - np2) / (self.th_freedom(prior=False) - np2)
+        return coeff
 
-        # Posterior
-        self.posterior_freedom = self.prior_freedom + self.inputs.shape[0].astype(th.config.floatX)
-        beta = (self.mapping_outputs - self.location_inputs).T.dot(tsl.solve(self.kernel_inputs, self.mapping_outputs - self.location_inputs))
-        coeff = (self.prior_freedom + beta - 2)/(self.posterior_freedom - 2)
-        self.posterior_mean = self.location_space + self.kernel_f_space_inputs.dot(
-            tsl.solve(self.kernel_inputs, self.mapping_outputs - self.location_inputs))
-        self.posterior_covariance = coeff * (self.kernel_f.cov(self.space_th) - self.kernel_f_space_inputs.dot(
-            tsl.solve(self.kernel_inputs, self.kernel_f_space_inputs.T)))
-        self.posterior_cholesky = cholesky_robust(self.posterior_covariance)
-        self.posterior_logp = TTPDist.logp_cho(self.random_th, self.posterior_mean, self.posterior_cholesky,
-                                               self.mapping, self.posterior_freedom)
-        self.posterior_distribution = tt.exp(self.posterior_logp.sum())
-        self.posterior_variance = tnl.extract_diag(self.posterior_covariance)
-        self.posterior_std = tt.sqrt(self.posterior_variance)
-        self.posterior_noise = tt.sqrt(coeff*(tnl.extract_diag(self.kernel.cov(self.space_th) - self.kernel_f_space_inputs.dot(
-            tsl.solve(self.kernel_inputs, self.kernel_f_space_inputs.T)))))
-        self.posterior_logpred = TTPDist.logp_cho(self.random_th, self.posterior_mean,
-                                                  nL.alloc_diag(self.posterior_noise), self.mapping, self.posterior_freedom)
+    def th_variance(self, prior=False, noise=False):
+        return super().th_variance(prior=prior, noise=noise) * self.th_scaling(prior=prior, noise=noise)
 
-        self.posterior_quantile_up = self.posterior_mean + sigma * self.posterior_std
-        self.posterior_quantile_down = self.posterior_mean - sigma * self.posterior_std
-        self.posterior_noise_up = self.posterior_mean + sigma * self.posterior_noise
-        self.posterior_noise_down = self.posterior_mean - sigma * self.posterior_noise
-        self.posterior_sampler = self.posterior_mean + tt.sqrt(self.random_scalar) * self.posterior_cholesky.dot(self.random_th)
+    def th_covariance(self, prior=False, noise=False):
+        return super().th_covariance(prior=prior, noise=noise) * self.th_scaling(prior=prior, noise=noise)
 
-    def subprocess(self, subkernel):
-        k_cross = subkernel.cov(self.space_th, self.inputs_th)
-        subprocess_mean = self.location_space + k_cross.dot(tsl.solve(self.kernel_inputs, self.mapping_outputs - self.location_inputs))
-        params = [self.space_th, self.inputs_th, self.outputs_th] + self.model.vars
-        return makefn(params, subprocess_mean, True)
+    def quantiler(self, params=None, space=None, inputs=None, outputs=None, q=0.975, prior=False, noise=False, simulations=None):
+        debug_p('quantiler')
+        p = stats.t.ppf(q, df=self.freedom(params=params, space=space, inputs=inputs, outputs=outputs, prior=prior, noise=noise))
+        gp_quantiler = self.location(params, space, inputs, outputs, prior=prior, noise=noise) + p*self.kernel_sd(params, space, inputs, outputs, prior=prior, noise=noise)
+        return self.mapping(params, space, inputs, outputs=gp_quantiler) #self.f_mapping
+
+    def sampler(self, params=None, space=None, inputs=None, outputs=None, samples=1, prior=False, noise=False):
+        debug_p('sampler' + str(samples) + str(prior) + str(noise)+str(len(self.space)))
+        if space is None:
+            space = self.space
+        free = self.freedom(params=params, space=space, inputs=inputs, outputs=outputs, prior=prior, noise=noise)
+        rand = np.random.randn(len(space), samples) * stats.invgamma.rvs(a=free/2,
+                                                                         scale=(free-2)/2,
+                                                                         size=samples)
+        qp_samples = self.location(params, space, inputs, outputs, prior=prior, noise=noise)[:, None] + \
+                     self.cholesky(params, space, inputs, outputs, prior=prior, noise=noise).dot(rand)
+        return np.array([self.mapping(params, space, inputs, outputs=k.T) for k in qp_samples.T]).T
 
 
-class TTPDist(pm.Continuous):
-    def __init__(self, mu, cov, mapping, freedom, ttp, *args, **kwargs):
+class WarpedStudentTProcess(StudentTProcess):
+
+    def __init__(self, *args, **kwargs):
+        if 'name' not in kwargs:
+            kwargs['name'] = 'WTP'
+        if 'degree' not in kwargs:
+            kwargs['degree'] = Freedom()
+        super().__init__(*args, **kwargs)
+
+    #TODO: fix mean
+    def th_mean(self, prior=False, noise=False, simulations=None, n=10):
+        debug_p('mean')
+        _a, _w = np.polynomial.hermite.hermgauss(n)
+        a = th.shared(_a.astype(th.config.floatX), borrow=False).dimshuffle([0, 'x'])
+        w = th.shared(_w.astype(th.config.floatX), borrow=False)
+        return self.gauss_hermite(lambda v: self.f_mapping(v), self.th_location(prior=prior, noise=noise),
+                                  self.th_kernel_sd(prior=prior, noise=noise), a, w)
+
+    #TODO: fix variance
+    def th_variance(self, prior=False, noise=False, simulations=None, n=10):
+        debug_p('variance')
+        _a, _w = np.polynomial.hermite.hermgauss(n)
+        a = th.shared(_a.astype(th.config.floatX), borrow=False).dimshuffle([0, 'x'])
+        w = th.shared(_w.astype(th.config.floatX), borrow=False)
+        return self.gauss_hermite(lambda v: self.f_mapping(v) ** 2, self.th_location(prior=prior, noise=noise),
+                                  self.th_kernel_sd(prior=prior, noise=noise), a, w) - self.th_mean(prior=prior, noise=noise) ** 2
+
+    def th_covariance(self, prior=False, noise=False):
+        pass
+
+    @classmethod
+    def gauss_hermite(cls, f, mu, sigma, a, w):
+        grille = mu + sigma * np.sqrt(2).astype(th.config.floatX) * a
+        return tt.dot(w, f(grille.flatten()).reshape(grille.shape)) / np.sqrt(np.pi).astype(th.config.floatX)
+
+
+class WarpedStudentTDistribution(pm.Continuous):
+    def __init__(self, mu, cov, freedom, mapping, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.mean = self.median = self.mode = self.mu = mu
         self.cov = cov
-        self.mapping = mapping
         self.freedom = freedom
-        self.ttp = ttp
-
+        self.mapping = mapping
 
     @classmethod
-    def logp_cho(cls, value, mu, cho, mapping, degree):
+    def logp_cho(cls, value, mu, cho, freedom, mapping):
         delta = mapping.inv(value) - mu
-        cond = tt.or_(tt.any(tt.isinf_(delta)), tt.any(tt.isnan_(delta)))
 
-        _L = sL.solve_lower_triangular(cho, delta)
-        beta = _L.T.dot(_L)
+        lcho = tsl.solve_lower_triangular(cho, delta)
+        beta = lcho.T.dot(lcho)
         n = cho.shape[0].astype(th.config.floatX)
 
-        gmln1 = gammaln((degree + n) / 2.0) - gammaln(degree / 2.0) - np.float32(0.5) * n * tt.log((degree-2.0) * np.pi)
-        gmln2 = approx_gammaln((degree + n) / 2.0) - approx_gammaln(degree / 2.0) - np.float32(0.5) * n * tt.log((degree-2.0) * np.pi)
-        gmln = ifelse((degree + n) < 1e6, gmln1, gmln2)
-        #gmln = th.printing.Print('gmln')(gmln)
-        dot2 = np.float32(-0.5) * (degree + n) * tt.log1p(beta / (degree-2.0))
-        det_k = - tt.sum(tt.log(nL.diag(cho)))
+        np5 = np.float32(0.5)
+        np2 = np.float32(2.0)
+        npi = np.float32(np.pi)
+
+        r1 = - np5 * (freedom + n) * tt.log1p(beta / (freedom-np2))
+        r2 = ifelse(tt.le(np.float32(1e6), freedom), - n * np5 * np.log(np2 * npi),
+                    tt.gammaln((freedom + n) * np5) - tt.gammaln(freedom * np5) - np5 * n * tt.log((freedom-np2) * npi))
+        r3 = - tt.sum(tt.log(tnl.diag(cho)))
         det_m = mapping.logdet_dinv(value)
-        r = gmln + dot2 + det_k + det_m
-        cond1 = tt.or_(tt.isinf_(degree), tt.isnan_(degree))
+
+        r1 = debug(r1, name='r1', force=True)
+        r2 = debug(r2, name='r2', force=True)
+        r3 = debug(r3, name='r3', force=True)
+        det_m = debug(det_m, name='det_m', force=True)
+
+        r = r1 + r2 + r3 + det_m
+
+        cond1 = tt.or_(tt.any(tt.isinf_(delta)), tt.any(tt.isnan_(delta)))
         cond2 = tt.or_(tt.any(tt.isinf_(det_m)), tt.any(tt.isnan_(det_m)))
-        cond3 = tt.or_(tt.any(tt.isinf_(_L)), tt.any(tt.isnan_(_L)))
-        return ifelse(cond, np.float32(-1e30), ifelse(cond1, np.float32(-1e30), ifelse(cond2, np.float32(-1e30), ifelse(cond3, np.float32(-1e30), r))))
+        cond3 = tt.or_(tt.any(tt.isinf_(cho)), tt.any(tt.isnan_(cho)))
+        cond4 = tt.or_(tt.any(tt.isinf_(lcho)), tt.any(tt.isnan_(lcho)))
+        return ifelse(cond1, np.float32(-1e30),
+                      ifelse(cond2, np.float32(-1e30),
+                             ifelse(cond3, np.float32(-1e30),
+                                    ifelse(cond4, np.float32(-1e30), r))))
 
     def logp(self, value):
-        return tt_to_num(debug(self.logp_cho(value, self.mu, self.cho, self.mapping, self.freedom), 'logp_cho'), -np.inf, -np.inf)
+        return self.logp_cho(value, self.mu, self.cho, self.freedom, self.mapping)
+        #return tt_to_num(debug(self.logp_cho(value, self.mu, self.cho, self.freedom, self.mapping), 'logp_cho'), -np.inf, -np.inf)
 
     @property
     def cho(self):
@@ -116,7 +155,3 @@ class TTPDist(pm.Continuous):
             return cholesky_robust(self.cov)
         except:
             raise sp.linalg.LinAlgError("not cholesky")
-
-
-def approx_gammaln(z):
-    return (z-np.float32(0.5))*tt.log(z) - z #+0.5*np.log(2*np.pi)

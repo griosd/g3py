@@ -1,5 +1,7 @@
-import theano as th
+import os
+os.environ['MKL_THREADING_LAYER'] = 'GNU'
 
+import theano as th
 th.config.floatX = 'float32'
 th.config.on_unused_input = 'ignore'
 th.config.mode = 'FAST_RUN'
