@@ -115,6 +115,14 @@ def plot_img(name='example', path='plots/', extension='png', return_html=False):
     display.display(display.HTML(html))
 
 
+def show_img(name='example', path='plots/', extension='png', return_html=False):
+    file = path + name+'.'+extension
+    html = '<img src=\'{}?{}\'>'.format(file, np.random.rand())
+    if return_html:
+        return html
+    display.display(display.HTML(html))
+
+
 def plot_matrix(matrix, color=True, cmap=cm.seismic, figsize=(6, 6)):
     if color:
         if figsize is not None:
