@@ -129,6 +129,9 @@ def plot_matrix(matrix, color=True, cmap=cm.seismic, figsize=(6, 6)):
             plt.figure(None, figsize)
         v = np.max(np.abs(matrix))
         plt.imshow(matrix, cmap=cmap, vmax=v, vmin=-v)
+        ax = plt.gca()
+        ax.grid(linewidth=0)
+
     else:
         plt.matshow(matrix)
 
