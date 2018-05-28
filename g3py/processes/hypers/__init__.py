@@ -135,11 +135,11 @@ class Hypers:
     @staticmethod
     def Exponential(name, lam=ones, shape=(), testval=ones):
         with modelcontext():
-            return pm.Exponential(name, shape=shape, lam=lam(shape), testval=testval(shape), dtype=th.config.floatX)
+            return pm.Exponential(name, shape=shape, lam=np.float32(lam(shape)), testval=np.float32(testval(shape)), dtype=th.config.floatX)
     @staticmethod
     def Uniform(name, lower=ones, upper=ones, shape=(), testval=ones):
         with modelcontext():
-            return pm.Uniform(name, shape=shape, lower=lower(shape), upper=upper(shape), testval=testval(shape), dtype=th.config.floatX)
+            return pm.Uniform(name, shape=shape, lower=np.float32(lower(shape)), upper=np.float32(upper(shape)), testval=np.float32(testval(shape)), dtype=th.config.floatX)
 
 class Freedom(Hypers):
     def __init__(self, x=None, name=None, degree=None, bound=np.float32(2.0)):

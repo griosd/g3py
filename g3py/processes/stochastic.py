@@ -367,13 +367,13 @@ class StochasticProcess(PlotModel):#TheanoBlackBox
 
         self.is_observed = True
 
-        pool = Pool(processes=2)
+        pool = Pool()
         pool.apply_async(self.logp, kwds={'array': True})
         pool.close()
-        pool = Pool(processes=2)
+        pool = Pool()
         pool.apply_async(self.logp, kwds={'array': True, 'prior': True})
         pool.close()
-        pool = Pool(processes=2)
+        pool = Pool()
         pool.apply_async(self.loglike, kwds={'array': True})
         pool.close()
         #try:
