@@ -11,7 +11,7 @@ from ..bayesian.models import GraphicalModel, PlotModel
 from ..bayesian.selection import optimize
 from ..libs import DictObj, save_pkl, load_pkl, load_datatrace, save_datatrace
 from ..libs.tensors import tt_to_num, makefn, gradient
-
+from multiprocessing import Pool
 # from ..bayesian.models import TheanoBlackBox
 
 zero32 = np.float32(0.0)
@@ -367,13 +367,20 @@ class StochasticProcess(PlotModel):#TheanoBlackBox
 
         self.is_observed = True
 
-        _ = self.logp(array=True)
-        _ = self.logp(array=True, prior=True)
-        _ = self.loglike(array=True)
-        try:
-            _ = self.dlogp(array=True)
-        except Exception as m:
-            print('Compiling dlogp error:', m)
+        pool = Pool(processes=2)
+        pool.apply_async(self.logp, kwds={'array': True})
+        pool.close()
+        pool = Pool(processes=2)
+        pool.apply_async(self.logp, kwds={'array': True, 'prior': True})
+        pool.close()
+        pool = Pool(processes=2)
+        pool.apply_async(self.loglike, kwds={'array': True})
+        pool.close()
+        #try:
+        #    pool = Pool(processes=1)
+        #    pool.apply_async(self.dlogp, kwds={'array': True})
+        #except Exception as m:
+        #    print('Compiling dlogp error:', m)
         self.is_observed = reset_observed
         self.set_space(space=reset_space, hidden=reset_hidden, order=reset_order,
                        inputs=reset_inputs, outputs=reset_outputs, index=reset_index)
