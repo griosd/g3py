@@ -6,7 +6,7 @@ import theano.tensor as tt
 import theano.tensor.slinalg as tsl
 from IPython.display import Image
 from . import clone
-from multiprocessing import Pool
+
 
 def gradient1(f, v):
     """flat gradient of f wrt v"""
@@ -32,7 +32,6 @@ def debug(x, name='', force=False):
     else:
         return x
 
-
 class makefn:
     def __init__(self, th_vars, fn, givens=None, bijection=None, precompile=False):
         self.th_vars = th_vars
@@ -41,12 +40,8 @@ class makefn:
         self.bijection = bijection
         if precompile:
             #print(self.th_vars, self.fn)
-            pool = Pool(processes=1)
-            self.compiled = pool.apply_async(th.function, args=(self.th_vars, self.fn), kwds={'givens':self.givens,
-                                                                                              'allow_input_downcast':True,
-                                                                                              'on_unused_input':'ignore'})
-            #self.compiled = th.function(self.th_vars, self.fn, givens=self.givens, allow_input_downcast=True,
-             #                           on_unused_input='ignore')
+            self.compiled = th.function(self.th_vars, self.fn, givens=self.givens, allow_input_downcast=True,
+                                        on_unused_input='ignore')
         else:
             self.compiled = None
         self.executed = 0
@@ -55,12 +50,8 @@ class makefn:
         self.executed += 1
         if self.compiled is None:
             #print(self.th_vars, self.fn)
-            pool = Pool(processes=1)
-            self.compiled = pool.apply_async(th.function, args=(self.th_vars, self.fn), kwds={'givens':self.givens,
-                                                                                              'allow_input_downcast':True,
-                                                                                              'on_unused_input':'ignore'})
-            #self.compiled = th.function(self.th_vars, self.fn, givens=self.givens, allow_input_downcast=True,
-            #                            on_unused_input='ignore')
+            self.compiled = th.function(self.th_vars, self.fn, givens=self.givens, allow_input_downcast=True,
+                                        on_unused_input='ignore')
         if self.givens is None:
             if self.bijection is None:
                 return self.compiled( **params)
