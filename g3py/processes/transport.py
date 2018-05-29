@@ -113,8 +113,8 @@ class TransportProcess(StochasticProcess):
     def th_covariance(self, prior=False, noise=False):
         pass
 
-    def _compile_methods(self):
-        super()._compile_methods()
+    def _compile_methods(self, *args, **kwargs):
+        super()._compile_methods(*args, **kwargs)
         self.transport = types.MethodType(self._method_name('th_transport'), self)
         self.transport_diag = types.MethodType(self._method_name('th_transport_diag'), self)
         self.transport_inv = types.MethodType(self._method_name('th_transport_inv'), self)

@@ -74,11 +74,11 @@ class MarginalProcess(StochasticProcess):
         self.distribution = self.f_density.distribution(self.name, inputs=self.th_inputs, outputs=self.th_outputs,
                                                         testval=self.outputs, dtype=th.config.floatX)
 
-    def _compile_methods(self):
+    def _compile_methods(self, *args, **kwargs):
         self.lower = types.MethodType(self._method_name('th_lower'), self)
         self.upper = types.MethodType(self._method_name('th_upper'), self)
         self.freedom = types.MethodType(self._method_name('th_freedom'), self)
-        super()._compile_methods()
+        super()._compile_methods(*args, **kwargs)
 
     def th_lower(self, prior=False, noise=False):
         return self.f_density.th_lower(self.th_space)

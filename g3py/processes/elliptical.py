@@ -203,8 +203,8 @@ class EllipticalProcess(StochasticProcess):
         debug_p('covariance' + str(prior) + str(noise))
         return self.th_kernel(prior=prior, noise=noise)
 
-    def _compile_methods(self):
-        super()._compile_methods()
+    def _compile_methods(self, *args, **kwargs):
+        super()._compile_methods(*args, **kwargs)
         self.freedom = types.MethodType(self._method_name('th_freedom'), self)
         self.mapping = types.MethodType(self._method_name('th_mapping'), self)
         self.mapping_inv = types.MethodType(self._method_name('th_mapping_inv'), self)
