@@ -370,7 +370,7 @@ class StochasticProcess(PlotModel):#TheanoBlackBox
         if compile_logp:
             _ = self.logp(array=True)
             _ = self.logp(array=True, prior=True)
-            _ = self.loglike(array=True)
+            # _ = self.loglike(array=True)
             try:
                 _ = self.dlogp(array=True)
             except Exception as m:
