@@ -20,12 +20,13 @@ zero32 = np.float32(0.0)
 class StochasticProcess(PlotModel):#TheanoBlackBox
 
     def __init__(self, space=None, order=None, inputs=None, outputs=None, hidden=None, index=None,
-                 name='SP', distribution=None, active=False, precompile=False, file=None, load=True, *args, **kwargs):
+                 name='SP', distribution=None, active=False, precompile=False, file=None, load=True, compile_logp=True,
+                 *args, **kwargs):
         if file is not None and load:
             try:
                 load = load_pkl(file)
                 self.__dict__.update(load.__dict__)
-                self._compile_methods()
+                self._compile_methods(compile_logp)
                 print('Loaded model ' + file)
                 self.set_space(space=space, hidden=hidden, order=order, inputs=inputs, outputs=outputs, index=index)
                 return
@@ -91,7 +92,7 @@ class StochasticProcess(PlotModel):#TheanoBlackBox
         #print('set_space')
         self.set_space(space=space, hidden=hidden, order=order, inputs=inputs, outputs=outputs, index=index)
         #print('_compile_methods')
-        self._compile_methods()
+        self._compile_methods(compile_logp)
         if hidden is None:
             self.hidden = hidden
 
@@ -324,7 +325,7 @@ class StochasticProcess(PlotModel):#TheanoBlackBox
     def th_error_mse(self, prior=False, noise=False):
         return tt.mean(tt.abs_(self.th_vector - self.th_outputs))**2 + tt.var(tt.abs_(self.th_vector - self.th_outputs))
 
-    def _compile_methods(self):
+    def _compile_methods(self, compile_logp=True):
         reset_space = self.space
         reset_hidden = self.hidden
         reset_order = self.order
@@ -366,14 +367,14 @@ class StochasticProcess(PlotModel):#TheanoBlackBox
         self.loglike = types.MethodType(self._method_name('th_loglike'), self)
 
         self.is_observed = True
-
-        _ = self.logp(array=True)
-        _ = self.logp(array=True, prior=True)
-        _ = self.loglike(array=True)
-        try:
-            _ = self.dlogp(array=True)
-        except Exception as m:
-            print('Compiling dlogp error:', m)
+        if compile_logp:
+            _ = self.logp(array=True)
+            _ = self.logp(array=True, prior=True)
+            _ = self.loglike(array=True)
+            try:
+                _ = self.dlogp(array=True)
+            except Exception as m:
+                print('Compiling dlogp error:', m)
         self.is_observed = reset_observed
         self.set_space(space=reset_space, hidden=reset_hidden, order=reset_order,
                        inputs=reset_inputs, outputs=reset_outputs, index=reset_index)
