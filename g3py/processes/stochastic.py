@@ -367,20 +367,13 @@ class StochasticProcess(PlotModel):#TheanoBlackBox
 
         self.is_observed = True
 
-        pool = Pool(processes=2)
-        pool.apply_async(self.logp, kwds={'array': True})
-        pool.close()
-        pool = Pool(processes=2)
-        pool.apply_async(self.logp, kwds={'array': True, 'prior': True})
-        pool.close()
-        pool = Pool(processes=2)
-        pool.apply_async(self.loglike, kwds={'array': True})
-        pool.close()
-        #try:
-        #    pool = Pool(processes=1)
-        #    pool.apply_async(self.dlogp, kwds={'array': True})
-        #except Exception as m:
-        #    print('Compiling dlogp error:', m)
+        _ = self.logp(array=True)
+        _ = self.logp(array=True, prior=True)
+        _ = self.loglike(array=True)
+        try:
+            _ = self.dlogp(array=True)
+        except Exception as m:
+            print('Compiling dlogp error:', m)
         self.is_observed = reset_observed
         self.set_space(space=reset_space, hidden=reset_hidden, order=reset_order,
                        inputs=reset_inputs, outputs=reset_outputs, index=reset_index)
