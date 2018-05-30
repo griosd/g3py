@@ -477,7 +477,7 @@ class SINC(KernelPeriodic):
         super().__init__(x, name, metric, var, freq, rate=1.0)
 
     def k(self, d):
-        sinc = tt.sin(d * self.freq)/(self.freq * d)
+        sinc = tt.sin(2*pi2*d * self.freq)/(2*pi2*self.freq * d)
         r = tt.switch(tt.neq(d, zero), sinc, np.float32(1))
         return tt.prod(r, axis=2, dtype=th.config.floatX)
 
