@@ -1,6 +1,7 @@
 import os
 import _pickle as pickle
 import time
+import json
 from copy import copy
 from pprint import pprint
 from .data import *
@@ -85,7 +86,9 @@ def load_datatrace(path='datatrace.h5'):
         print(e)
         return None
 
-
+def save_json(dict_to_json, path='file.json'):
+    with open(path,'w') as f:
+        json.dump(dict_to_json, fp=f)
 #def print(*args):
 #    for a in args:
 #        pprint(a)
